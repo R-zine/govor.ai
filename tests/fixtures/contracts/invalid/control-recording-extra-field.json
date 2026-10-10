@@ -1,0 +1,12 @@
+{
+  "protocol_version": "1.0",
+  "message_type": "learner.recording_submitted",
+  "correlation_id": "42b606a0-d767-4c22-a86f-3354d7186e73",
+  "payload": {
+    "session_id": "3191d8bd-d30f-488b-a324-cb91f1286745",
+    "utterance_id": "19c369b5-6fca-43ea-bffc-764b51b7e7c2",
+    "duration_us": 1000000,
+    "audio_reference": "webrtc",
+    "path": "C:/not-allowed.wav"
+  }
+}

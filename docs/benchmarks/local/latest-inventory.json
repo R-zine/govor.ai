@@ -1,0 +1,8 @@
+﻿{
+    "schema_version":  "1.0",
+    "result_kind":  "environment_inventory",
+    "measured_at_utc":  "2026-10-08T17:19:30.8160657Z",
+    "hardware_performance_executed":  false,
+    "gpu":  "NVIDIA GeForce RTX 3060, 12288 MiB, 560.94",
+    "note":  "Inventory only. This is not a media, model, rendering, or stability benchmark."
+}

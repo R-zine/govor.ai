@@ -1,0 +1,264 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://govor.ai/contracts/v1/control-message.schema.json",
+  "title": "govor.ai control message",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["protocol_version", "message_type", "correlation_id", "payload"],
+  "properties": {
+    "protocol_version": { "const": "1.0" },
+    "message_type": {
+      "enum": [
+        "session.start",
+        "session.state",
+        "session.cancel",
+        "session.retry",
+        "session.ended",
+        "teacher.turn",
+        "teacher.playback_completed",
+        "learner.recording_started",
+        "learner.recording_submitted",
+        "learner.transcript",
+        "renderer.ready",
+        "renderer.command",
+        "renderer.ack",
+        "error"
+      ]
+    },
+    "correlation_id": { "type": "string", "format": "uuid" },
+    "payload": { "type": "object" }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "message_type": { "const": "session.start" } } },
+      "then": { "properties": { "payload": { "$ref": "#/$defs/sessionStart" } } }
+    },
+    {
+      "if": { "properties": { "message_type": { "const": "session.state" } } },
+      "then": { "properties": { "payload": { "$ref": "#/$defs/sessionState" } } }
+    },
+    {
+      "if": {
+        "properties": {
+          "message_type": { "enum": ["session.retry"] }
+        }
+      },
+      "then": { "properties": { "payload": { "$ref": "#/$defs/sessionScoped" } } }
+    },
+    {
+      "if": { "properties": { "message_type": { "const": "session.cancel" } } },
+      "then": { "properties": { "payload": { "$ref": "#/$defs/sessionCancel" } } }
+    },
+    {
+      "if": { "properties": { "message_type": { "const": "session.ended" } } },
+      "then": { "properties": { "payload": { "$ref": "#/$defs/sessionEnded" } } }
+    },
+    {
+      "if": { "properties": { "message_type": { "const": "teacher.turn" } } },
+      "then": { "properties": { "payload": { "$ref": "#/$defs/teacherTurn" } } }
+    },
+    {
+      "if": {
+        "properties": { "message_type": { "const": "teacher.playback_completed" } }
+      },
+      "then": { "properties": { "payload": { "$ref": "#/$defs/playbackCompleted" } } }
+    },
+    {
+      "if": { "properties": { "message_type": { "const": "learner.recording_started" } } },
+      "then": { "properties": { "payload": { "$ref": "#/$defs/recordingStarted" } } }
+    },
+    {
+      "if": {
+        "properties": { "message_type": { "const": "learner.recording_submitted" } }
+      },
+      "then": { "properties": { "payload": { "$ref": "#/$defs/recordingSubmitted" } } }
+    },
+    {
+      "if": { "properties": { "message_type": { "const": "learner.transcript" } } },
+      "then": { "properties": { "payload": { "$ref": "#/$defs/transcript" } } }
+    },
+    {
+      "if": { "properties": { "message_type": { "const": "renderer.ready" } } },
+      "then": { "properties": { "payload": { "$ref": "#/$defs/rendererReady" } } }
+    },
+    {
+      "if": { "properties": { "message_type": { "const": "renderer.command" } } },
+      "then": { "properties": { "payload": { "$ref": "#/$defs/rendererCommand" } } }
+    },
+    {
+      "if": { "properties": { "message_type": { "const": "renderer.ack" } } },
+      "then": { "properties": { "payload": { "$ref": "#/$defs/rendererAck" } } }
+    },
+    {
+      "if": { "properties": { "message_type": { "const": "error" } } },
+      "then": { "properties": { "payload": { "$ref": "#/$defs/error" } } }
+    }
+  ],
+  "$defs": {
+    "uuid": { "type": "string", "format": "uuid" },
+    "sessionIdProperty": { "session_id": { "$ref": "#/$defs/uuid" } },
+    "sessionScoped": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["session_id"],
+      "properties": { "session_id": { "$ref": "#/$defs/uuid" } }
+    },
+    "sessionStart": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["client_id"],
+      "properties": { "client_id": { "$ref": "#/$defs/uuid" } }
+    },
+    "sessionState": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["session_id", "state", "event_id"],
+      "properties": {
+        "session_id": { "$ref": "#/$defs/uuid" },
+        "state": {
+          "enum": [
+            "disconnected", "discovering", "pairing", "connecting", "ready",
+            "teacher_speaking", "awaiting_learner", "recording", "processing",
+            "reconnecting", "recoverable_error", "fatal_error", "ending"
+          ]
+        },
+        "event_id": { "$ref": "#/$defs/uuid" }
+      }
+    },
+    "sessionCancel": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["session_id", "reason"],
+      "properties": {
+        "session_id": { "$ref": "#/$defs/uuid" },
+        "reason": { "enum": ["user", "disconnect", "timeout"] }
+      }
+    },
+    "sessionEnded": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["session_id", "reason"],
+      "properties": {
+        "session_id": { "$ref": "#/$defs/uuid" },
+        "reason": { "enum": ["cancelled", "completed", "disconnected"] }
+      }
+    },
+    "playbackCompleted": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["session_id", "turn_id"],
+      "properties": {
+        "session_id": { "$ref": "#/$defs/uuid" },
+        "turn_id": { "$ref": "#/$defs/uuid" }
+      }
+    },
+    "recordingStarted": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["session_id", "utterance_id"],
+      "properties": {
+        "session_id": { "$ref": "#/$defs/uuid" },
+        "utterance_id": { "$ref": "#/$defs/uuid" }
+      }
+    },
+    "recordingSubmitted": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["session_id", "utterance_id", "duration_us", "audio_reference"],
+      "properties": {
+        "session_id": { "$ref": "#/$defs/uuid" },
+        "utterance_id": { "$ref": "#/$defs/uuid" },
+        "duration_us": { "type": "integer", "minimum": 1, "maximum": 30000000 },
+        "audio_reference": { "const": "webrtc" }
+      }
+    },
+    "teacherTurn": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "session_id", "turn_id", "text", "locale", "provider_id", "audio_format",
+        "sample_rate_hz", "duration_us", "audio_base64", "word_alignment",
+        "phoneme_alignment"
+      ],
+      "properties": {
+        "session_id": { "$ref": "#/$defs/uuid" },
+        "turn_id": { "$ref": "#/$defs/uuid" },
+        "text": { "type": "string", "minLength": 1, "maxLength": 2048 },
+        "locale": { "type": "string", "pattern": "^[a-z]{2,3}(-[A-Z]{2})?$", "maxLength": 16 },
+        "provider_id": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "audio_format": { "const": "wav" },
+        "sample_rate_hz": { "enum": [16000, 24000, 48000] },
+        "duration_us": { "type": "integer", "minimum": 1, "maximum": 30000000 },
+        "audio_base64": { "type": "string", "minLength": 4, "maxLength": 1398104 },
+        "word_alignment": { "type": "null" },
+        "phoneme_alignment": { "type": "null" }
+      }
+    },
+    "transcript": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["session_id", "utterance_id", "text", "locale", "provider_id"],
+      "properties": {
+        "session_id": { "$ref": "#/$defs/uuid" },
+        "utterance_id": { "$ref": "#/$defs/uuid" },
+        "text": { "type": "string", "minLength": 1, "maxLength": 2048 },
+        "locale": { "type": "string", "pattern": "^[a-z]{2,3}(-[A-Z]{2})?$", "maxLength": 16 },
+        "provider_id": { "type": "string", "minLength": 1, "maxLength": 64 }
+      }
+    },
+    "rendererReady": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["renderer_id", "renderer_kind", "protocol_version"],
+      "properties": {
+        "renderer_id": { "$ref": "#/$defs/uuid" },
+        "renderer_kind": { "const": "godot" },
+        "protocol_version": { "const": "1.0" }
+      }
+    },
+    "rendererCommand": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["session_id", "command_id", "action", "media_start_us", "duration_us"],
+      "properties": {
+        "session_id": { "$ref": "#/$defs/uuid" },
+        "command_id": { "$ref": "#/$defs/uuid" },
+        "action": {
+          "enum": [
+            "session_started", "teacher_speaking", "awaiting_learner", "recording",
+            "processing", "reset"
+          ]
+        },
+        "media_start_us": { "type": "integer", "minimum": 0 },
+        "duration_us": {
+          "oneOf": [
+            { "type": "null" },
+            { "type": "integer", "minimum": 1, "maximum": 30000000 }
+          ]
+        }
+      }
+    },
+    "rendererAck": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["command_id", "applied"],
+      "properties": {
+        "command_id": { "$ref": "#/$defs/uuid" },
+        "applied": { "type": "boolean" }
+      }
+    },
+    "error": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "message", "retryable"],
+      "properties": {
+        "code": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "message": { "type": "string", "maxLength": 512 },
+        "retryable": { "type": "boolean" },
+        "session_id": {
+          "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/uuid" }]
+        }
+      }
+    }
+  }
+}

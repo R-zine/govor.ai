@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://govor.ai/contracts/v1/session-state.schema.json",
+  "title": "SessionState",
+  "type": "string",
+  "enum": [
+    "disconnected",
+    "discovering",
+    "pairing",
+    "connecting",
+    "ready",
+    "teacher_speaking",
+    "awaiting_learner",
+    "recording",
+    "processing",
+    "reconnecting",
+    "recoverable_error",
+    "fatal_error",
+    "ending"
+  ]
+}

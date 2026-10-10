@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://govor.ai/contracts/v1/signaling-message.schema.json",
+  "title": "SignalingMessage",
+  "$defs": {
+    "base": {
+      "type": "object",
+      "required": ["protocol_version", "message_type", "correlation_id", "payload"],
+      "properties": {
+        "protocol_version": { "const": "1.0" },
+        "message_type": { "type": "string" },
+        "correlation_id": { "type": "string", "format": "uuid" },
+        "payload": { "type": "object" }
+      }
+    },
+    "emptyPayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "maxProperties": 0
+    }
+  },
+  "unevaluatedProperties": false,
+  "oneOf": [
+    {
+      "allOf": [
+        { "$ref": "#/$defs/base" },
+        {
+          "properties": {
+            "message_type": { "enum": ["webrtc.offer", "webrtc.answer"] },
+            "payload": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["sdp"],
+              "properties": {
+                "sdp": { "type": "string", "minLength": 1, "maxLength": 1048576 }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "allOf": [
+        { "$ref": "#/$defs/base" },
+        {
+          "properties": {
+            "message_type": { "const": "webrtc.ice_candidate" },
+            "payload": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["candidate", "sdp_mid", "sdp_mline_index"],
+              "properties": {
+                "candidate": { "type": "string", "maxLength": 8192 },
+                "sdp_mid": { "type": ["string", "null"], "maxLength": 128 },
+                "sdp_mline_index": { "type": ["integer", "null"], "minimum": 0 }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "allOf": [
+        { "$ref": "#/$defs/base" },
+        {
+          "properties": {
+            "message_type": { "const": "auth.request" },
+            "payload": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["token"],
+              "properties": {
+                "token": { "type": "string", "minLength": 32, "maxLength": 256 }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "allOf": [
+        { "$ref": "#/$defs/base" },
+        {
+          "properties": {
+            "message_type": { "enum": ["auth.ok", "webrtc.end"] },
+            "payload": { "$ref": "#/$defs/emptyPayload" }
+          }
+        }
+      ]
+    },
+    {
+      "allOf": [
+        { "$ref": "#/$defs/base" },
+        {
+          "properties": {
+            "message_type": { "const": "error" },
+            "payload": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["code", "message", "retryable"],
+              "properties": {
+                "code": { "type": "string", "maxLength": 64 },
+                "message": { "type": "string", "maxLength": 512 },
+                "retryable": { "type": "boolean" }
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

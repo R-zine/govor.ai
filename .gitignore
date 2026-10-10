@@ -1,0 +1,50 @@
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+*.keystore
+*.jks
+*.p12
+local.properties
+
+# Python
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+__pycache__/
+*.py[cod]
+
+# Repository-local tool and download caches
+.cache/
+.tools/
+
+# Android / Gradle
+.gradle/
+**/.kotlin/
+**/build/
+captures/
+*.apk
+*.aab
+
+# .NET / Godot
+**/bin/
+**/obj/
+apps/renderer/.godot/
+apps/renderer/Builds/
+
+# Runtime data (never commit recordings or learner data)
+data/
+recordings/
+benchmarks/results/
+
+# Editors / OS
+.idea/
+.vscode/
+*.user
+*.suo
+.DS_Store
+Thumbs.db

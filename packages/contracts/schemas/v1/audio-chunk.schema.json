@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://govor.ai/contracts/v1/audio-chunk.schema.json",
+  "title": "AudioChunk",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "utterance_id",
+    "sequence",
+    "format",
+    "sample_rate_hz",
+    "channels",
+    "end_of_utterance",
+    "audio_base64"
+  ],
+  "properties": {
+    "utterance_id": { "type": "string", "format": "uuid" },
+    "sequence": { "type": "integer", "minimum": 0 },
+    "format": { "enum": ["pcm_s16le", "wav"] },
+    "sample_rate_hz": { "enum": [16000, 24000, 48000] },
+    "channels": { "const": 1 },
+    "end_of_utterance": { "type": "boolean" },
+    "audio_base64": { "type": "string", "contentEncoding": "base64", "maxLength": 1398104 }
+  }
+}

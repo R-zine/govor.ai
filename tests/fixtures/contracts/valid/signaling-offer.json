@@ -1,0 +1,8 @@
+{
+  "protocol_version": "1.0",
+  "message_type": "webrtc.offer",
+  "correlation_id": "92c80ccc-3557-4950-a990-874db42411bb",
+  "payload": {
+    "sdp": "v=0\r\n"
+  }
+}

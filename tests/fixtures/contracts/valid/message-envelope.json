@@ -1,0 +1,8 @@
+{
+  "protocol_version": "1.0",
+  "message_type": "session.start",
+  "correlation_id": "9a352221-6fbd-4dd0-9fee-d14a07998d72",
+  "payload": {
+    "accent": "en-GB"
+  }
+}

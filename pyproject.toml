@@ -1,0 +1,86 @@
+[project]
+name = "govor-ai"
+version = "0.1.0"
+description = "Privacy-first local English teaching host for a Bulgarian learner"
+readme = "README.md"
+requires-python = ">=3.12,<3.14"
+dependencies = [
+  "fastapi==0.142.4",
+  "jsonschema==4.25.1",
+  "pydantic==2.11.9",
+  "pydantic-settings==2.11.0",
+  "uvicorn[standard]==0.37.0",
+]
+
+[project.optional-dependencies]
+media = [
+  "aiortc==1.15.0",
+  "av==14.2.0",
+  "numpy==2.3.3",
+]
+
+[dependency-groups]
+dev = [
+  "httpx==0.28.1",
+  "mypy==1.18.2",
+  "pip-audit==2.9.0",
+  "pre-commit==4.3.0",
+  "pytest==9.1.1",
+  "pytest-asyncio==1.4.0",
+  "pytest-cov==7.0.0",
+  "ruff==0.13.3",
+]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+addopts = "--strict-config --strict-markers"
+testpaths = ["apps/host/tests", "packages/domain/tests", "tests/contracts", "tests/integration"]
+pythonpath = [
+  "apps/host/src",
+  "packages/domain/src",
+  "packages/contracts/python",
+  "services/media/src",
+]
+markers = [
+  "hardware: requires physical hardware and is never satisfied by a mock",
+  "integration: crosses process or module boundaries",
+]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+extend-exclude = [
+  ".cache",
+  ".tools",
+  ".venv",
+  "apps/renderer/.godot",
+  "apps/android/build",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "S"]
+ignore = ["S101"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+files = [
+  "apps/host/src",
+  "packages/domain/src",
+  "packages/contracts/python",
+]
+plugins = ["pydantic.mypy"]
+
+[tool.coverage.run]
+branch = true
+source = [
+  "apps/host/src",
+  "packages/domain/src",
+  "packages/contracts/python",
+]
+
+[tool.coverage.report]
+show_missing = true
+fail_under = 85

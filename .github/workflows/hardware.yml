@@ -1,0 +1,21 @@
+name: Milestone 9 hardware acceptance
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  media-hardware:
+    if: ${{ vars.GOVOR_HARDWARE_RUNNER_READY == 'true' }}
+    runs-on: [self-hosted, Windows, govor-media-hardware]
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Bootstrap without changing machine-global configuration
+        shell: pwsh
+        run: ./scripts/bootstrap.ps1 -IncludeMedia
+      - name: Run physical-device hardware suite
+        shell: pwsh
+        run: ./scripts/test.ps1 -Scope hardware
