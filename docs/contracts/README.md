@@ -18,6 +18,13 @@ events, host state/turn/error events, and the loopback Godot command/acknowledge
 Unknown message types and payload fields are rejected. Session, turn, utterance, command, event,
 and correlation identifiers are UUIDs; media durations and offsets are integer microseconds.
 
+`local-ai-dialogue.schema.json` is the closed model-output shape used at the local inference
+boundary. It permits only an intent, bounded reply text, `en-GB`/`bg-BG` locale, and a proposed
+exercise-advance boolean. It is not a wire envelope because it never leaves the trusted desktop;
+the same closed shape is supplied to llama.cpp constrained generation and independently validated
+before domain policy applies. An explicit negative fixture proves that an injected renderer action
+is rejected.
+
 Speech messages must include locale, format, sample rate, channel count, utterance ID, and timing
 reference. Media timing uses integer microseconds relative to the associated media item. Null
 alignment means unavailable; it never authorizes guessed timestamps.

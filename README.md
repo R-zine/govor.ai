@@ -9,20 +9,22 @@ owns WebRTC and the native Android client owns display/audio/microphone interact
 part of the project stack.
 
 The project is under active development. Milestone 0 established a reproducible monorepo,
-Milestone 1 completed the native-emulator media architecture proof, and Milestone 2 completed the
-validated deterministic session skeleton across the host, Android, and Godot. Local AI work begins
-in Milestone 3. Physical-phone, Wi-Fi, hardware-codec, performance, and soak acceptance remains
-mandatory in the final release milestone.
+Milestone 1 completed the native-emulator media architecture proof, Milestone 2 completed the
+validated session skeleton, and Milestone 3 integrated local bilingual recognition/dialogue with
+whisper.cpp, llama.cpp, and Qwen3. Physical-phone, Wi-Fi, hardware-codec, performance, and soak
+acceptance remains mandatory in the final release milestone.
 
 ## Quick start (Windows PowerShell)
 
 ```powershell
-./scripts/bootstrap.ps1 -IncludeMedia -IncludeRenderer
+./scripts/bootstrap.ps1 -IncludeMedia -IncludeRenderer -IncludeLocalAi
 ./scripts/test.ps1 -Scope all
 ./scripts/dev.ps1 -Mode mock
+./scripts/dev.ps1 -Mode local -PairingToken '<at-least-32-random-characters>'
 ```
 
-The mock host and Godot control client bind/connect on loopback only and never call a cloud service.
+The fake/local host, local AI services, and Godot control client bind/connect on loopback only and
+never call a cloud service after the pinned artifacts are downloaded.
 The exported renderer must exist before `dev.ps1` starts the combined development stack. See
 `docs/development/setup.md` and `docs/milestones/STATUS.md` for prerequisites, verified results,
 and exact resume commands.
@@ -32,7 +34,8 @@ and exact resume commands.
 - Cloud providers and telemetry are absent and therefore disabled.
 - Local inference services must remain loopback-only.
 - Microphone recordings and learner data are ignored and must not be committed.
-- The development mock is clearly identified as `provider_mode=fake`; it is not production AI.
+- Health metadata distinguishes fake and local providers. Milestone 3 local inference is real, but
+  its diagnostic response tone is not TTS; natural speech begins in Milestone 4.
 - The Milestone 1 media peer is real WebRTC with generated diagnostic media, not a provider mock;
   its cleartext trusted-LAN signaling and debug APK are not production-safe.
 - No hardware acceptance claim is made without a physical Android device test record.

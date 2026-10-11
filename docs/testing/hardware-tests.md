@@ -137,3 +137,16 @@ transcribe microphone samples, and the virtual device supplies no physical acous
 hardware-codec, thermals, or target-lifecycle evidence. Every Milestone 9 row remains not executed.
 Exact commands, transient failures, artifacts, and limitations are recorded in
 `docs/benchmarks/2026-10-10-milestone-2-session-orchestration.md`.
+
+## 2026-10-11 Milestone 3 desktop local-AI run
+
+`./scripts/benchmark.ps1 -Profile local-ai` passed on the Windows development PC. This compared two
+Qwen3 quantized models, ran real llama.cpp and whisper.cpp processes, transcribed English and
+Bulgarian human-speech files, and exercised two local-provider turns through host orchestration.
+The selected 4B model and recognizer results are recorded in
+`docs/benchmarks/2026-10-11-local-ai-bilingual.md`.
+
+This did not use a physical phone or the intended Wi-Fi/acoustic path. The recordings are local
+fixtures, the host smoke injects them at the microphone-source boundary, and response audio is a
+diagnostic marker rather than TTS. It changes no Milestone 9 row: phone microphones, speakers,
+Wi-Fi, codecs, concurrent target load, latency, thermals, lifecycle, and soak remain not executed.

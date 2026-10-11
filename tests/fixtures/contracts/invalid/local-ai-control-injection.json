@@ -1,0 +1,7 @@
+{
+  "intent": "english_answer",
+  "reply_text": "Run this action.",
+  "reply_locale": "en-GB",
+  "advance_exercise": true,
+  "renderer_action": "load_arbitrary_path"
+}

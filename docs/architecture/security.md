@@ -6,9 +6,9 @@ payload limits, timeouts, rate limits, and encrypted transport.
 
 ## Current development posture
 
-The deterministic mock host binds to `127.0.0.1` by default. `scripts/dev.ps1` refuses a LAN bind
-because pairing and TLS are not implemented yet. This makes the mock usable locally without
-pretending it is safe for a phone connection.
+The fake and local hosts bind to `127.0.0.1` by default. `scripts/dev.ps1` refuses a LAN control
+bind because pairing and TLS are not implemented yet. This makes development usable through
+`adb reverse` without pretending the control endpoint is safe for a phone-facing LAN.
 
 The Milestone 2 Android control check reaches that loopback listener only through debug-only
 `adb reverse`; `/v1/control` is not authenticated and must not be exposed on a LAN. It caps messages
@@ -31,6 +31,13 @@ opens no socket, is not reachable from the LAN, contains only transient rendered
 application-owned PCM ring, and disappears when the last process handle closes. It is not an
 authentication boundary: the renderer and media peer must run as the same trusted desktop user.
 
+llama.cpp and the media capture API also bind only to loopback. The host rejects non-loopback
+model/capture URLs. Model output is untrusted: generation uses a closed JSON schema, Pydantic
+forbids extra fields, and domain policy—not the model—decides whether an exercise may advance. No
+model field can become a renderer action, path, URL, tool call, or command. whisper.cpp receives an
+ephemeral per-utterance WAV and writes bounded JSON under ignored `.cache`; both files are removed
+in a `finally` path. Normal logs and benchmark artifacts omit raw audio and transcript text.
+
 Godot's Milestone 2 control client also opens an outbound loopback WebSocket; the renderer opens no
 listener. It accepts a closed action set, validates UUIDs and integer-microsecond bounds, and
 acknowledges commands. This loopback connection relies on the trusted desktop-user boundary and is
@@ -49,7 +56,8 @@ not a LAN authentication mechanism.
 - Redact secrets and personal content. Do not save recordings or full transcripts by default.
 - Cloud networking remains absent/disabled unless the learner explicitly selects a provider.
 
-The Milestone 2 security review deliberately keeps unauthenticated control on loopback and rejects
-LAN binding. Pairing, certificate lifecycle, abuse/rate limits, device authorization, and firewall
-rules remain unimplemented release controls. The current host is not production-ready, and the
-physical-network path must pass the Milestone 9 release-security gate.
+The current security review deliberately keeps unauthenticated control on loopback and rejects LAN
+binding. The media server's long development token authenticates only the cleartext feasibility
+path; it is not release pairing. Certificate lifecycle, abuse/rate limits, device authorization,
+and firewall rules remain unimplemented release controls. The current host is not production-ready,
+and the physical-network path must pass the Milestone 9 release-security gate.

@@ -7,7 +7,9 @@ from dataclasses import dataclass
 from typing import Literal
 
 from aiortc import MediaStreamError, MediaStreamTrack, RTCPeerConnection, RTCSessionDescription
+from av import AudioFrame
 
+from .microphone_capture import MicrophoneCapture
 from .renderer_bridge import RendererBridgeSource
 from .tracks import ApplicationAudioTrack, DiagnosticVideoTrack
 
@@ -24,7 +26,12 @@ class MicrophoneMetrics:
 class MediaPeer:
     """One Windows media peer for one Android lesson client."""
 
-    def __init__(self, *, media_source: Literal["diagnostic", "renderer"] = "diagnostic") -> None:
+    def __init__(
+        self,
+        *,
+        media_source: Literal["diagnostic", "renderer"] = "diagnostic",
+        microphone_capture: MicrophoneCapture | None = None,
+    ) -> None:
         self.connection = RTCPeerConnection()
         self._renderer_bridge: RendererBridgeSource | None = None
         self.video: MediaStreamTrack
@@ -37,6 +44,7 @@ class MediaPeer:
             self.video = DiagnosticVideoTrack()
             self.audio = ApplicationAudioTrack()
         self.microphone = MicrophoneMetrics()
+        self._microphone_capture = microphone_capture
         self.microphone_frame_received = asyncio.Event()
         self._tasks: set[asyncio.Task[None]] = set()
         self.connection.addTrack(self.video)
@@ -80,6 +88,8 @@ class MediaPeer:
                 self.microphone.frames_received += 1
                 self.microphone.samples_received += getattr(frame, "samples", 0)
                 self.microphone.sample_rate_hz = getattr(frame, "sample_rate", None)
+                if self._microphone_capture is not None and isinstance(frame, AudioFrame):
+                    self._microphone_capture.append(frame)
                 if self.microphone.frames_received == 1:
                     LOGGER.info(
                         "Received first client microphone frame: sample_rate_hz=%s samples=%s",

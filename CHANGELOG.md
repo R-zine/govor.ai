@@ -24,6 +24,10 @@ All notable project changes are recorded here. The project is not yet released.
 - Host-owned deterministic lesson orchestration, native Android lesson controls, and an outbound
   loopback Godot control client with cancellation, retry, timeouts, recoverable failures, and
   bounded cleanup.
+- Provider-neutral local AI interfaces, llama.cpp/Qwen3 dialogue, whisper.cpp multilingual
+  recognition, bilingual lesson policy, bounded session memory, and ephemeral microphone capture.
+- Reproducible Qwen3 4B/1.7B model comparison and English/Bulgarian human-speech benchmark with
+  pinned runtimes, weights, fixture provenance, and explicit privacy/accuracy limits.
 
 ### Changed
 
@@ -33,7 +37,9 @@ All notable project changes are recorded here. The project is not yet released.
   physical phone/Wi-Fi/target-hardware acceptance bundle to the mandatory Milestone 9 release
   gate without treating emulator evidence as hardware evidence.
 - Completed Milestone 2 on unit, integration, Godot runtime, real aiortc, and API 34 emulator
-  evidence; real local AI integration begins in Milestone 3.
+  evidence.
+- Completed Milestone 3 on real local dialogue/recognition, structured bilingual fixtures, failure
+  handling, measured latency/memory, and host integration; natural speech remains Milestone 4.
 
 ### Fixed
 

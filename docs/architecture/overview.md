@@ -24,8 +24,10 @@ media item. Wall-clock timestamps are UTC ISO 8601 and are never used for media 
 
 - `fake`: deterministic scripted lesson and generated test tone. Development/test only, labeled
   in health and response metadata.
-- `local`: future production adapters for llama.cpp, whisper.cpp, Kokoro, Bulgarian speech, and
-  alignment. These are not implemented in Milestone 0.
+- `local`: real loopback-only llama.cpp dialogue and whisper.cpp multilingual recognition. The
+  selected dialogue model is Qwen3 4B Q4_K_M; a deterministic policy owns teaching invariants and
+  bounded session memory. The current audio response is explicitly a Milestone 3 diagnostic tone,
+  not speech. Kokoro, Bulgarian speech, and alignment begin in Milestone 4.
 - `cloud`: optional future adapters, independently configured, opt-in, and disabled by default.
 
 The host should remain useful in deterministic scripted lesson mode if local model inference
@@ -43,6 +45,22 @@ Provider calls run in cancellable tasks with explicit deadlines, while playback 
 steps have their own deadlines. A connection owns at most one lesson session, and disconnect/end
 cancels outstanding work, resets the renderer, and removes the session from the host registry.
 See ADR-0005.
+
+## Local AI boundary
+
+`packages/provider_interfaces` defines framework-neutral recognition, dialogue, speech, and lesson
+types. `services/local_ai` adapts the pinned local runtimes; it does not own session transport.
+`packages/domain` owns conservative script-level language detection, explicit help-intent
+classification, the bilingual policy, lesson context, and a configurable bounded history window.
+
+The llama.cpp server accepts OpenAI-compatible requests only on loopback. Model output is
+constrained to a closed JSON schema, parsed with unknown fields forbidden, then passed through the
+deterministic policy. The policy prevents clarification, reformulation, repeat, slower-speech,
+vocabulary, ambiguity, and recognition-error turns from advancing an exercise. whisper.cpp reads
+one temporary WAV and produces one bounded JSON file; both are deleted after the call. A successful
+empty recognition is distinct from malformed provider output and produces a repeat request without
+an invented transcript. The server URL, provider identity, model path, context size, GPU layers,
+and memory window are configurable without changing domain code. See ADR-0006.
 
 ## Media architecture decision
 

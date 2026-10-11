@@ -29,6 +29,7 @@ def test_schema_is_valid_draft_2020_12(schema_path: Path) -> None:
         ("signaling-message.schema.json", "signaling-offer.json"),
         ("control-message.schema.json", "control-teacher-turn.json"),
         ("control-message.schema.json", "control-renderer-command.json"),
+        ("local-ai-dialogue.schema.json", "local-ai-dialogue.json"),
     ],
 )
 def test_positive_contract_fixtures(schema_name: str, fixture_name: str) -> None:
@@ -44,6 +45,7 @@ def test_positive_contract_fixtures(schema_name: str, fixture_name: str) -> None
         ("message-envelope.schema.json", "message-envelope-missing-correlation.json"),
         ("signaling-message.schema.json", "signaling-unknown-field.json"),
         ("control-message.schema.json", "control-recording-extra-field.json"),
+        ("local-ai-dialogue.schema.json", "local-ai-control-injection.json"),
     ],
 )
 def test_negative_contract_fixtures(schema_name: str, fixture_name: str) -> None:

@@ -8,7 +8,7 @@ criterion has direct evidence).
 | 0. Repository foundation | complete | Master specification | Source-only bootstrap and full suite pass; contracts, pre-commit, CI syntax, mock mode, and pinned/locked dependencies verified |
 | 1. Native streaming proof | complete | M0 foundation | Native emulator diagnostic and Godot media, microphone return, reconnect, cleanup, and development architecture decision pass |
 | 2. Session orchestration | complete | M1 architecture decision (satisfied) | Complete validated fake turn cycle across host/Android/renderer; cancellation/timeouts/errors; leak-free repeated sessions |
-| 3. Local AI/bilingual | not started | M2 contracts/orchestration | Local LLM/STT, English/Bulgarian/mixed intents, valid structured output, real microphone transcription, measured latency/memory |
+| 3. Local AI/bilingual | complete | M2 contracts/orchestration | Local LLM/STT, English/Bulgarian/mixed intents, valid structured output, human-speech transcription, measured latency/memory |
 | 4. Speech/phonemes | not started | M3 providers | English/Bulgarian TTS/fallback, speed/replay, IPA, real alignment/fallback, synchronized subtitles/word replay |
 | 5. Teaching/progress | not started | M3-4 | Four complete guided scenarios, adaptive explainable teaching, questions do not break lessons, SQLite persistence/resume |
 | 6. Avatar/scenes | not started | M1 media decision, M4 timing | Avatar and four validated dynamic environments, lip sync/fallback, memory/performance evidence |
@@ -44,9 +44,31 @@ Verified software and native-emulator evidence:
 - Injected provider/renderer failures are recoverable; invalid and out-of-order messages are safely
   rejected; every domain transition is tested; 20 repeated sessions leave zero registry entries.
 
-Milestone 2 is complete. Milestone 3 may begin. The fake recognizer does not transcribe media and
-the generated tones are not production speech evidence. Emulator execution remains development
-evidence only and does not satisfy any Milestone 9 physical target-hardware criterion.
+Milestone 2 is complete. Its fakes remain available for deterministic development but are not local
+AI evidence. Emulator execution remains development evidence only and does not satisfy any
+Milestone 9 physical target-hardware criterion.
+
+## Milestone 3 acceptance tracking
+
+Verified local software evidence:
+
+- Pinned llama.cpp b11540 Vulkan and whisper.cpp b5454 CPU runtimes, checksum-pinned Qwen3 and
+  multilingual Whisper weights, and a loopback-only development launcher.
+- Qwen3 4B and 1.7B Q4_K_M compared on seven English/Bulgarian/mixed structured cases. Both passed;
+  the 4B default needed one policy correction versus three for 1.7B and fit the development GPU.
+- Real human English and Bulgarian recordings transcribed by whisper.cpp. Both language/keyword
+  checks passed; the Bulgarian output had recorded word errors and is not a perfect-accuracy claim.
+- Provider-neutral interfaces, explicit health capabilities, deterministic language/intent/policy,
+  configurable bounded memory, lesson context, one transient-model retry, and safe scripted fallback.
+- Closed model-output schema rejects unknown/control fields. Tests cover clarification progress,
+  invalid output, timeout, crash, resource exhaustion, silence, ephemeral files, and capture bounds.
+- Real local providers completed a Bulgarian turn followed by an English turn through host
+  orchestration with zero retained recordings and zero leaked sessions.
+
+Milestone 3 is complete. The text conversation path is local and returns naturally to English.
+The 150 ms diagnostic tone is not speech or Milestone 4 evidence. The bounded fixture set is not a
+broad language-quality study, and missing audio categories must be expanded in later evaluation.
+Milestone 4 may begin.
 
 ## Milestone 0 acceptance tracking
 
@@ -98,8 +120,8 @@ Deferred release acceptance (Milestone 9, not a Milestone 1 blocker):
 - Production pairing/WSS and release network security; the development token and cleartext
   signaling remain development-only.
 
-Milestones 1 and 2 are complete on their verified software/native-emulator criteria. Milestone 3
-may begin. The deferred hardware bundle must remain visible and must pass before Milestone 9 can
+Milestones 1–3 are complete on their verified software/native-emulator criteria. Milestone 4 may
+begin. The deferred hardware bundle must remain visible and must pass before Milestone 9 can
 complete.
 
 ## Milestone 9 target-hardware acceptance tracking

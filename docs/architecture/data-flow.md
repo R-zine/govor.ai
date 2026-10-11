@@ -12,13 +12,19 @@
 7. Push-to-talk audio is sent as a bounded authenticated upload or WebRTC track.
 8. The host recognizes speech, classifies intent, applies lesson policy, and creates the next turn.
 
-In the Milestone 2 deterministic skeleton, Android's `/v1/control` connection sends
+Android's `/v1/control` connection sends
 `session.start`, playback completion, recording start/submission metadata, retry, and cancellation.
-The microphone itself remains on the WebRTC track. The unmistakably fake recognizer intentionally
-uses only the bounded utterance duration/reference and returns a scripted transcript; this proves
-orchestration, not speech recognition. A short bounded WAV tone is carried in `teacher.turn` and
-played by Android solely for the fake control-flow proof. Production speech/media routing is a
-Milestone 4 concern and this development tone is not a TTS architecture commitment.
+The microphone itself remains on the WebRTC track. In `local` mode, recording start opens a single
+bounded capture in the media service; received frames are resampled to 16 kHz mono PCM. Submission
+closes the capture and returns an in-memory WAV over a loopback-only internal HTTP endpoint. The
+host passes that WAV to whisper.cpp, deletes the recognizer's temporary input/output files, sends a
+validated transcript when speech exists, and invokes the bilingual dialogue pipeline.
+
+The local dialogue adapter sends the recognized utterance, lesson context, deterministic intent
+hint, and at most the configured number of recent turns to llama.cpp. Closed structured output is
+parsed, then the domain policy can reject unsafe locale/progress choices and use a deterministic
+fallback. The current bounded WAV in `teacher.turn` is a 150 ms diagnostic marker; it is explicitly
+not synthesized speech. Real TTS and its final media routing are Milestone 4 work.
 
 For every state change, the host dispatches an allow-listed `renderer.command` over a separate
 loopback WebSocket opened by Godot and waits for `renderer.ack`. Renderer loss becomes a
@@ -44,8 +50,9 @@ and are idempotent. Disconnect transitions to `reconnecting`; lesson state remai
 
 Raw microphone audio is held only long enough to process an utterance and is not persisted by
 default. Normal logs contain event names, timing, correlation IDs, and error classes—not audio,
-credentials, or full transcripts. The scripted transcript is sent to the active Android session
-but is not written to normal logs. Progress is stored locally in SQLite in a later milestone.
+credentials, or full transcripts. The transcript is sent to the active Android session but is not
+written to normal logs. Conversation memory is session-local, bounded, and cleared with its lesson
+service; progress is stored locally in SQLite in a later milestone.
 
 ## Timing
 

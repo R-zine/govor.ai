@@ -7,6 +7,8 @@ $script:CacheRoot = Join-Path $script:RepositoryRoot '.cache'
 $script:GodotVersion = '4.7.2'
 $script:GodotRelease = "$($script:GodotVersion)-stable"
 $script:GodotTemplateVersion = "$($script:GodotVersion).stable.mono"
+$script:LlamaCppBuild = 'b11540'
+$script:WhisperCppBuild = 'b5454'
 
 function Initialize-GovorEnvironment {
     New-Item -ItemType Directory -Force -Path $script:ToolsRoot | Out-Null
@@ -84,6 +86,50 @@ function Get-GovorGodotEditor {
     }
 
     throw "Godot $($script:GodotRelease) .NET was not found. Run scripts/bootstrap.ps1 -IncludeRenderer or set GOVOR_GODOT_EDITOR."
+}
+
+function Get-GovorLlamaServer {
+    $root = Join-Path $script:ToolsRoot "llama.cpp\$($script:LlamaCppBuild)"
+    $executable = Get-ChildItem -LiteralPath $root -Filter 'llama-server.exe' -Recurse -ErrorAction SilentlyContinue |
+        Select-Object -First 1 -ExpandProperty FullName
+    if (-not $executable) {
+        throw 'llama.cpp server is missing. Run scripts/bootstrap.ps1 -IncludeLocalAi.'
+    }
+    return $executable
+}
+
+function Get-GovorWhisperCli {
+    $root = Join-Path $script:ToolsRoot "whisper.cpp\$($script:WhisperCppBuild)"
+    $executable = Get-ChildItem -LiteralPath $root -Filter 'whisper-cli.exe' -Recurse -ErrorAction SilentlyContinue |
+        Select-Object -First 1 -ExpandProperty FullName
+    if (-not $executable) {
+        throw 'whisper.cpp CLI is missing. Run scripts/bootstrap.ps1 -IncludeLocalAi.'
+    }
+    return $executable
+}
+
+function Get-GovorLlamaModel {
+    $model = Join-Path $script:ToolsRoot 'models\qwen\Qwen3-4B-Q4_K_M.gguf'
+    if (-not (Test-Path -LiteralPath $model)) {
+        throw 'The Qwen3 model is missing. Run scripts/bootstrap.ps1 -IncludeLocalAi.'
+    }
+    return $model
+}
+
+function Get-GovorLlamaCandidateModel {
+    $model = Join-Path $script:ToolsRoot 'models\qwen\Qwen3-1.7B-Q4_K_M.gguf'
+    if (-not (Test-Path -LiteralPath $model)) {
+        throw 'The Qwen3 1.7B comparison model is missing. Run scripts/bootstrap.ps1 -IncludeLocalAi.'
+    }
+    return $model
+}
+
+function Get-GovorWhisperModel {
+    $model = Join-Path $script:ToolsRoot 'models\whisper\ggml-small.bin'
+    if (-not (Test-Path -LiteralPath $model)) {
+        throw 'The multilingual Whisper model is missing. Run scripts/bootstrap.ps1 -IncludeLocalAi.'
+    }
+    return $model
 }
 
 function Initialize-GovorAndroidDebugKeystore {

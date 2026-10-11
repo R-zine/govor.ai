@@ -19,6 +19,7 @@ from uuid import UUID, uuid4
 from govor_contracts import (
     LearnerTranscriptPayload,
     MessageEnvelope,
+    ProviderCapabilities,
     RecordingStartedPayload,
     RecordingSubmittedPayload,
     RendererAction,
@@ -33,10 +34,11 @@ from govor_contracts import (
     TeacherTurnPayload,
 )
 from govor_domain import InvalidTransition, SessionEvent, SessionMachine, SessionState
+from govor_provider_interfaces import LessonResult, TeacherTurn, UtteranceAudio
 from pydantic import BaseModel, ValidationError
 
 from .config import Settings
-from .fake_lesson import AudioReference, FakeLessonResult, FakeTeacherTurn
+from .microphone import MicrophoneAudioSource
 from .renderer_gateway import RendererControl, RendererUnavailable
 
 LOGGER = logging.getLogger("uvicorn.error")
@@ -44,9 +46,12 @@ SendJson = Callable[[dict[str, object]], Awaitable[None]]
 
 
 class LessonService(Protocol):
-    async def initial_turn(self) -> FakeTeacherTurn: ...
+    @property
+    def capabilities(self) -> tuple[ProviderCapabilities, ...]: ...
 
-    async def respond(self, audio: AudioReference) -> FakeLessonResult: ...
+    async def initial_turn(self) -> TeacherTurn: ...
+
+    async def respond(self, audio: UtteranceAudio) -> LessonResult: ...
 
 
 class SessionRegistry:
@@ -88,12 +93,14 @@ class ControlSession:
         send_json: SendJson,
         renderer: RendererControl,
         lesson: LessonService,
+        microphone: MicrophoneAudioSource,
         settings: Settings,
         registry: SessionRegistry,
     ) -> None:
         self._send_json = send_json
         self._renderer = renderer
         self._lesson = lesson
+        self._microphone = microphone
         self._settings = settings
         self._registry = registry
         self._send_lock = asyncio.Lock()
@@ -216,7 +223,7 @@ class ControlSession:
             await self._recoverable_failure(
                 correlation_id,
                 code=_operation_error_code(error),
-                message="The fake lesson provider did not produce a turn.",
+                message="The lesson provider did not produce a turn.",
             )
 
     async def _playback_completed(
@@ -244,6 +251,16 @@ class ControlSession:
         self._cancel_deadline()
         self._machine.apply(SessionEvent.RECORDING_STARTED, correlation_id)
         self._utterance_id = payload.utterance_id
+        try:
+            async with asyncio.timeout(self._settings.capture_timeout_seconds):
+                await self._microphone.begin(payload.utterance_id)
+        except Exception as error:
+            await self._recoverable_failure(
+                correlation_id,
+                code=_operation_error_code(error),
+                message="Microphone capture could not be started.",
+            )
+            return
         await self._renderer_command("recording", correlation_id)
         await self._send_state(correlation_id)
         self._arm_deadline(
@@ -272,19 +289,24 @@ class ControlSession:
     ) -> None:
         try:
             async with asyncio.timeout(self._settings.provider_timeout_seconds):
-                result = await self._lesson.respond(AudioReference(duration_us=payload.duration_us))
+                audio = await self._microphone.finish(
+                    payload.utterance_id,
+                    payload.duration_us,
+                )
+                result = await self._lesson.respond(audio)
             session_id = self._require_active_session()
-            await self._send(
-                "learner.transcript",
-                correlation_id,
-                LearnerTranscriptPayload(
-                    session_id=session_id,
-                    utterance_id=payload.utterance_id,
-                    text=result.transcript.text,
-                    locale=result.transcript.locale,
-                    provider_id=result.transcript.provider_id,
-                ),
-            )
+            if result.transcript is not None:
+                await self._send(
+                    "learner.transcript",
+                    correlation_id,
+                    LearnerTranscriptPayload(
+                        session_id=session_id,
+                        utterance_id=payload.utterance_id,
+                        text=result.transcript.text,
+                        locale=result.transcript.locale,
+                        provider_id=result.transcript.provider_id,
+                    ),
+                )
             await self._issue_teacher_turn(result.turn, correlation_id, response=True)
         except asyncio.CancelledError:
             raise
@@ -292,12 +314,12 @@ class ControlSession:
             await self._recoverable_failure(
                 correlation_id,
                 code=_operation_error_code(error),
-                message="The fake lesson provider could not complete the turn.",
+                message="The lesson provider could not complete the turn.",
             )
 
     async def _issue_teacher_turn(
         self,
-        turn: FakeTeacherTurn,
+        turn: TeacherTurn,
         correlation_id: UUID,
         *,
         response: bool,
@@ -466,6 +488,7 @@ class ControlSession:
             return
         self._cancel_work()
         self._cancel_deadline()
+        await self._microphone.cancel(self._utterance_id)
         correlation_id = uuid4()
         if self._machine.state not in {SessionState.DISCONNECTED, SessionState.ENDING}:
             self._machine.apply(SessionEvent.END_REQUESTED, correlation_id)

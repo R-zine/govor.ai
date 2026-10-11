@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://govor.ai/contracts/v1/local-ai-dialogue.schema.json",
+  "title": "Validated local dialogue model output",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["intent", "reply_text", "reply_locale", "advance_exercise"],
+  "properties": {
+    "intent": {
+      "enum": [
+        "english_answer",
+        "bulgarian_clarification",
+        "bulgarian_reformulation",
+        "repeat",
+        "slower_speech",
+        "vocabulary_explanation",
+        "ambiguous",
+        "recognition_error"
+      ]
+    },
+    "reply_text": { "type": "string", "minLength": 1, "maxLength": 2048 },
+    "reply_locale": { "enum": ["en-GB", "bg-BG"] },
+    "advance_exercise": { "type": "boolean" }
+  }
+}

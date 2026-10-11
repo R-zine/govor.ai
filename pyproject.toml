@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.12,<3.14"
 dependencies = [
   "fastapi==0.142.4",
+  "httpx==0.28.1",
   "jsonschema==4.25.1",
   "pydantic==2.11.9",
   "pydantic-settings==2.11.0",
@@ -21,7 +22,6 @@ media = [
 
 [dependency-groups]
 dev = [
-  "httpx==0.28.1",
   "mypy==1.18.2",
   "pip-audit==2.9.0",
   "pre-commit==4.3.0",
@@ -36,11 +36,19 @@ package = false
 
 [tool.pytest.ini_options]
 addopts = "--strict-config --strict-markers"
-testpaths = ["apps/host/tests", "packages/domain/tests", "tests/contracts", "tests/integration"]
+testpaths = [
+  "apps/host/tests",
+  "packages/domain/tests",
+  "services/local_ai/tests",
+  "tests/contracts",
+  "tests/integration",
+]
 pythonpath = [
   "apps/host/src",
   "packages/domain/src",
+  "packages/provider_interfaces/src",
   "packages/contracts/python",
+  "services/local_ai/src",
   "services/media/src",
 ]
 markers = [
@@ -69,7 +77,9 @@ strict = true
 files = [
   "apps/host/src",
   "packages/domain/src",
+  "packages/provider_interfaces/src",
   "packages/contracts/python",
+  "services/local_ai/src",
 ]
 plugins = ["pydantic.mypy"]
 
@@ -78,7 +88,9 @@ branch = true
 source = [
   "apps/host/src",
   "packages/domain/src",
+  "packages/provider_interfaces/src",
   "packages/contracts/python",
+  "services/local_ai/src",
 ]
 
 [tool.coverage.report]

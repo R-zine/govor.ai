@@ -10,7 +10,8 @@ from fastapi.testclient import TestClient
 from govor_contracts import RendererCommandPayload
 from govor_host.app import create_app
 from govor_host.config import Settings
-from govor_host.fake_lesson import AudioReference, FakeLessonService
+from govor_host.fake_lesson import FakeLessonService
+from govor_provider_interfaces import LessonResult, UtteranceAudio
 from starlette.websockets import WebSocketDisconnect
 
 
@@ -30,16 +31,27 @@ class FakeRendererControl:
 
 
 class FailingLessonService(FakeLessonService):
-    async def respond(self, audio: AudioReference):  # type: ignore[no-untyped-def]
+    async def respond(self, audio: UtteranceAudio):  # type: ignore[no-untyped-def]
         _ = audio
         raise RuntimeError("injected provider failure")
 
 
 class SlowLessonService(FakeLessonService):
-    async def respond(self, audio: AudioReference):  # type: ignore[no-untyped-def]
+    async def respond(self, audio: UtteranceAudio):  # type: ignore[no-untyped-def]
         _ = audio
         await asyncio.sleep(60)
         raise AssertionError("cancelled work resumed")
+
+
+class NoSpeechLessonService(FakeLessonService):
+    async def respond(self, audio: UtteranceAudio) -> LessonResult:
+        _ = audio
+        turn = await self.speech.synthesize(
+            "Please try again.",
+            "en-GB",
+            frequency_hz=440.0,
+        )
+        return LessonResult(transcript=None, turn=turn)
 
 
 def envelope(message_type: str, payload: dict[str, object]) -> dict[str, object]:
@@ -64,6 +76,26 @@ def test_health_identifies_fake_mode() -> None:
         "network_scope": "loopback",
         "renderer_connected": True,
         "active_sessions": 0,
+        "providers": [
+            {
+                "provider_id": "fake-scripted-stt",
+                "provider_kind": "speech_recognition",
+                "local": True,
+                "features": ["deterministic", "development_only"],
+            },
+            {
+                "provider_id": "fake-scripted-dialogue",
+                "provider_kind": "dialogue",
+                "local": True,
+                "features": ["deterministic", "development_only"],
+            },
+            {
+                "provider_id": "fake-scripted-speech",
+                "provider_kind": "speech_synthesis",
+                "local": True,
+                "features": ["deterministic", "development_only", "wav"],
+            },
+        ],
     }
 
 
@@ -176,6 +208,33 @@ def test_provider_failure_becomes_recoverable_error() -> None:
     assert failure["payload"]["code"] == "provider_failed"
     assert failure["payload"]["retryable"] is True
     assert app.state.session_registry.active_count == 0
+
+
+def test_no_speech_emits_repeat_turn_without_an_invented_transcript() -> None:
+    app = create_app(
+        Settings(),
+        renderer=FakeRendererControl(),
+        lesson=NoSpeechLessonService(),
+    )
+    with TestClient(app).websocket_connect("/v1/control") as socket:
+        session_id, turn_id = start_session(socket)
+        utterance_id = enter_recording(socket, session_id, turn_id)
+        socket.send_json(
+            envelope(
+                "learner.recording_submitted",
+                {
+                    "session_id": session_id,
+                    "utterance_id": utterance_id,
+                    "duration_us": 500_000,
+                    "audio_reference": "webrtc",
+                },
+            )
+        )
+        assert socket.receive_json()["payload"]["state"] == "processing"
+        next_message = socket.receive_json()
+
+    assert next_message["message_type"] == "teacher.turn"
+    assert next_message["payload"]["text"] == "Please try again."
 
 
 def test_cancel_interrupts_provider_work_and_cleans_up() -> None:

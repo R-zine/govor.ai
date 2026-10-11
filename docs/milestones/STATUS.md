@@ -1,6 +1,6 @@
 # Current verified status
 
-Last updated: 2026-10-10
+Last updated: 2026-10-11
 
 ## Outcome
 
@@ -16,8 +16,14 @@ acceptance bundle to Milestone 9; none of that hardware behavior is inferred fro
 Milestone 2 is complete. The host-owned control plane now runs a fully validated deterministic
 turn across the FastAPI host, native Android client, and Godot renderer. It includes strict shared
 contracts, cancellation, retry, explicit deadlines, recoverable failures, correlated redacted
-logging, and bounded cleanup. Milestone 3 may begin. The scripted fake providers do not prove real
-speech recognition, dialogue quality, or speech synthesis.
+logging, and bounded cleanup.
+
+Milestone 3 is complete. The local path now uses real pinned llama.cpp/Qwen3 dialogue and
+whisper.cpp multilingual recognition, provider-neutral interfaces, conservative language/intent
+detection, deterministic bilingual policy, lesson context, configurable bounded memory, explicit
+capabilities, bounded retry/fallback, and ephemeral WebRTC microphone capture. Real English and
+Bulgarian human recordings and a two-turn host integration passed. The current response sound is
+an explicitly labeled 150 ms diagnostic tone; it is not speech synthesis or Milestone 4 evidence.
 
 ADR-0003 now selects Godot 4.7.2 .NET as the only renderer. The earlier proof from the proprietary
 engine was removed completely, including source, project metadata, build scripts, and dependencies.
@@ -57,6 +63,23 @@ measurements fail.
   propagation, and a zero-retention session registry.
 - The fake providers are explicitly named and report explicit capabilities. Fake STT consumes only
   a bounded media reference and duration; it does not inspect or transcribe microphone samples.
+- `packages/provider_interfaces` defines stable recognition/dialogue/speech/lesson types without
+  FastAPI, Godot, Android, or runtime dependencies. Host health reports the active provider IDs,
+  kinds, locality, and sorted features.
+- `services/local_ai` runs Qwen3 4B Q4_K_M through a loopback llama.cpp b11540 Vulkan server and
+  multilingual Whisper small through whisper.cpp b5454 CPU. Qwen3 1.7B Q4_K_M is retained as a
+  checksum-pinned benchmark comparison, not the selected default.
+- Closed structured generation and independent parsing reject extra/control fields. The domain
+  policy owns locale and progress, so clarification, reformulation, vocabulary help, repeat,
+  slower speech, ambiguity, and recognition errors cannot advance an exercise.
+- Conversation memory is scoped to one control connection and compressed to a configurable recent
+  window (eight turns by default). Model unavailability/timeout receives one bounded retry and then
+  a deterministic response; resource exhaustion/malformed output falls back immediately.
+- The media peer resamples microphone frames into one bounded 16 kHz mono capture. Only loopback
+  start/finish/cancel endpoints expose the in-memory WAV to the host. whisper.cpp temporary WAV and
+  JSON files are removed after every result, including failures.
+- Empty valid recognition is treated as no speech, not malformed provider output: no transcript is
+  invented, no memory entry is stored, and the learner receives a Bulgarian request to repeat.
 - Android owns bounded WAV playback and the real WebRTC push-to-talk microphone lifecycle. Godot
   connects outbound to a loopback-only control endpoint and accepts only six visual actions.
 - The emulator smoke deliberately exercises renderer-unavailable recovery before completing a
@@ -68,33 +91,62 @@ measurements fail.
 | --- | --- | --- |
 | `./scripts/bootstrap.ps1 -IncludeMedia -IncludeRenderer -NoDownload` | verified passing | Pinned local Python/.NET/Godot assets and locked dependencies restored without a download |
 | `./scripts/test.ps1 -Scope all` | verified passing | 2026-10-10 final run; Python, contracts, Kotlin, C#, media, Godot, and Android APK build |
-| Python gate | verified passing | Ruff check/format, strict mypy, 46 tests, 87.95% branch coverage |
-| Contract schema gate | verified passing | 12 valid/invalid version 1 schema and shared-fixture tests |
+| Python gate | verified passing | Ruff check/format, strict mypy, 79 tests, 87.26% branch coverage |
+| Contract schema gate | verified passing | 15 schema and valid/invalid shared-fixture tests, including closed local model output |
 | Kotlin gate | verified passing | 9 JVM contract/state-machine tests |
 | Pure C# gate | verified passing | 5 .NET contract/allow-list tests |
-| Media gate | verified passing | Strict mypy and 10 tests, including real aiortc loopback, renderer-buffer validation, and clean remote-track teardown |
+| Media gate | verified passing | Strict mypy and 15 tests, including real aiortc loopback, flushed 48-to-16 kHz microphone resampling, renderer-buffer validation, and clean remote-track teardown |
 | Godot gate | verified passing | Headless import, successful C# build, and self-test marker; offline NuGet vulnerability lookup and Windows certificate-store warnings are recorded below |
 | `./scripts/build.ps1 -Target renderer` | verified passing | 109,372,928-byte Windows export; SHA-256 `65d86d986f0f5508a2dede1bce653bfb21fc6fd8cf06aed43872c0806e679175` |
 | `./scripts/renderer-smoke.ps1` | verified passing | Final run: 5 complete/changing frames, RGB maximum 255, 7 PCM blocks, peak 2621; proof PNG and clean bounded exit |
 | Supervised audible renderer smoke | verified passing | Brief PC check only; tone completion marker at two seconds and process stopped |
 | `./scripts/emulator-renderer-smoke.ps1` | verified passing with limits | Complete fake turn and recovery path; aiortc received non-black 1280x720 Godot RGBA (`rgb_max=255`) and 48 kHz PCM (`peak=2621`); Android reported 120 received/rendered frames, zero drops, over 4.002 seconds (30.0 fps); video and 48 kHz/960-sample microphone return passed again after reconnect |
+| `./scripts/bootstrap.ps1 -IncludeMedia -IncludeRenderer -IncludeLocalAi` | verified passing | Pinned/checksummed runtimes, two Qwen candidates, Whisper model, and human-speech fixtures available; comparison model downloaded from the pinned official revision |
+| `./scripts/benchmark.ps1 -Profile local-ai` | verified passing | Qwen3 4B and 1.7B each passed 7/7 bilingual structured cases; selected 4B, two real STT fixtures, and two-turn host integration passed; all local servers stopped |
+| Qwen3 4B dialogue | verified passing with limits | 1,002.8 ms median, 2,883.6 ms max; 1 policy correction; 2,706,542,592-byte working set and 3,207,282,688-byte peak on this machine |
+| Qwen3 1.7B comparison | verified passing with limits | 688.5 ms median, 2,639.7 ms max; 3 policy corrections; 1,314,185,216-byte working set; comparison only |
+| whisper.cpp human recordings | verified passing with limits | English and Bulgarian language/required-word checks passed at 5,803.9 ms median; Bulgarian had word errors; no broad accuracy claim |
+| Local-provider host turn | verified passing | Bulgarian fixture then English fixture completed one session, returned to English, dispatched expected renderer states, retained zero recordings, and leaked zero sessions |
+| `./scripts/dev.ps1 -Mode local ...` | verified passing | Host, renderer, media, and llama.cpp health passed on loopback; health exposed the three real/diagnostic capabilities; terminating the foreground host stopped ports 8765–8768, Godot, and llama.cpp |
 | Godot emulator screenshot | inconclusive | UI/status captured, but the WebRTC `SurfaceView` area is black in ADB screencaps; transport logs prove non-black input and Android render callbacks, not a screenshot of scene pixels |
 | Renderer-source reconnect/teardown | verified passing on emulator | Second peer received non-black Godot video and microphone frames; no unobserved task exception and no retained tone block replay |
 | Milestone 1 development architecture gate | complete | ADR-0002/0003 confirmed on native-emulator evidence; ADR-0004 defers all physical target-environment acceptance to Milestone 9 |
 | Android APK build | verified passing | 58,656,824 bytes; SHA-256 `eef822f1ddca3ed4338163936c0b71acd1134f0cefe0efa82d2e258d48730b79` |
 | `uv run --frozen pip-audit --cache-dir .cache/pip-audit-m2-final` | verified passing | Final Milestone 2 audit: no known vulnerabilities found; sandbox network denial was repeated with approved network access |
-| Pre-commit across all tracked/untracked sources | verified passing | JSON/YAML, line endings/whitespace, secret/size checks, Ruff, and contract tests; first pass normalized generated line endings, second pass clean |
+| `uv run --frozen pip-audit --cache-dir .cache/pip-audit-m3-final` | verified passing | Final Milestone 3 audit: no known vulnerabilities found; sandbox network denial was repeated with approved network access |
+| Pre-commit across all tracked/untracked sources | verified passing | JSON/YAML, line endings/whitespace, secret/size checks, Ruff, and contract tests; first pass normalized three generated lock files, second pass clean |
 | `./scripts/hardware-test.ps1` | Milestone 9 not executed | Ignores the active emulator and exits 2 because no physical phone is connected; this does not reopen Milestone 1 |
 | Physical Android/Wi-Fi/media/soak bundle | Milestone 9 not executed | No suitable physical phone; mandatory before release, not a prerequisite for Milestones 2-8 |
 | Remote GitHub Actions | not executed | Workflow includes the Godot renderer job, but the current milestone snapshot has not run remotely |
 
-The final `./scripts/test.ps1 -Scope all` run passed on 2026-10-10: 46 Python tests at 87.95%
-branch coverage, 12 contract-schema tests, 9 Kotlin tests, 5 pure C# tests, 10 media tests, Godot
+The final `./scripts/test.ps1 -Scope all` run passed on 2026-10-11: 79 Python tests at 87.26%
+branch coverage, 15 contract tests, 9 Kotlin tests, 5 pure C# tests, 15 media tests, Godot
 import/build/self-test, and the Android debug APK build. Pytest emitted the existing Starlette
-`httpx` deprecation warning. Offline NuGet vulnerability lookup produced `NU1900`, Godot could not
-read the Windows root-certificate store, Android analytics could not write outside the workspace,
-and the Kotlin daemon could not write its user-profile marker before Gradle successfully used its
-documented in-process fallback. These were environment warnings; every gate completed successfully.
+`httpx` deprecation warning. Godot could not read the Windows root-certificate store and Android
+analytics could not write outside the workspace; both are previously recorded managed-environment
+warnings and every gate completed successfully.
+
+## Milestone 3 acceptance and handoff
+
+| Acceptance criterion | Status | Direct evidence |
+| --- | --- | --- |
+| Learner can hold a basic English conversation locally | verified passing with limits | Real Qwen3 handled the English fixture and a two-turn local-provider host session; response text traversed the host contract. The audio marker is not TTS. |
+| Bulgarian clarification requests work | verified passing | Both model candidates returned the expected Bulgarian clarification intent/locale; policy tests prove the request cannot advance the exercise. |
+| Teacher returns naturally to English | verified passing | One host session processed Bulgarian then English human recordings and emitted `bg-BG` then `en-GB` teacher turns with bounded history. |
+
+Implementation and decision details are in ADR-0006 and the dated benchmark. There is no current
+Milestone 3 blocker. The first Python gate exposed 83.47% coverage and was fixed with adapter-boundary
+tests. The first comparison-model bootstrap and dependency audit were denied by sandbox networking
+and passed when repeated with approved network access. The first final pre-commit pass normalized
+three generated lock files; the second and post-staging passes were clean. The local launcher health
+check required force-stopping only the foreground host because the automation PTY did not deliver
+Ctrl+C; its `finally` block then stopped every child/listener as designed.
+
+Not executed for Milestone 3: a live human conversation, Bulgarian-accented English audio, hesitant
+or short human audio, and a spoken mixed-language recording. Those are not inferred from text
+fixtures. They remain evaluation inputs for future teaching/speech work, while physical-phone,
+Wi-Fi, acoustics, codecs, concurrent target load, thermals, and soak remain mandatory Milestone 9
+criteria.
 
 ## Renderer evidence and limitations
 
@@ -133,14 +185,14 @@ Detailed migration evidence is in `docs/benchmarks/2026-10-09-godot-renderer-mig
 
 ## Next steps
 
-Milestone 3 is now the next eligible implementation milestone:
+Milestone 4 is now the next eligible implementation milestone:
 
-1. Define production local provider interfaces and capability discovery without coupling the
-   domain to a model runtime.
-2. Integrate and verify real local English, Bulgarian, and mixed-language STT/dialogue paths while
-   retaining deterministic fakes for tests.
-3. Record real microphone transcription accuracy, latency, memory, error handling, and offline
-   behavior without representing unavailable timing metadata as measured data.
+1. Replace the diagnostic tone with independent natural English, Bulgarian, and deterministic
+   offline fallback speech providers using the defined audio contract.
+2. Add replay and speed control plus real word/phoneme timing where available; represent missing
+   alignment as null and implement the specified fallback hierarchy.
+3. Synchronize subtitles, word replay, pronunciation feedback, and renderer mouth/viseme events
+   without moving lesson policy into Android or Godot.
 
 Deferred mandatory Milestone 9 work:
 
@@ -159,10 +211,12 @@ Milestone 9 must not pass using emulator evidence.
 
 ```powershell
 git -c safe.directory='C:/Users/PC/Documents/GitHub/govor.ai' status --short --branch
-./scripts/bootstrap.ps1 -IncludeMedia -IncludeRenderer -NoDownload
+./scripts/bootstrap.ps1 -IncludeMedia -IncludeRenderer -IncludeLocalAi -NoDownload
 ./scripts/test.ps1 -Scope all
+./scripts/benchmark.ps1 -Profile local-ai
 ./scripts/build.ps1 -Target renderer
 ./scripts/renderer-smoke.ps1
 ./scripts/emulator-renderer-smoke.ps1
 ./scripts/dev.ps1 -Mode mock
+./scripts/dev.ps1 -Mode local -PairingToken '<at-least-32-random-characters>'
 ```

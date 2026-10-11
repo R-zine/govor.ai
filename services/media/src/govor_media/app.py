@@ -1,15 +1,29 @@
 from __future__ import annotations
 
 import hmac
+import ipaddress
 import json
 from typing import Any, Literal
 from uuid import UUID
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, Request, Response, WebSocket, WebSocketDisconnect
 from govor_contracts import MessageEnvelope
-from pydantic import ValidationError
+from pydantic import BaseModel, ConfigDict, ValidationError
 
+from .microphone_capture import CaptureConflict, CaptureEmpty, MicrophoneCapture
 from .peer import MediaPeer
+
+
+class CaptureRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    utterance_id: UUID
+
+
+class CaptureCancelRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    utterance_id: UUID | None = None
 
 
 def create_media_app(
@@ -21,6 +35,52 @@ def create_media_app(
         raise ValueError(f"Unsupported media source: {media_source}")
 
     app = FastAPI(title="govor.ai media feasibility peer", version="0.1.0")
+    microphone_capture = MicrophoneCapture()
+    app.state.microphone_capture = microphone_capture
+
+    def require_loopback(request: Request) -> None:
+        client = request.client
+        try:
+            is_loopback = client is not None and ipaddress.ip_address(client.host).is_loopback
+        except ValueError:
+            is_loopback = False
+        if not is_loopback:
+            raise HTTPException(status_code=403, detail="microphone capture is loopback-only")
+
+    @app.post("/v1/internal/microphone/start", status_code=204)
+    async def start_microphone_capture(payload: CaptureRequest, request: Request) -> Response:
+        require_loopback(request)
+        try:
+            microphone_capture.begin(payload.utterance_id)
+        except CaptureConflict as error:
+            raise HTTPException(status_code=409, detail=str(error)) from error
+        return Response(status_code=204)
+
+    @app.post("/v1/internal/microphone/finish")
+    async def finish_microphone_capture(payload: CaptureRequest, request: Request) -> Response:
+        require_loopback(request)
+        try:
+            wav = microphone_capture.finish(payload.utterance_id)
+        except CaptureEmpty as error:
+            raise HTTPException(status_code=422, detail=str(error)) from error
+        except CaptureConflict as error:
+            raise HTTPException(status_code=409, detail=str(error)) from error
+        return Response(
+            content=wav,
+            media_type="audio/wav",
+            headers={"Cache-Control": "no-store"},
+        )
+
+    @app.post("/v1/internal/microphone/cancel", status_code=204)
+    async def cancel_microphone_capture(
+        payload: CaptureCancelRequest, request: Request
+    ) -> Response:
+        require_loopback(request)
+        try:
+            microphone_capture.cancel(payload.utterance_id)
+        except CaptureConflict as error:
+            raise HTTPException(status_code=409, detail=str(error)) from error
+        return Response(status_code=204)
 
     @app.get("/health")
     async def health() -> dict[str, Any]:
@@ -63,7 +123,10 @@ def create_media_app(
                         raise ValueError("webrtc.offer payload requires sdp")
                     if peer is not None:
                         await peer.close()
-                    peer = MediaPeer(media_source=media_source)
+                    peer = MediaPeer(
+                        media_source=media_source,
+                        microphone_capture=microphone_capture,
+                    )
                     answer = await peer.accept_offer(sdp)
                     await websocket.send_json(
                         _envelope("webrtc.answer", correlation_id, {"sdp": answer})
@@ -87,6 +150,7 @@ def create_media_app(
         finally:
             if peer is not None:
                 await peer.close()
+            microphone_capture.cancel()
 
     return app
 

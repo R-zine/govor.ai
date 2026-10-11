@@ -49,7 +49,7 @@ Milestone handoff.
 ## Commands
 
 ```powershell
-./scripts/bootstrap.ps1 -IncludeMedia -IncludeRenderer
+./scripts/bootstrap.ps1 -IncludeMedia -IncludeRenderer -IncludeLocalAi
 ./scripts/test.ps1 -Scope python
 ./scripts/test.ps1 -Scope contracts
 ./scripts/test.ps1 -Scope kotlin
@@ -58,6 +58,7 @@ Milestone handoff.
 ./scripts/test.ps1 -Scope godot
 ./scripts/test.ps1 -Scope all
 ./scripts/dev.ps1 -Mode mock
+./scripts/dev.ps1 -Mode local -PairingToken '<at-least-32-random-characters>'
 ./scripts/media-dev.ps1 -PairingToken '<at-least-32-random-characters>' -AllowInsecureDevLan
 ```
 
@@ -66,6 +67,7 @@ Hardware tests are separate:
 ```powershell
 ./scripts/test.ps1 -Scope hardware
 ./scripts/benchmark.ps1 -Profile media-poc
+./scripts/benchmark.ps1 -Profile local-ai
 ```
 
 Record the machine, device, network, exact command, timestamp, result, and artifacts in

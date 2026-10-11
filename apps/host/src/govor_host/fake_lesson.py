@@ -1,4 +1,4 @@
-"""Deterministic fake lesson providers used only by Milestone 2 development and tests.
+"""Deterministic fake lesson providers used only by development and tests.
 
 The fakes exercise production-shaped provider boundaries without credentials or models. They
 never inspect, retain, or log microphone content. The short tones are transport/playback fixtures,
@@ -11,45 +11,10 @@ import io
 import math
 import struct
 import wave
-from dataclasses import dataclass
 
 from govor_contracts import ProviderCapabilities
-
-
-@dataclass(frozen=True, slots=True)
-class AudioReference:
-    """Ephemeral reference to an utterance carried by the active WebRTC session."""
-
-    duration_us: int
-
-
-@dataclass(frozen=True, slots=True)
-class FakeTranscript:
-    text: str
-    locale: str
-    provider_id: str = "fake-scripted-stt"
-
-
-@dataclass(frozen=True, slots=True)
-class FakeDialogueReply:
-    text: str
-    locale: str
-    provider_id: str = "fake-scripted-dialogue"
-
-
-@dataclass(frozen=True, slots=True)
-class FakeTeacherTurn:
-    text: str
-    locale: str
-    audio_wav: bytes
-    duration_us: int
-    provider_id: str = "fake-scripted-speech"
-
-
-@dataclass(frozen=True, slots=True)
-class FakeLessonResult:
-    transcript: FakeTranscript
-    turn: FakeTeacherTurn
+from govor_domain import DetectedLanguage
+from govor_provider_interfaces import LessonResult, TeacherTurn, Transcript, UtteranceAudio
 
 
 class FakeSpeechRecognizer:
@@ -60,10 +25,15 @@ class FakeSpeechRecognizer:
         features=frozenset({"deterministic", "development_only"}),
     )
 
-    async def transcribe(self, audio: AudioReference) -> FakeTranscript:
+    async def transcribe(self, audio: UtteranceAudio) -> Transcript:
         if not 1 <= audio.duration_us <= 30_000_000:
             raise ValueError("utterance duration is outside the accepted range")
-        return FakeTranscript(text="I would like coffee, please.", locale="en-GB")
+        return Transcript(
+            text="I would like coffee, please.",
+            locale="en-GB",
+            language=DetectedLanguage.ENGLISH,
+            provider_id="fake-scripted-stt",
+        )
 
 
 class FakeDialogueProvider:
@@ -74,13 +44,10 @@ class FakeDialogueProvider:
         features=frozenset({"deterministic", "development_only"}),
     )
 
-    async def reply(self, transcript: FakeTranscript) -> FakeDialogueReply:
+    async def reply(self, transcript: Transcript) -> tuple[str, str]:
         if not transcript.text:
             raise ValueError("transcript must not be empty")
-        return FakeDialogueReply(
-            text="Thank you. Would you like coffee or tea?",
-            locale="en-GB",
-        )
+        return "Thank you. Would you like coffee or tea?", "en-GB"
 
 
 class FakeSpeechProvider:
@@ -93,16 +60,18 @@ class FakeSpeechProvider:
 
     async def synthesize(
         self,
-        reply: FakeDialogueReply,
+        text: str,
+        locale: str,
         *,
         frequency_hz: float,
-    ) -> FakeTeacherTurn:
+    ) -> TeacherTurn:
         audio, duration_us = _tone_wav(frequency_hz=frequency_hz)
-        return FakeTeacherTurn(
-            text=reply.text,
-            locale=reply.locale,
+        return TeacherTurn(
+            text=text,
+            locale=locale,
             audio_wav=audio,
             duration_us=duration_us,
+            provider_id="fake-scripted-speech",
         )
 
 
@@ -127,20 +96,18 @@ class FakeLessonService:
             self.speech.capabilities,
         )
 
-    async def initial_turn(self) -> FakeTeacherTurn:
+    async def initial_turn(self) -> TeacherTurn:
         return await self.speech.synthesize(
-            FakeDialogueReply(
-                text="Welcome. What would you like to order?",
-                locale="en-GB",
-            ),
+            "Welcome. What would you like to order?",
+            "en-GB",
             frequency_hz=440.0,
         )
 
-    async def respond(self, audio: AudioReference) -> FakeLessonResult:
+    async def respond(self, audio: UtteranceAudio) -> LessonResult:
         transcript = await self.recognizer.transcribe(audio)
-        reply = await self.dialogue.reply(transcript)
-        turn = await self.speech.synthesize(reply, frequency_hz=554.37)
-        return FakeLessonResult(transcript=transcript, turn=turn)
+        text, locale = await self.dialogue.reply(transcript)
+        turn = await self.speech.synthesize(text, locale, frequency_hz=554.37)
+        return LessonResult(transcript=transcript, turn=turn)
 
 
 def _tone_wav(*, frequency_hz: float, duration_seconds: float = 0.15) -> tuple[bytes, int]:

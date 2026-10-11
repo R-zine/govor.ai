@@ -1,0 +1,148 @@
+from __future__ import annotations
+
+from uuid import uuid4
+
+import pytest
+from govor_contracts import ProviderCapabilities
+from govor_domain import DetectedLanguage, DialogueDraft, LearnerIntent
+from govor_local_ai.service import DiagnosticToneSpeechProvider, LocalLessonService
+from govor_provider_interfaces import (
+    DialogueRequest,
+    NoSpeechRecognized,
+    ProviderUnavailable,
+    Transcript,
+    UtteranceAudio,
+)
+
+
+class QueueRecognizer:
+    capabilities = ProviderCapabilities(
+        provider_id="test-stt",
+        provider_kind="speech_recognition",
+        local=True,
+    )
+
+    def __init__(self, transcripts: list[Transcript]) -> None:
+        self.transcripts = transcripts
+
+    async def transcribe(self, audio: UtteranceAudio) -> Transcript:
+        assert audio.wav_bytes is not None
+        return self.transcripts.pop(0)
+
+
+class NoSpeechRecognizer:
+    capabilities = ProviderCapabilities(
+        provider_id="test-stt-no-speech",
+        provider_kind="speech_recognition",
+        local=True,
+    )
+
+    async def transcribe(self, audio: UtteranceAudio) -> Transcript:
+        _ = audio
+        raise NoSpeechRecognized("silence")
+
+
+class QueueDialogue:
+    capabilities = ProviderCapabilities(
+        provider_id="test-dialogue",
+        provider_kind="dialogue",
+        local=True,
+    )
+
+    def __init__(self, drafts: list[DialogueDraft | Exception]) -> None:
+        self.drafts = drafts
+        self.requests: list[DialogueRequest] = []
+
+    async def generate(self, request: DialogueRequest) -> DialogueDraft:
+        self.requests.append(request)
+        result = self.drafts.pop(0)
+        if isinstance(result, Exception):
+            raise result
+        return result
+
+
+def transcript(text: str, language: DetectedLanguage) -> Transcript:
+    return Transcript(
+        text=text,
+        locale="bg-BG" if language is DetectedLanguage.BULGARIAN else "en-GB",
+        language=language,
+        provider_id="test-stt",
+    )
+
+
+def audio() -> UtteranceAudio:
+    return UtteranceAudio(uuid4(), 500_000, b"RIFF" + b"\0" * 4 + b"WAVE" + b"\0" * 32)
+
+
+@pytest.mark.asyncio
+async def test_bulgarian_help_then_english_answer_returns_to_english() -> None:
+    recognizer = QueueRecognizer(
+        [
+            transcript("Не разбирам въпроса.", DetectedLanguage.BULGARIAN),
+            transcript("I would like coffee, please.", DetectedLanguage.ENGLISH),
+        ]
+    )
+    dialogue = QueueDialogue(
+        [
+            DialogueDraft(
+                LearnerIntent.BULGARIAN_CLARIFICATION,
+                "Въпросът е какво искате. Опитайте на английски.",
+                "bg-BG",
+                True,
+            ),
+            DialogueDraft(
+                LearnerIntent.ENGLISH_ANSWER,
+                "Good. Would you like anything else?",
+                "en-GB",
+                True,
+            ),
+        ]
+    )
+    service = LocalLessonService(recognizer, dialogue)
+
+    help_result = await service.respond(audio())
+    answer_result = await service.respond(audio())
+
+    assert help_result.turn.locale == "bg-BG"
+    assert answer_result.turn.locale == "en-GB"
+    assert service.memory.snapshot()[0].intent is LearnerIntent.BULGARIAN_CLARIFICATION
+    assert service.memory.snapshot()[1].intent is LearnerIntent.ENGLISH_ANSWER
+    assert len(dialogue.requests[1].history) == 1
+
+
+@pytest.mark.asyncio
+async def test_dialogue_failure_uses_deterministic_bilingual_fallback() -> None:
+    service = LocalLessonService(
+        QueueRecognizer([transcript("Как да кажа искам кафе?", DetectedLanguage.BULGARIAN)]),
+        QueueDialogue([ProviderUnavailable("model crashed")]),
+    )
+
+    result = await service.respond(audio())
+
+    assert result.turn.locale == "bg-BG"
+    assert "I would like" in result.turn.text
+    assert service.memory.snapshot()[0].intent is LearnerIntent.BULGARIAN_REFORMULATION
+
+
+@pytest.mark.asyncio
+async def test_no_speech_asks_for_repeat_without_calling_model_or_storing_memory() -> None:
+    dialogue = QueueDialogue([])
+    service = LocalLessonService(NoSpeechRecognizer(), dialogue)
+
+    result = await service.respond(audio())
+
+    assert result.transcript is None
+    assert result.turn.locale == "bg-BG"
+    assert dialogue.requests == []
+    assert service.memory.snapshot() == ()
+
+
+@pytest.mark.asyncio
+async def test_diagnostic_audio_is_bounded_and_explicitly_not_speech() -> None:
+    provider = DiagnosticToneSpeechProvider()
+    turn = await provider.synthesize("Text remains available to Android.", "en-GB")
+
+    assert turn.provider_id == "milestone3-diagnostic-tone"
+    assert turn.audio_wav.startswith(b"RIFF")
+    assert turn.duration_us == 150_000
+    assert "not_speech" in provider.capabilities.features

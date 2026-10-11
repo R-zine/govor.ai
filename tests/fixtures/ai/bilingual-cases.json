@@ -1,0 +1,58 @@
+[
+  {
+    "id": "english-answer",
+    "text": "I would like a coffee, please.",
+    "language": "en",
+    "intent": "english_answer",
+    "reply_locale": "en-GB",
+    "may_advance": true
+  },
+  {
+    "id": "bulgarian-clarification",
+    "text": "Не разбирам въпроса. Може ли да обясните?",
+    "language": "bg",
+    "intent": "bulgarian_clarification",
+    "reply_locale": "bg-BG",
+    "may_advance": false
+  },
+  {
+    "id": "mixed-reformulation",
+    "text": "Как да кажа, че искам coffee без мляко?",
+    "language": "mixed",
+    "intent": "bulgarian_reformulation",
+    "reply_locale": "bg-BG",
+    "may_advance": false
+  },
+  {
+    "id": "repeat",
+    "text": "Could you repeat that?",
+    "language": "en",
+    "intent": "repeat",
+    "reply_locale": "en-GB",
+    "may_advance": false
+  },
+  {
+    "id": "slower",
+    "text": "Може ли по-бавно?",
+    "language": "bg",
+    "intent": "slower_speech",
+    "reply_locale": "en-GB",
+    "may_advance": false
+  },
+  {
+    "id": "vocabulary",
+    "text": "What does order mean?",
+    "language": "en",
+    "intent": "vocabulary_explanation",
+    "reply_locale": "bg-BG",
+    "may_advance": false
+  },
+  {
+    "id": "ambiguous",
+    "text": "Maybe the thing.",
+    "language": "en",
+    "intent": "ambiguous",
+    "reply_locale": "en-GB",
+    "may_advance": false
+  }
+]

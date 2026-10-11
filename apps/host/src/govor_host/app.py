@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 
 from .config import Settings, get_settings
 from .fake_lesson import FakeLessonService
+from .microphone import MediaMicrophoneSource, MicrophoneAudioSource, ReferenceOnlyMicrophoneSource
 from .orchestration import ControlSession, LessonService, SessionRegistry
 from .renderer_gateway import RendererControl, RendererGateway
 
@@ -14,11 +16,26 @@ def create_app(
     settings: Settings | None = None,
     *,
     lesson: LessonService | None = None,
+    microphone: MicrophoneAudioSource | None = None,
     renderer: RendererControl | None = None,
 ) -> FastAPI:
     runtime = settings or get_settings()
     app = FastAPI(title="govor.ai host", version="0.2.0")
-    lesson_service = lesson or FakeLessonService()
+    lesson_factory: Callable[[], LessonService]
+    if lesson is None and runtime.mode == "local":
+        from govor_local_ai import build_local_lesson_service
+
+        lesson_factory = lambda: build_local_lesson_service(runtime)  # noqa: E731
+    elif lesson is None:
+        lesson_factory = FakeLessonService
+    else:
+        lesson_factory = lambda: lesson  # noqa: E731
+    provider_capabilities = lesson_factory().capabilities
+    microphone_source = microphone or (
+        MediaMicrophoneSource(runtime.media_capture_url)
+        if runtime.mode == "local"
+        else ReferenceOnlyMicrophoneSource()
+    )
     renderer_gateway = renderer or RendererGateway(
         acknowledgement_timeout_seconds=runtime.renderer_ack_timeout_seconds
     )
@@ -35,6 +52,15 @@ def create_app(
             "network_scope": "loopback" if runtime.bind_host in {"127.0.0.1", "::1"} else "lan",
             "renderer_connected": renderer_gateway.connected,
             "active_sessions": registry.active_count,
+            "providers": [
+                {
+                    "provider_id": capability.provider_id,
+                    "provider_kind": capability.provider_kind,
+                    "local": capability.local,
+                    "features": sorted(capability.features),
+                }
+                for capability in provider_capabilities
+            ],
         }
 
     @app.websocket("/v1/control")
@@ -43,7 +69,8 @@ def create_app(
         session = ControlSession(
             send_json=websocket.send_json,
             renderer=renderer_gateway,
-            lesson=lesson_service,
+            lesson=lesson_factory(),
+            microphone=microphone_source,
             settings=runtime,
             registry=registry,
         )

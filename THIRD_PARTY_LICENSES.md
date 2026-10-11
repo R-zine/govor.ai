@@ -18,7 +18,15 @@ files.
 | AndroidX / Jetpack Compose | pinned by Gradle catalog | developer.android.com | Apache-2.0 | Retain notices |
 | xUnit.net | pinned by project | xunit.net | Apache-2.0 | Retain notice |
 | Godot Engine .NET editor/export templates | 4.7.2 | github.com/godotengine/godot | MIT | Retain the Godot copyright and license notice in distributions; portable development artifacts are checksum-pinned |
+| llama.cpp Windows Vulkan runtime | b11540 | github.com/ggml-org/llama.cpp | MIT | Repository-local development runtime is checksum-pinned; retain license notice if distributed |
+| whisper.cpp Windows x64 runtime | b5454 | github.com/ggml-org/whisper.cpp | MIT | Repository-local development runtime is checksum-pinned; retain license notice if distributed |
+| Qwen3-4B-GGUF model | revision `bc640142`, Q4_K_M | huggingface.co/Qwen/Qwen3-4B-GGUF | Apache-2.0 | 2.50 GB development model is checksum-pinned and ignored; distribution packaging remains a later review |
+| Qwen3-1.7B-GGUF comparison model | revision `7fb011e9`, Q4_K_M | huggingface.co/Qwen/Qwen3-1.7B-GGUF | Apache-2.0 | 1.11 GB benchmark-only model is checksum-pinned and ignored; it is not the selected default |
+| Whisper multilingual small model | revision `5359861c` | huggingface.co/ggerganov/whisper.cpp | MIT | 488 MB development model is checksum-pinned and ignored; distribution packaging remains a later review |
+| whisper.cpp `jfk.wav` test recording | b5454 | github.com/ggml-org/whisper.cpp | MIT | Ignored, checksum-pinned human-speech test fixture; not packaged |
+| VoxForge Bulgarian `dtd-20120908-cuf` recording | 2012-09-08 archive | repository.voxforge1.org | GPL-3.0-or-later | Ignored, checksum-pinned test fixture only; must not be bundled without GPL distribution review |
 
-Model weights, voices, avatars, environment assets, and eSpeak/phonemizer components are
-not distributed by this repository. Their licenses and redistributability must be reviewed before introduction.
+Model weights, voices, avatars, environment assets, and eSpeak/phonemizer components are not
+distributed by this source repository. The two Milestone 3 development weights above are downloaded
+to ignored local tooling storage; their redistributability must be reviewed again before packaging.
 In particular, no GPL component may be bundled until its distribution implications are recorded.
