@@ -32,6 +32,13 @@ fallback, with accent-aware IPA, actual-or-null timing, synchronized Android hig
 native-emulator, and local-provider evidence passed, and the user confirmed on 2026-10-12 that the
 generated GB-English and Bulgarian samples were intelligible and acceptably natural.
 
+Milestone 5 is complete. The host now owns four deterministic guided scenarios, gentle correction,
+question/help invariants, explainable bounded difficulty adaptation, scenario selection, and
+completion after final teacher playback. Structured settings, exercise/comprehension outcomes,
+vocabulary review state, difficulty reasons, completion, and interrupted-session resume persist in
+local SQLite without raw audio or full transcript storage. Android exposes all four scenarios,
+GB/US accent, optional spaced review, and progress. Local view/export/delete tooling is available.
+
 ADR-0003 now selects Godot 4.7.2 .NET as the only renderer. The earlier proof from the proprietary
 engine was removed completely, including source, project metadata, build scripts, and dependencies.
 Godot import, C# compilation, self-test, Windows export, local runtime, non-black shared-memory
@@ -102,16 +109,34 @@ measurements fail.
   connects outbound to a loopback-only control endpoint and accepts only six visual actions.
 - The emulator smoke deliberately exercises renderer-unavailable recovery before completing a
   teacher/learner/teacher turn, media reconnect, renderer reset, and process/network cleanup.
+- `packages/domain` defines café, supermarket, airport, and home lessons with three exercise types
+  each, committed vocabulary/examples/misunderstandings/Bulgarian explanations, and a pure
+  `TeachingEngine`. The LLM may classify intent but cannot award success or choose progression.
+- Two unsuccessful English attempts lower difficulty one level; two consecutive first-attempt
+  successes raise it. `repeated_difficulty` and `consistent_first_try_success` are validated and
+  visible to Android. Bulgarian/mixed assistance, questions, repetition, and no-speech do not count
+  as English production or advance an exercise.
+- `packages/progress` owns schema-versioned SQLite persistence at the configurable development path
+  `data/progress.sqlite3`. It stores structured settings/counters/vocabulary review/difficulty
+  history only. An active lesson resumes after process restart; a completed scenario begins a new
+  attempt while retaining history.
+- `scripts/progress.ps1` views and exports the structured JSON history and requires
+  `-ConfirmDelete` before deleting history. Deletion preserves explicit learner settings.
+- `session.start` accepts a scenario, English accent, and review preference. Each host-generated
+  `teacher.turn` includes an additive progress snapshot. The host sends completed session teardown
+  only after the final audio playback acknowledgement.
+- Android exposes two visible rows for all four scenarios, GB/US selection, a spaced-review toggle,
+  progress/difficulty display, and an explanation when difficulty changes.
 
 ## Verification ledger
 
 | Command or check | Result | Evidence and limits |
 | --- | --- | --- |
 | `./scripts/bootstrap.ps1 -IncludeMedia -IncludeRenderer -NoDownload` | verified passing | Pinned local Python/.NET/Godot assets and locked dependencies restored without a download |
-| `./scripts/test.ps1 -Scope all` | verified passing | 2026-10-12 final Milestone 4 run; Python, contracts, Kotlin, C#, media, Godot, and Android APK build |
-| Python gate | verified passing | Ruff check/format, strict mypy, 93 tests, 85.23% branch coverage |
-| Contract schema gate | verified passing | Shared schema/fixture coverage includes closed teacher-turn, word-replay-request, and word-audio messages |
-| Kotlin gate | verified passing | 12 JVM contract/state-machine/timeline tests, including both shared word-replay fixtures |
+| `./scripts/test.ps1 -Scope all` | verified passing | 2026-10-12 final Milestone 5 run; Python, contracts, Kotlin, C#, media, Godot, and Android APK build |
+| Python gate | verified passing | Ruff check/format, strict mypy, 111 tests, 85.69% branch coverage |
+| Contract schema gate | verified passing | 18 schema/fixture tests include additive lesson progress, scenario/settings start fields, word replay, and renderer messages |
+| Kotlin gate | verified passing | 13 JVM contract/state-machine/timeline tests, including lesson-progress invariants and shared fixtures |
 | Pure C# gate | verified passing | 7 .NET contract/allow-list tests, including both shared word-replay fixtures |
 | Media gate | verified passing | Strict mypy and 15 tests, including real aiortc loopback, flushed 48-to-16 kHz microphone resampling, renderer-buffer validation, and clean remote-track teardown |
 | Godot gate | verified passing | Headless import, successful C# build, and self-test marker; offline NuGet vulnerability lookup and Windows certificate-store warnings are recorded below |
@@ -126,6 +151,11 @@ measurements fail.
 | Speech benchmark latency | verified with limits | Final 1× examples: Kokoro GB 403.7 ms, Piper BG 784.9 ms, eSpeak fallback 276.5 ms; cold/accent cases recorded separately; development CPU only |
 | `./scripts/emulator-speech-smoke.ps1` | verified passing with limits | API 34 emulator completed real Kokoro `AudioTrack` playout, seven word highlights, 0.75× replay, IPA word selection, isolated-word synthesis/playback, and clean shutdown |
 | Generated speech listening path | verified passing | GB English, US English, Bulgarian, and fallback WAVs each completed one synchronous PC playback and closed; the user confirmed the GB-English and Bulgarian samples sounded good on 2026-10-12 |
+| Four guided scenarios | verified passing | Parameterized pure-domain tests completed café, supermarket, airport, and home; each has three exercises and full committed guidance metadata |
+| Adaptation/help policy | verified passing | Repeated difficulty lowers one level, two first-try successes raise one, closed reasons are exposed, and Bulgarian/mixed/help/no-speech turns cannot advance |
+| SQLite progress/resume/privacy | verified passing | Closed/reopened database resumed the next exercise; history/settings/vocabulary/review/export/delete passed; a sentinel transcript and audio fields were absent |
+| Host lesson completion | verified passing | Local-service integration completed café and persisted it; host waited for final playback before `session.ended: completed` |
+| Android Milestone 5 UI | verified passing with emulator limit | API 34 final UI hierarchy showed Café, Supermarket, Airport, Home, GB/US, and optional review; app was force-stopped and no media/audio server was started |
 | Qwen3 4B dialogue | verified passing with limits | 999.3 ms median, 2,784.6 ms max; 1 policy correction; 2,706,419,712-byte working set and 3,207,090,176-byte peak on this machine |
 | Qwen3 1.7B comparison | verified passing with limits | 630.4 ms median, 2,570.1 ms max; 3 policy corrections; 1,309,011,968-byte working set; comparison only |
 | whisper.cpp human recordings | verified passing with limits | English and Bulgarian language/required-word checks passed at 5,840.2 ms median; Bulgarian had word errors; no broad accuracy claim |
@@ -134,17 +164,18 @@ measurements fail.
 | Godot emulator screenshot | inconclusive | UI/status captured, but the WebRTC `SurfaceView` area is black in ADB screencaps; transport logs prove non-black input and Android render callbacks, not a screenshot of scene pixels |
 | Renderer-source reconnect/teardown | verified passing on emulator | Second peer received non-black Godot video and microphone frames; no unobserved task exception and no retained tone block replay |
 | Milestone 1 development architecture gate | complete | ADR-0002/0003 confirmed on native-emulator evidence; ADR-0004 defers all physical target-environment acceptance to Milestone 9 |
-| Android APK build | verified passing | 58,712,920 bytes; SHA-256 `9c206f7ff849e860c2ffd057a4011bf2dab02aed1feb7b8fa3bec3c071a874fc` |
+| Android APK build | verified passing | 58,726,666 bytes; SHA-256 `ee37f03b47176d30d20d902807d86f43d2bb1c039b2de5e2d1b7b8aa97ada3d8` |
 | `uv run --frozen pip-audit --cache-dir .cache/pip-audit-m2-final` | verified passing | Final Milestone 2 audit: no known vulnerabilities found; sandbox network denial was repeated with approved network access |
 | `uv run --frozen pip-audit --cache-dir .cache/pip-audit-m3-final` | verified passing | Final Milestone 3 audit: no known vulnerabilities found; sandbox network denial was repeated with approved network access |
 | `uv run --frozen --extra media --extra speech pip-audit --cache-dir .cache/pip-audit-m4-final` | verified passing | Final Milestone 4 audit, including media and speech extras: no known vulnerabilities found; sandbox network denial was repeated with approved network access |
-| Pre-commit across all tracked/untracked sources | verified passing | Final Milestone 4 run passed JSON/YAML, line endings/whitespace, secret/size checks, Ruff, and contract tests; initial sandbox runs could not use the managed-account hook cache, and the approved-context rerun passed |
+| `uv run --frozen --extra media --extra speech pip-audit --cache-dir .cache/pip-audit-m5-final` | verified passing | Final Milestone 5 audit: no known vulnerabilities found; the sandbox-denied query passed with approved network access |
+| Pre-commit across all tracked/untracked sources | verified passing | Final Milestone 5 run passed JSON/YAML, line endings/whitespace, secret/size checks, Ruff, and contract tests; the sandbox could not fetch the isolated pinned hook environments, and the approved-context rerun passed |
 | `./scripts/hardware-test.ps1` | Milestone 9 not executed | Ignores the active emulator and exits 2 because no physical phone is connected; this does not reopen Milestone 1 |
 | Physical Android/Wi-Fi/media/soak bundle | Milestone 9 not executed | No suitable physical phone; mandatory before release, not a prerequisite for Milestones 2-8 |
 | Remote GitHub Actions | not executed | Workflow includes the Godot renderer job, but the current milestone snapshot has not run remotely |
 
-The final `./scripts/test.ps1 -Scope all` run passed on 2026-10-12: 93 Python tests at 85.23%
-branch coverage, 12 Kotlin tests, 7 pure C# tests, 15 media tests, Godot
+The final `./scripts/test.ps1 -Scope all` run passed on 2026-10-12: 111 Python tests at 85.69%
+branch coverage, 18 contract tests, 13 Kotlin tests, 7 pure C# tests, 15 media tests, Godot
 import/build/self-test, and the Android debug APK build. Pytest emitted the existing Starlette
 `httpx` deprecation warning. Godot could not read the Windows root-certificate store and Android
 analytics could not write outside the workspace; both are previously recorded managed-environment
@@ -190,6 +221,28 @@ acceptable for local development, but Milestone 8 must either meet its distribut
 replace it. The human listening confirmation closes the final Milestone 4 acceptance item; this
 handoff is the required focused milestone commit.
 
+## Milestone 5 acceptance and handoff
+
+| Acceptance criterion | Status | Direct evidence |
+| --- | --- | --- |
+| A complete guided lesson can finish | verified passing | Pure-domain tests completed all four scenarios; local-service café integration completed and host teardown waited for final audio acknowledgement. |
+| Progress persists after application restart | verified passing | A file-backed SQLite repository was closed/reopened and resumed café at exercise two; a completed lesson retained its completion count and began a fresh attempt. |
+| Repeated difficulties adapt the lesson | verified passing | Two unsuccessful English attempts lowered intermediate to beginner and exposed `repeated_difficulty`; tests also cover upward adaptation. |
+| Questions do not break the exercise | verified passing | Bulgarian clarification, vocabulary help, repeat, slower speech, no-speech, and mixed-language paths preserve the active exercise and do not increment English success. |
+| Bulgarian assistance is not successful English | verified passing | Domain and local-service tests prove Bulgarian production cannot advance even when the model proposes progress. |
+| Teacher provides appropriate correction | verified passing with bounded scope | Each committed exercise has a gentle English correction and Bulgarian explanation; tests verify corrective retry text. This is guided-content evidence, not broad pedagogical validation. |
+| Difficulty changes are explainable/testable | verified passing | Only the two closed reasons can cross the contract; Python/Kotlin validation and deterministic engine tests pass. |
+| Progression and persistence tests | verified passing | The final Python suite contains domain, SQLite, CLI, local-service, and host integration coverage; shared schema/Kotlin/C# fixtures pass. |
+
+Implementation and privacy decisions are recorded in ADR-0008; exact commands, transient failures,
+artifacts, and limits are in `docs/benchmarks/2026-10-12-teaching-engine-and-progress.md`. No new
+third-party dependency was added. The phrase-pattern evaluator is intentionally scoped to committed
+guided tasks and is not a fluency, grammar, or pronunciation score.
+
+The API 34 UI check is emulator development evidence only. No live human lesson or physical phone,
+Wi-Fi, codec, acoustic, target-load, thermal, or soak acceptance ran. Those do not block Milestone
+5 and remain mandatory Milestone 9 work. This handoff is the required focused Milestone 5 commit.
+
 ## Renderer evidence and limitations
 
 The local proof image visibly contains the cyan animated placeholder, ground, lighting, and
@@ -227,8 +280,13 @@ Detailed migration evidence is in `docs/benchmarks/2026-10-09-godot-renderer-mig
 
 ## Next steps
 
-Milestone 4 is complete. Create its focused handoff commit, then begin Milestone 5 teaching and
-progress work. Renderer visemes remain Milestone 6 work.
+Milestone 5 is complete. The next implementation milestone is Milestone 6: replace the renderer
+placeholder with a suitably licensed avatar, connect teacher audio/timing to bounded lip and body
+animation, and implement deterministic validated scene specifications for at least four
+environments. Asset IDs must remain allow-listed; lesson/model output must never select paths,
+downloads, or executable content. Record scene-transition latency, frame time, memory, asset-load,
+avatar, inference-coexistence, and encoding evidence without treating emulator results as target
+hardware measurements.
 
 Deferred mandatory Milestone 9 work:
 
@@ -249,6 +307,8 @@ Milestone 9 must not pass using emulator evidence.
 git -c safe.directory='C:/Users/PC/Documents/GitHub/govor.ai' status --short --branch
 ./scripts/bootstrap.ps1 -IncludeMedia -IncludeRenderer -IncludeLocalAi -NoDownload
 ./scripts/test.ps1 -Scope all
+./scripts/progress.ps1 -Action View
+./scripts/progress.ps1 -Action Export -OutputPath '.cache/progress-export.json'
 ./scripts/test.ps1 -Scope speech
 ./scripts/benchmark.ps1 -Profile speech
 ./scripts/emulator-speech-smoke.ps1

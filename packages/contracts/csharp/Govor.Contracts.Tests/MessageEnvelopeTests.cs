@@ -60,6 +60,9 @@ public sealed class MessageEnvelopeTests
         Assert.Equal("ˈwɛlkəm", payload.Pronunciations[0].Ipa);
         Assert.Equal(0, payload.WordAlignment?[0].WordIndex);
         Assert.False(payload.FallbackUsed);
+        Assert.Equal("cafe-ordering", payload.LessonProgress!.ScenarioId);
+        Assert.Equal(1, payload.LessonProgress.ExerciseNumber);
+        Assert.Equal("intermediate", payload.LessonProgress.Difficulty);
     }
 
     [Fact]

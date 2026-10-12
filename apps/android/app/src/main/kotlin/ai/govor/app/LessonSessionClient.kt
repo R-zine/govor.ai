@@ -2,6 +2,7 @@ package ai.govor.app
 
 import ai.govor.core.ControlContractCodec
 import ai.govor.core.LearnerTranscriptPayload
+import ai.govor.core.LessonProgressPayload
 import ai.govor.core.MessageEnvelope
 import ai.govor.core.RecordingStartedPayload
 import ai.govor.core.RecordingSubmittedPayload
@@ -60,6 +61,9 @@ class LessonSessionClient {
     private var playbackJob: Job? = null
     @Volatile private var activeTrack: AudioTrack? = null
     private var activeTurn: TeacherTurnPayload? = null
+    private var selectedScenarioId = "cafe-ordering"
+    private var selectedEnglishLocale = "en-GB"
+    private var selectedSpacedReview = false
 
     private val mutableState = MutableStateFlow(SessionState.DISCONNECTED)
     val state: StateFlow<SessionState> = mutableState
@@ -85,8 +89,21 @@ class LessonSessionClient {
     private val mutableError = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = mutableError
 
-    fun connect(host: String) {
+    private val mutableLessonProgress = MutableStateFlow<LessonProgressPayload?>(null)
+    val lessonProgress: StateFlow<LessonProgressPayload?> = mutableLessonProgress
+
+    fun connect(
+        host: String,
+        scenarioId: String,
+        englishLocale: String,
+        spacedReviewEnabled: Boolean,
+    ) {
         closeSocket(notifyHost = false)
+        require(scenarioId in SUPPORTED_SCENARIOS)
+        require(englishLocale in setOf("en-GB", "en-US"))
+        selectedScenarioId = scenarioId
+        selectedEnglishLocale = englishLocale
+        selectedSpacedReview = spacedReviewEnabled
         val normalizedHost = host.trim().removePrefix("ws://").removePrefix("wss://").trimEnd('/')
         if (normalizedHost.isBlank()) {
             fail("Enter the Windows control host and port.")
@@ -226,6 +243,7 @@ class LessonSessionClient {
         require(abs(wav.durationUs - payload.duration_us) <= 10_000)
         turnId = payload.turn_id
         activeTurn = payload
+        mutableLessonProgress.value = payload.lesson_progress
         mutableTeacherText.value = payload.text
         mutablePronunciations.value = payload.pronunciations
         mutableSelectedPronunciation.value = null
@@ -404,7 +422,12 @@ class LessonSessionClient {
                 ControlContractCodec.encodeEnvelope(
                     "session.start",
                     UUID.randomUUID().toString(),
-                    SessionStartPayload(UUID.randomUUID().toString()),
+                    SessionStartPayload(
+                        client_id = UUID.randomUUID().toString(),
+                        scenario_id = selectedScenarioId,
+                        english_locale = selectedEnglishLocale,
+                        spaced_review_enabled = selectedSpacedReview,
+                    ),
                 ),
             )
         }
@@ -488,5 +511,11 @@ class LessonSessionClient {
 
     private companion object {
         const val LOG_TAG = "GovorSpeech"
+        val SUPPORTED_SCENARIOS = setOf(
+            "cafe-ordering",
+            "supermarket-shopping",
+            "airport-travel",
+            "home-conversation",
+        )
     }
 }

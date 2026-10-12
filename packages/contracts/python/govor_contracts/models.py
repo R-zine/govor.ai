@@ -62,6 +62,13 @@ class ErrorPayload(StrictModel):
 
 class SessionStartPayload(StrictModel):
     client_id: UUID
+    scenario_id: str = Field(
+        default="cafe-ordering",
+        pattern=r"^[a-z][a-z0-9-]{2,63}$",
+        max_length=64,
+    )
+    english_locale: Literal["en-GB", "en-US"] = "en-GB"
+    spaced_review_enabled: bool = False
 
 
 class SessionScopedPayload(StrictModel):
@@ -125,6 +132,31 @@ class PhonemeAlignmentPayload(WordAlignmentPayload):
     symbol: str = Field(min_length=1, max_length=16)
 
 
+class LessonProgressPayload(StrictModel):
+    scenario_id: str = Field(pattern=r"^[a-z][a-z0-9-]{2,63}$", max_length=64)
+    scenario_title: str = Field(min_length=1, max_length=128)
+    exercise_number: int = Field(ge=1, le=64)
+    exercise_count: int = Field(ge=1, le=64)
+    successful_exercises: int = Field(ge=0, le=64)
+    attempts_on_exercise: int = Field(ge=0, le=100)
+    difficulty: Literal["beginner", "intermediate", "advanced"]
+    status: Literal["in_progress", "completed"]
+    resumed: bool
+    difficulty_change_reason: (
+        Literal["repeated_difficulty", "consistent_first_try_success"] | None
+    ) = None
+
+    @model_validator(mode="after")
+    def validate_counts(self) -> LessonProgressPayload:
+        if self.exercise_number > self.exercise_count:
+            raise ValueError("lesson exercise number exceeds the exercise count")
+        if self.successful_exercises > self.exercise_count:
+            raise ValueError("successful exercise count exceeds the exercise count")
+        if self.status == "completed" and self.successful_exercises != self.exercise_count:
+            raise ValueError("completed lesson must contain every successful exercise")
+        return self
+
+
 class TeacherTurnPayload(SessionScopedPayload):
     turn_id: UUID
     text: str = Field(min_length=1, max_length=2_048)
@@ -141,6 +173,7 @@ class TeacherTurnPayload(SessionScopedPayload):
         max_length=2_048,
     )
     fallback_used: bool = False
+    lesson_progress: LessonProgressPayload | None = None
 
     @field_validator("audio_base64")
     @classmethod

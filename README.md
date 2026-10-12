@@ -12,8 +12,11 @@ The project is under active development. Milestone 0 established a reproducible 
 Milestone 1 completed the native-emulator media architecture proof, Milestone 2 completed the
 validated session skeleton, Milestone 3 integrated local bilingual recognition/dialogue, and
 Milestone 4 completed Kokoro/Piper/eSpeak speech, accent-aware IPA, real alignment, synchronized
-subtitles, speed control, and word replay. Physical-phone, Wi-Fi, hardware-codec, performance, and
-soak acceptance remains mandatory in the final release milestone.
+subtitles, speed control, and word replay. Milestone 5 adds four guided scenarios, deterministic
+gentle correction and explainable difficulty adaptation, Android scenario/progress controls, and
+local SQLite resume/history without retaining recordings or complete transcripts. Physical-phone,
+Wi-Fi, hardware-codec, performance, and soak acceptance remains mandatory in the final release
+milestone.
 
 ## Quick start (Windows PowerShell)
 
@@ -22,6 +25,7 @@ soak acceptance remains mandatory in the final release milestone.
 ./scripts/test.ps1 -Scope all
 ./scripts/dev.ps1 -Mode mock
 ./scripts/dev.ps1 -Mode local -PairingToken '<at-least-32-random-characters>'
+./scripts/progress.ps1 -Action View
 ```
 
 The fake/local host, local AI services, and Godot control client bind/connect on loopback only and

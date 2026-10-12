@@ -13,7 +13,13 @@ import struct
 import wave
 
 from govor_contracts import ProviderCapabilities
-from govor_domain import DetectedLanguage
+from govor_domain import (
+    DetectedLanguage,
+    LearnerIntent,
+    LessonProgress,
+    TeachingEngine,
+    get_scenario,
+)
 from govor_provider_interfaces import LessonResult, TeacherTurn, Transcript, UtteranceAudio
 
 
@@ -90,6 +96,11 @@ class FakeLessonService:
         self.recognizer = recognizer or FakeSpeechRecognizer()
         self.dialogue = dialogue or FakeDialogueProvider()
         self.speech = speech or FakeSpeechProvider()
+        self._engine = TeachingEngine(get_scenario("cafe-ordering"))
+
+    @property
+    def progress(self) -> LessonProgress:
+        return self._engine.progress()
 
     @property
     def capabilities(self) -> tuple[ProviderCapabilities, ...]:
@@ -99,10 +110,21 @@ class FakeLessonService:
             self.speech.capabilities,
         )
 
-    async def initial_turn(self) -> TeacherTurn:
+    async def initial_turn(
+        self,
+        scenario_id: str = "cafe-ordering",
+        *,
+        english_locale: str = "en-GB",
+        spaced_review_enabled: bool = False,
+    ) -> TeacherTurn:
+        _ = spaced_review_enabled
+        self._engine = TeachingEngine(
+            get_scenario(scenario_id),
+            english_locale=english_locale,
+        )
         return await self.speech.synthesize(
-            "Welcome. What would you like to order?",
-            "en-GB",
+            self._engine.initial_prompt(),
+            english_locale,
             frequency_hz=440.0,
         )
 
@@ -111,6 +133,11 @@ class FakeLessonService:
 
     async def respond(self, audio: UtteranceAudio) -> LessonResult:
         transcript = await self.recognizer.transcribe(audio)
+        self._engine.evaluate(
+            transcript.text,
+            transcript.language,
+            LearnerIntent.ENGLISH_ANSWER,
+        )
         text, locale = await self.dialogue.reply(transcript)
         turn = await self.speech.synthesize(text, locale, frequency_hz=554.37)
         return LessonResult(transcript=transcript, turn=turn)

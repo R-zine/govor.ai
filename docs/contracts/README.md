@@ -36,5 +36,12 @@ Speech messages must include locale, format, sample rate, channel count, utteran
 reference. Media timing uses integer microseconds relative to the associated media item. Null
 alignment means unavailable; it never authorizes guessed timestamps.
 
+Milestone 5 adds optional scenario/settings fields to `session.start`, with safe café/GB/no-review
+defaults for older version 1 development clients. The host resolves scenario IDs against the
+committed allow-list. `teacher.turn.lesson_progress` is additive and includes bounded exercise
+counts, difficulty, completion status, resume state, and an optional closed difficulty-change
+reason. It contains no learner utterance or audio. Python, Kotlin, C#, JSON Schema, and the shared
+teacher-turn fixture understand the same shape.
+
 Breaking changes require a new protocol version and an ADR. Adding an optional field is allowed
 only after all consumers ignore or understand it predictably.

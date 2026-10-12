@@ -72,7 +72,12 @@ enum class SessionState {
 }
 
 @Serializable
-data class SessionStartPayload(val client_id: String)
+data class SessionStartPayload(
+    val client_id: String,
+    val scenario_id: String = "cafe-ordering",
+    val english_locale: String = "en-GB",
+    val spaced_review_enabled: Boolean = false,
+)
 
 @Serializable
 data class SessionScopedPayload(val session_id: String)
@@ -130,6 +135,39 @@ data class PhonemeAlignmentPayload(
 )
 
 @Serializable
+data class LessonProgressPayload(
+    val scenario_id: String,
+    val scenario_title: String,
+    val exercise_number: Int,
+    val exercise_count: Int,
+    val successful_exercises: Int,
+    val attempts_on_exercise: Int,
+    val difficulty: String,
+    val status: String,
+    val resumed: Boolean,
+    val difficulty_change_reason: String? = null,
+) {
+    fun validate(): LessonProgressPayload {
+        require(scenario_id.matches(Regex("^[a-z][a-z0-9-]{2,63}$")))
+        require(scenario_title.length in 1..128)
+        require(exercise_number in 1..exercise_count && exercise_count in 1..64)
+        require(successful_exercises in 0..exercise_count)
+        require(attempts_on_exercise in 0..100)
+        require(difficulty in setOf("beginner", "intermediate", "advanced"))
+        require(status in setOf("in_progress", "completed"))
+        require(
+            difficulty_change_reason == null ||
+                difficulty_change_reason in setOf(
+                    "repeated_difficulty",
+                    "consistent_first_try_success",
+                ),
+        )
+        require(status != "completed" || successful_exercises == exercise_count)
+        return this
+    }
+}
+
+@Serializable
 data class TeacherTurnPayload(
     val session_id: String,
     val turn_id: String,
@@ -144,6 +182,7 @@ data class TeacherTurnPayload(
     val word_alignment: List<WordAlignmentPayload>? = null,
     val phoneme_alignment: List<PhonemeAlignmentPayload>? = null,
     val fallback_used: Boolean,
+    val lesson_progress: LessonProgressPayload? = null,
 ) {
     fun validate(): TeacherTurnPayload {
         UUID.fromString(session_id)
@@ -174,6 +213,7 @@ data class TeacherTurnPayload(
             require(alignment.start_us >= 0 && alignment.end_us in 1..duration_us)
             require(alignment.end_us > alignment.start_us)
         }
+        lesson_progress?.validate()
         return this
     }
 }

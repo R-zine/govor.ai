@@ -25,6 +25,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -72,15 +73,28 @@ private fun GovorApp(model: MediaSessionViewModel = viewModel()) {
     val selectedPronunciation by model.lesson.selectedPronunciation.collectAsStateWithLifecycle()
     val playbackRate by model.lesson.playbackRate.collectAsStateWithLifecycle()
     val transcript by model.lesson.transcript.collectAsStateWithLifecycle()
+    val lessonProgress by model.lesson.lessonProgress.collectAsStateWithLifecycle()
     // Debug emulator defaults use adb reverse for control 8765 and media 8766.
     var mediaHost by remember { mutableStateOf("127.0.0.1:8766") }
     var controlHost by remember { mutableStateOf("127.0.0.1:8765") }
     var token by remember { mutableStateOf("") }
+    var scenarioId by remember { mutableStateOf("cafe-ordering") }
+    var englishLocale by remember { mutableStateOf("en-GB") }
+    var spacedReviewEnabled by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
     ) { granted ->
-        if (granted) model.connect(mediaHost, controlHost, token)
+        if (granted) {
+            model.connect(
+                mediaHost,
+                controlHost,
+                token,
+                scenarioId,
+                englishLocale,
+                spacedReviewEnabled,
+            )
+        }
     }
 
     MaterialTheme {
@@ -150,6 +164,36 @@ private fun GovorApp(model: MediaSessionViewModel = viewModel()) {
                             visualTransformation = PasswordVisualTransformation(),
                             modifier = Modifier.fillMaxWidth(),
                         )
+                        Text("Guided scenario", color = Color.White)
+                        GUIDED_SCENARIOS.chunked(2).forEach { scenarioRow ->
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                scenarioRow.forEach { scenario ->
+                                    Button(onClick = { scenarioId = scenario.first }) {
+                                        Text(
+                                            if (scenarioId == scenario.first) {
+                                                "${scenario.second} ✓"
+                                            } else {
+                                                scenario.second
+                                            },
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            listOf("en-GB", "en-US").forEach { locale ->
+                                Button(onClick = { englishLocale = locale }) {
+                                    Text(if (englishLocale == locale) "$locale ✓" else locale)
+                                }
+                            }
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(
+                                checked = spacedReviewEnabled,
+                                onCheckedChange = { spacedReviewEnabled = it },
+                            )
+                            Text("Enable spaced vocabulary review", color = Color.White)
+                        }
                         Button(
                             onClick = {
                                 val microphonePermission = ContextCompat.checkSelfPermission(
@@ -157,7 +201,14 @@ private fun GovorApp(model: MediaSessionViewModel = viewModel()) {
                                     Manifest.permission.RECORD_AUDIO,
                                 )
                                 if (microphonePermission == PackageManager.PERMISSION_GRANTED) {
-                                    model.connect(mediaHost, controlHost, token)
+                                    model.connect(
+                                        mediaHost,
+                                        controlHost,
+                                        token,
+                                        scenarioId,
+                                        englishLocale,
+                                        spacedReviewEnabled,
+                                    )
                                 } else {
                                     permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
                                 }
@@ -179,6 +230,29 @@ private fun GovorApp(model: MediaSessionViewModel = viewModel()) {
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(16.dp),
                     ) {
+                        lessonProgress?.let { progress ->
+                            Text(
+                                "${progress.scenario_title} · " +
+                                    "${progress.exercise_number}/${progress.exercise_count} · " +
+                                    progress.difficulty,
+                                color = Color(0xFFB8D9D1),
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                            progress.difficulty_change_reason?.let { reason ->
+                                Text(
+                                    when (reason) {
+                                        "repeated_difficulty" ->
+                                            "Difficulty reduced after repeated difficulty."
+                                        else ->
+                                            "Difficulty increased after consistent first-try success."
+                                    },
+                                    color = Color(0xFFB8D9D1),
+                                )
+                            }
+                            if (progress.status == "completed") {
+                                Text("Lesson complete · progress saved", color = Color(0xFF83F8DA))
+                            }
+                        }
                         teacherText?.let { text ->
                             val annotated = buildAnnotatedString {
                                 append("Teacher: ")
@@ -309,6 +383,13 @@ private fun GovorApp(model: MediaSessionViewModel = viewModel()) {
         }
     }
 }
+
+private val GUIDED_SCENARIOS = listOf(
+    "cafe-ordering" to "Café",
+    "supermarket-shopping" to "Supermarket",
+    "airport-travel" to "Airport",
+    "home-conversation" to "Home",
+)
 
 private fun statusColor(status: MediaConnectionStatus): Color = when (status) {
     MediaConnectionStatus.CONNECTED -> Color(0xFF83F8DA)

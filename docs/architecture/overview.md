@@ -71,6 +71,24 @@ empty recognition is distinct from malformed provider output and produces a repe
 an invented transcript. The server URL, provider identity, model path, context size, GPU layers,
 and memory window are configurable without changing domain code. See ADR-0006.
 
+## Teaching and progress boundary
+
+`packages/domain` contains four committed guided lesson definitions and the deterministic
+`TeachingEngine`. The active local dialogue model may classify or phrase a conversational turn,
+but it cannot award progress. Only recognized English production that satisfies the active guided
+exercise can advance. Bulgarian/mixed assistance, vocabulary questions, repetition, slower-speech
+requests, ambiguity, and recognition failure retain the exercise.
+
+Two failed English attempts lower difficulty by one level; two consecutive first-attempt successes
+raise it by one. A closed reason enum accompanies each change. The Android client selects the
+café, supermarket, airport, or home scenario and displays the host-owned progress snapshot.
+
+`packages/progress` is the replaceable SQLite adapter. It persists structured settings, exercise
+counters, vocabulary outcomes/review dates, completion, and difficulty history. Its schema has no
+audio or transcript column. Interrupted active lessons resume; completed lessons start a new
+attempt when selected again. View/export/confirmation-gated deletion is available through
+`scripts/progress.ps1`. See ADR-0008.
+
 ## Media architecture decision
 
 Milestone 1 proved the riskiest development path before full teaching work. The target was WebRTC

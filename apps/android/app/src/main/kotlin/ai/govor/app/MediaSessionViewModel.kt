@@ -7,9 +7,16 @@ class MediaSessionViewModel(application: Application) : AndroidViewModel(applica
     val session = WebRtcSession(application.applicationContext)
     val lesson = LessonSessionClient()
 
-    fun connect(mediaHost: String, controlHost: String, pairingToken: String) {
+    fun connect(
+        mediaHost: String,
+        controlHost: String,
+        pairingToken: String,
+        scenarioId: String,
+        englishLocale: String,
+        spacedReviewEnabled: Boolean,
+    ) {
         session.connect(mediaHost, pairingToken)
-        lesson.connect(controlHost)
+        lesson.connect(controlHost, scenarioId, englishLocale, spacedReviewEnabled)
     }
 
     fun setPushToTalk(active: Boolean) {

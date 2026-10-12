@@ -31,6 +31,18 @@
       {"word_index":6,"start_us":121000,"end_us":149000}
     ],
     "phoneme_alignment": null,
-    "fallback_used": false
+    "fallback_used": false,
+    "lesson_progress": {
+      "scenario_id": "cafe-ordering",
+      "scenario_title": "Ordering at a café",
+      "exercise_number": 1,
+      "exercise_count": 3,
+      "successful_exercises": 0,
+      "attempts_on_exercise": 0,
+      "difficulty": "intermediate",
+      "status": "in_progress",
+      "resumed": false,
+      "difficulty_change_reason": null
+    }
   }
 }

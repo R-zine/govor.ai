@@ -6,18 +6,24 @@ import io
 import math
 import struct
 import wave
+from dataclasses import replace
 from typing import Protocol
 
 from govor_contracts import ProviderCapabilities
 from govor_domain import (
-    CAFE_LESSON,
     ConversationMemory,
     ConversationTurn,
     DetectedLanguage,
     DialoguePolicy,
     LearnerIntent,
+    LearnerSettings,
+    LessonProgress,
     Recognition,
+    TeachingEngine,
+    TeachingOutcome,
+    TeachingState,
     classify_explicit_intent,
+    get_scenario,
 )
 from govor_provider_interfaces import (
     DialogueProvider,
@@ -48,6 +54,42 @@ class LocalAiSettings(Protocol):
     kokoro_voice_us: str
     piper_bg_model: str
     piper_bg_config: str
+    progress_database: str
+
+
+class ProgressRepository(Protocol):
+    def get_settings(self) -> LearnerSettings: ...
+
+    def update_settings(self, settings: LearnerSettings) -> None: ...
+
+    def load_or_start(self, scenario_id: str) -> tuple[TeachingState, bool]: ...
+
+    def record_outcome(self, outcome: TeachingOutcome, state: TeachingState) -> None: ...
+
+
+class EphemeralProgressRepository:
+    """Non-persistent repository for focused adapter tests only."""
+
+    def __init__(self) -> None:
+        self.settings = LearnerSettings()
+        self.states: dict[str, TeachingState] = {}
+
+    def get_settings(self) -> LearnerSettings:
+        return self.settings
+
+    def update_settings(self, settings: LearnerSettings) -> None:
+        self.settings = settings
+
+    def load_or_start(self, scenario_id: str) -> tuple[TeachingState, bool]:
+        state = self.states.get(scenario_id)
+        if state is None or state.status.value == "completed":
+            state = TeachingState(difficulty=self.settings.starting_difficulty)
+            self.states[scenario_id] = state
+            return state, False
+        return state, True
+
+    def record_outcome(self, outcome: TeachingOutcome, state: TeachingState) -> None:
+        self.states[outcome.progress.scenario_id] = state
 
 
 class DiagnosticToneSpeechProvider:
@@ -79,6 +121,7 @@ class LocalLessonService:
         recognizer: SpeechRecognizer,
         dialogue: DialogueProvider,
         speech: SpeechProvider | None = None,
+        progress_repository: ProgressRepository | None = None,
         *,
         memory_turns: int = 8,
     ) -> None:
@@ -87,7 +130,12 @@ class LocalLessonService:
         self.speech = speech or DiagnosticToneSpeechProvider()
         self.memory = ConversationMemory(max_turns=memory_turns)
         self.policy = DialoguePolicy()
-        self.lesson = CAFE_LESSON
+        self.progress_repository = progress_repository or EphemeralProgressRepository()
+        self._engine = TeachingEngine(get_scenario("cafe-ordering"))
+
+    @property
+    def progress(self) -> LessonProgress:
+        return self._engine.progress()
 
     @property
     def capabilities(self) -> tuple[ProviderCapabilities, ...]:
@@ -97,8 +145,29 @@ class LocalLessonService:
             self.speech.capabilities,
         )
 
-    async def initial_turn(self) -> TeacherTurn:
-        return await self.speech.synthesize(self.lesson.teacher_prompt, "en-GB")
+    async def initial_turn(
+        self,
+        scenario_id: str = "cafe-ordering",
+        *,
+        english_locale: str = "en-GB",
+        spaced_review_enabled: bool = False,
+    ) -> TeacherTurn:
+        settings = self.progress_repository.get_settings()
+        self.progress_repository.update_settings(
+            replace(
+                settings,
+                english_locale=english_locale,
+                spaced_review_enabled=spaced_review_enabled,
+            )
+        )
+        state, resumed = self.progress_repository.load_or_start(scenario_id)
+        self._engine = TeachingEngine(
+            get_scenario(scenario_id),
+            state,
+            resumed=resumed,
+            english_locale=english_locale,
+        )
+        return await self.speech.synthesize(self._engine.initial_prompt(), english_locale)
 
     async def replay_word(self, word: str, locale: str, *, speed: float = 1.0) -> TeacherTurn:
         return await self.speech.synthesize(word, locale, speed=speed)
@@ -107,8 +176,9 @@ class LocalLessonService:
         try:
             transcript = await self.recognizer.transcribe(audio)
         except NoSpeechRecognized:
-            decision = self.policy.fallback(LearnerIntent.RECOGNITION_ERROR)
-            turn = await self.speech.synthesize(decision.reply_text, decision.reply_locale)
+            outcome = self._engine.no_speech()
+            turn = await self.speech.synthesize(outcome.reply_text, outcome.reply_locale)
+            self.progress_repository.record_outcome(outcome, self._engine.state)
             return LessonResult(transcript=None, turn=turn)
         recognition = Recognition(
             text=transcript.text,
@@ -123,7 +193,7 @@ class LocalLessonService:
             draft = await self.dialogue.generate(
                 DialogueRequest(
                     transcript=transcript,
-                    lesson=self.lesson,
+                    lesson=self._engine.context(),
                     history=self.memory.snapshot(),
                     intent_hint=intent_hint,
                 )
@@ -131,20 +201,27 @@ class LocalLessonService:
             decision = self.policy.apply(recognition, draft)
         except (ProviderError, TimeoutError):
             decision = self.policy.fallback(fallback_intent)
-        turn = await self.speech.synthesize(decision.reply_text, decision.reply_locale)
+        outcome = self._engine.evaluate(
+            transcript.text,
+            transcript.language,
+            decision.intent,
+        )
+        turn = await self.speech.synthesize(outcome.reply_text, outcome.reply_locale)
+        self.progress_repository.record_outcome(outcome, self._engine.state)
         self.memory.append(
             ConversationTurn(
                 learner_text=transcript.text,
                 learner_locale=transcript.locale,
                 intent=decision.intent,
-                teacher_text=decision.reply_text,
-                teacher_locale=decision.reply_locale,
+                teacher_text=outcome.reply_text,
+                teacher_locale=outcome.reply_locale,
             )
         )
         return LessonResult(transcript=transcript, turn=turn)
 
 
 def build_local_lesson_service(settings: LocalAiSettings) -> LocalLessonService:
+    from govor_progress import SQLiteProgressRepository
     from govor_speech import build_local_speech_provider
 
     return LocalLessonService(
@@ -159,6 +236,7 @@ def build_local_lesson_service(settings: LocalAiSettings) -> LocalLessonService:
             provider_id=settings.dialogue_provider_id,
         ),
         speech=build_local_speech_provider(settings),
+        progress_repository=SQLiteProgressRepository(settings.progress_database),
         memory_turns=settings.conversation_memory_turns,
     )
 

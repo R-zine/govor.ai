@@ -19,6 +19,9 @@
 | `./scripts/renderer-smoke.ps1` | Run a muted, bounded Godot frame/PCM/cleanup smoke check |
 | `./scripts/emulator-renderer-smoke.ps1` | Development-only Godot/aiortc/native-emulator media and microphone check |
 | `./scripts/benchmark.ps1 -Profile inventory` | Write environment inventory, not performance results |
+| `./scripts/progress.ps1 -Action View` | View local structured learner progress/settings as JSON |
+| `./scripts/progress.ps1 -Action Export -OutputPath <path>` | Export structured progress; never audio/transcripts |
+| `./scripts/progress.ps1 -Action Delete -ConfirmDelete` | Delete progress history while preserving settings |
 
 For pre-release development only, the feasibility media server can be exposed to a physical phone
 on a trusted LAN:

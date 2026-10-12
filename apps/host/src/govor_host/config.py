@@ -36,6 +36,7 @@ class Settings(BaseSettings):
     kokoro_voice_us: str = "af_heart"
     piper_bg_model: str = ".tools/models/speech/bg_BG-dimitar-medium.onnx"
     piper_bg_config: str = ".tools/models/speech/bg_BG-dimitar-medium.onnx.json"
+    progress_database: str = "data/progress.sqlite3"
 
 
 @lru_cache

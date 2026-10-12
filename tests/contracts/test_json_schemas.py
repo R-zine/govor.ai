@@ -47,6 +47,7 @@ def test_positive_contract_fixtures(schema_name: str, fixture_name: str) -> None
         ("message-envelope.schema.json", "message-envelope-missing-correlation.json"),
         ("signaling-message.schema.json", "signaling-unknown-field.json"),
         ("control-message.schema.json", "control-recording-extra-field.json"),
+        ("control-message.schema.json", "control-lesson-progress-invalid.json"),
         ("local-ai-dialogue.schema.json", "local-ai-control-injection.json"),
     ],
 )

@@ -67,6 +67,18 @@ public sealed record PhonemeAlignmentPayload(
     [property: JsonPropertyName("start_us")] long StartUs,
     [property: JsonPropertyName("end_us")] long EndUs);
 
+public sealed record LessonProgressPayload(
+    [property: JsonPropertyName("scenario_id")] string ScenarioId,
+    [property: JsonPropertyName("scenario_title")] string ScenarioTitle,
+    [property: JsonPropertyName("exercise_number")] int ExerciseNumber,
+    [property: JsonPropertyName("exercise_count")] int ExerciseCount,
+    [property: JsonPropertyName("successful_exercises")] int SuccessfulExercises,
+    [property: JsonPropertyName("attempts_on_exercise")] int AttemptsOnExercise,
+    [property: JsonPropertyName("difficulty")] string Difficulty,
+    [property: JsonPropertyName("status")] string Status,
+    [property: JsonPropertyName("resumed")] bool Resumed,
+    [property: JsonPropertyName("difficulty_change_reason")] string? DifficultyChangeReason);
+
 public sealed record TeacherTurnPayload(
     [property: JsonPropertyName("session_id")] Guid SessionId,
     [property: JsonPropertyName("turn_id")] Guid TurnId,
@@ -80,7 +92,8 @@ public sealed record TeacherTurnPayload(
     [property: JsonPropertyName("pronunciations")] IReadOnlyList<PronunciationPayload> Pronunciations,
     [property: JsonPropertyName("word_alignment")] IReadOnlyList<WordAlignmentPayload>? WordAlignment,
     [property: JsonPropertyName("phoneme_alignment")] IReadOnlyList<PhonemeAlignmentPayload>? PhonemeAlignment,
-    [property: JsonPropertyName("fallback_used")] bool FallbackUsed);
+    [property: JsonPropertyName("fallback_used")] bool FallbackUsed,
+    [property: JsonPropertyName("lesson_progress")] LessonProgressPayload? LessonProgress);
 
 public sealed record TeacherWordReplayRequestPayload(
     [property: JsonPropertyName("session_id")] Guid SessionId,

@@ -34,6 +34,9 @@ class ContractsTest {
         assertEquals("ˈwɛlkəm", turn.pronunciations.first().ipa)
         assertEquals(0, turn.word_alignment?.first()?.word_index)
         assertFalse(turn.fallback_used)
+        assertEquals("cafe-ordering", turn.lesson_progress?.scenario_id)
+        assertEquals(1, turn.lesson_progress?.exercise_number)
+        assertEquals("intermediate", turn.lesson_progress?.difficulty)
     }
 
     @Test
@@ -62,6 +65,23 @@ class ContractsTest {
     }
 
     @Test
+    fun `invalid completed lesson progress is rejected`() {
+        val progress = LessonProgressPayload(
+            scenario_id = "cafe-ordering",
+            scenario_title = "Ordering at a café",
+            exercise_number = 3,
+            exercise_count = 3,
+            successful_exercises = 2,
+            attempts_on_exercise = 0,
+            difficulty = "intermediate",
+            status = "completed",
+            resumed = false,
+        )
+
+        assertThrows(IllegalArgumentException::class.java) { progress.validate() }
+    }
+
+    @Test
     fun `unknown payload field is rejected`() {
         val envelope = ControlContractCodec.decodeEnvelope(
             """{"protocol_version":"1.0","message_type":"session.state","correlation_id":"42b606a0-d767-4c22-a86f-3354d7186e73","payload":{"session_id":"3191d8bd-d30f-488b-a324-cb91f1286745","state":"ready","event_id":"19c369b5-6fca-43ea-bffc-764b51b7e7c2","unexpected":true}}""",
@@ -80,12 +100,21 @@ class ContractsTest {
         val encoded = ControlContractCodec.encodeEnvelope(
             "session.start",
             correlationId,
-            SessionStartPayload(clientId),
+            SessionStartPayload(
+                client_id = clientId,
+                scenario_id = "airport-travel",
+                english_locale = "en-US",
+                spaced_review_enabled = true,
+            ),
         )
         val decoded = ControlContractCodec.decodeEnvelope(encoded)
 
         assertEquals(correlationId, decoded.correlation_id)
-        assertEquals(clientId, ControlContractCodec.decodePayload<SessionStartPayload>(decoded).client_id)
+        val start = ControlContractCodec.decodePayload<SessionStartPayload>(decoded)
+        assertEquals(clientId, start.client_id)
+        assertEquals("airport-travel", start.scenario_id)
+        assertEquals("en-US", start.english_locale)
+        assertTrue(start.spaced_review_enabled)
         assertFalse(encoded.contains("unexpected"))
     }
 

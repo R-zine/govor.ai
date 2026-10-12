@@ -61,6 +61,9 @@ Milestone handoff.
 ./scripts/dev.ps1 -Mode mock
 ./scripts/dev.ps1 -Mode local -PairingToken '<at-least-32-random-characters>'
 ./scripts/media-dev.ps1 -PairingToken '<at-least-32-random-characters>' -AllowInsecureDevLan
+./scripts/progress.ps1 -Action View
+./scripts/progress.ps1 -Action Export -OutputPath '<path>'
+./scripts/progress.ps1 -Action Delete -ConfirmDelete
 ```
 
 Hardware tests are separate:

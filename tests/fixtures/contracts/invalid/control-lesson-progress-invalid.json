@@ -1,0 +1,32 @@
+{
+  "protocol_version": "1.0",
+  "message_type": "teacher.turn",
+  "correlation_id": "42b606a0-d767-4c22-a86f-3354d7186e73",
+  "payload": {
+    "session_id": "3191d8bd-d30f-488b-a324-cb91f1286745",
+    "turn_id": "19c369b5-6fca-43ea-bffc-764b51b7e7c2",
+    "text": "Try again.",
+    "locale": "en-GB",
+    "provider_id": "fake-scripted-speech",
+    "audio_format": "wav",
+    "sample_rate_hz": 16000,
+    "duration_us": 150000,
+    "audio_base64": "UklGRgQAAABXQVZF",
+    "pronunciations": [],
+    "word_alignment": null,
+    "phoneme_alignment": null,
+    "fallback_used": false,
+    "lesson_progress": {
+      "scenario_id": "cafe-ordering",
+      "scenario_title": "Ordering at a café",
+      "exercise_number": 0,
+      "exercise_count": 3,
+      "successful_exercises": 0,
+      "attempts_on_exercise": 0,
+      "difficulty": "intermediate",
+      "status": "in_progress",
+      "resumed": false,
+      "difficulty_change_reason": null
+    }
+  }
+}

@@ -18,6 +18,7 @@ from uuid import UUID, uuid4
 
 from govor_contracts import (
     LearnerTranscriptPayload,
+    LessonProgressPayload,
     MessageEnvelope,
     PhonemeAlignmentPayload,
     PronunciationPayload,
@@ -38,7 +39,15 @@ from govor_contracts import (
     TeacherWordReplayRequestPayload,
     WordAlignmentPayload,
 )
-from govor_domain import InvalidTransition, SessionEvent, SessionMachine, SessionState
+from govor_domain import (
+    InvalidTransition,
+    LessonProgress,
+    LessonStatus,
+    SessionEvent,
+    SessionMachine,
+    SessionState,
+    get_scenario,
+)
 from govor_provider_interfaces import LessonResult, TeacherTurn, UtteranceAudio
 from pydantic import BaseModel, ValidationError
 
@@ -54,7 +63,16 @@ class LessonService(Protocol):
     @property
     def capabilities(self) -> tuple[ProviderCapabilities, ...]: ...
 
-    async def initial_turn(self) -> TeacherTurn: ...
+    @property
+    def progress(self) -> LessonProgress: ...
+
+    async def initial_turn(
+        self,
+        scenario_id: str = "cafe-ordering",
+        *,
+        english_locale: str = "en-GB",
+        spaced_review_enabled: bool = False,
+    ) -> TeacherTurn: ...
 
     async def replay_word(self, word: str, locale: str, *, speed: float = 1.0) -> TeacherTurn: ...
 
@@ -117,6 +135,10 @@ class ControlSession:
         self._client_id: UUID | None = None
         self._turn_id: UUID | None = None
         self._active_turn: TeacherTurn | None = None
+        self._lesson_completed = False
+        self._scenario_id = "cafe-ordering"
+        self._english_locale = "en-GB"
+        self._spaced_review_enabled = False
         self._utterance_id: UUID | None = None
         self._work_task: asyncio.Task[None] | None = None
         self._deadline_task: asyncio.Task[None] | None = None
@@ -211,9 +233,13 @@ class ControlSession:
             )
             return
 
+        get_scenario(payload.scenario_id)
         self._machine = SessionMachine()
         self._session_id = uuid4()
         self._client_id = payload.client_id
+        self._scenario_id = payload.scenario_id
+        self._english_locale = payload.english_locale
+        self._spaced_review_enabled = payload.spaced_review_enabled
         self._registry.start(self._session_id)
         for event in (
             SessionEvent.DISCOVERY_STARTED,
@@ -229,7 +255,11 @@ class ControlSession:
     async def _prepare_initial_turn(self, correlation_id: UUID) -> None:
         try:
             async with asyncio.timeout(self._settings.provider_timeout_seconds):
-                turn = await self._lesson.initial_turn()
+                turn = await self._lesson.initial_turn(
+                    self._scenario_id,
+                    english_locale=self._english_locale,
+                    spaced_review_enabled=self._spaced_review_enabled,
+                )
             await self._issue_teacher_turn(turn, correlation_id, response=False)
         except asyncio.CancelledError:
             raise
@@ -248,6 +278,9 @@ class ControlSession:
         if payload.turn_id != self._turn_id:
             raise ValueError("turn_id does not match the active turn")
         self._cancel_deadline()
+        if self._lesson_completed:
+            await self._cleanup_active_session(reason="completed", notify=True)
+            return
         self._machine.apply(SessionEvent.TEACHER_PLAYBACK_FINISHED, correlation_id)
         await self._renderer_command("awaiting_learner", correlation_id)
         await self._send_state(correlation_id)
@@ -393,6 +426,8 @@ class ControlSession:
     ) -> None:
         self._turn_id = uuid4()
         self._active_turn = turn
+        progress = self._lesson.progress
+        self._lesson_completed = progress.status is LessonStatus.COMPLETED
         await self._renderer_command(
             "teacher_speaking",
             correlation_id,
@@ -450,6 +485,7 @@ class ControlSession:
                     else None
                 ),
                 fallback_used=turn.fallback_used,
+                lesson_progress=_lesson_progress_payload(progress),
             ),
         )
         self._arm_deadline(
@@ -627,6 +663,7 @@ class ControlSession:
         self._client_id = None
         self._turn_id = None
         self._active_turn = None
+        self._lesson_completed = False
         self._utterance_id = None
         self._machine = SessionMachine()
 
@@ -670,3 +707,22 @@ def _operation_error_code(error: Exception) -> str:
     if isinstance(error, RendererUnavailable):
         return "renderer_unavailable"
     return "provider_failed"
+
+
+def _lesson_progress_payload(progress: LessonProgress) -> LessonProgressPayload:
+    return LessonProgressPayload(
+        scenario_id=progress.scenario_id,
+        scenario_title=progress.scenario_title,
+        exercise_number=progress.exercise_number,
+        exercise_count=progress.exercise_count,
+        successful_exercises=progress.successful_exercises,
+        attempts_on_exercise=progress.attempts_on_exercise,
+        difficulty=progress.difficulty.value,
+        status=progress.status.value,
+        resumed=progress.resumed,
+        difficulty_change_reason=(
+            progress.difficulty_change_reason.value
+            if progress.difficulty_change_reason is not None
+            else None
+        ),
+    )

@@ -6,6 +6,7 @@ import pytest
 from govor_contracts import ProviderCapabilities
 from govor_domain import DetectedLanguage, DialogueDraft, LearnerIntent
 from govor_local_ai.service import DiagnosticToneSpeechProvider, LocalLessonService
+from govor_progress import SQLiteProgressRepository
 from govor_provider_interfaces import (
     DialogueRequest,
     NoSpeechRecognized,
@@ -146,3 +147,58 @@ async def test_diagnostic_audio_is_bounded_and_explicitly_not_speech() -> None:
     assert turn.audio_wav.startswith(b"RIFF")
     assert turn.duration_us == 150_000
     assert "not_speech" in provider.capabilities.features
+
+
+@pytest.mark.asyncio
+async def test_guided_lesson_persists_help_progress_and_completion(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    recognizer = QueueRecognizer(
+        [
+            transcript("Не разбирам.", DetectedLanguage.BULGARIAN),
+            transcript("I would like coffee, please.", DetectedLanguage.ENGLISH),
+            transcript("That is all, thank you.", DetectedLanguage.ENGLISH),
+            transcript("For here, please.", DetectedLanguage.ENGLISH),
+        ]
+    )
+    dialogue = QueueDialogue(
+        [
+            DialogueDraft(
+                LearnerIntent.BULGARIAN_CLARIFICATION,
+                "Ще помогна.",
+                "bg-BG",
+                False,
+            ),
+            *[
+                DialogueDraft(
+                    LearnerIntent.ENGLISH_ANSWER,
+                    "Good.",
+                    "en-GB",
+                    True,
+                )
+                for _ in range(3)
+            ],
+        ]
+    )
+    progress = SQLiteProgressRepository(tmp_path / "progress.sqlite3")
+    service = LocalLessonService(recognizer, dialogue, progress_repository=progress)
+    initial = await service.initial_turn("cafe-ordering")
+
+    assert initial.locale == "en-GB"
+    help_result = await service.respond(audio())
+    assert help_result.turn.locale == "bg-BG"
+    assert service.progress.exercise_number == 1
+    for _ in range(3):
+        result = await service.respond(audio())
+
+    assert result.turn.text.startswith("Well done.")
+    assert service.progress.status.value == "completed"
+    history = progress.history()
+    assert history["scenarios"][0]["completed_count"] == 1
+    assert sum(item["help_requests"] for item in history["exercises"]) == 1
+
+    restarted = LocalLessonService(
+        QueueRecognizer([]),
+        QueueDialogue([]),
+        progress_repository=SQLiteProgressRepository(tmp_path / "progress.sqlite3"),
+    )
+    next_initial = await restarted.initial_turn("cafe-ordering")
+    assert not next_initial.text.startswith("Welcome back.")

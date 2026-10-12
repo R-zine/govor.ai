@@ -37,6 +37,7 @@ $env:PYTHONPATH = @(
     (Join-Path $script:RepositoryRoot 'apps\host\src'),
     (Join-Path $script:RepositoryRoot 'packages\domain\src'),
     (Join-Path $script:RepositoryRoot 'packages\provider_interfaces\src'),
+    (Join-Path $script:RepositoryRoot 'packages\progress\src'),
     (Join-Path $script:RepositoryRoot 'packages\contracts\python'),
     (Join-Path $script:RepositoryRoot 'services\local_ai\src'),
     (Join-Path $script:RepositoryRoot 'services\speech\src'),

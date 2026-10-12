@@ -38,6 +38,13 @@ model field can become a renderer action, path, URL, tool call, or command. whis
 ephemeral per-utterance WAV and writes bounded JSON under ignored `.cache`; both files are removed
 in a `finally` path. Normal logs and benchmark artifacts omit raw audio and transcript text.
 
+The Milestone 5 SQLite database is also local to the trusted Windows user and has no listener. Its
+schema accepts scenario/exercise identifiers, counters, settings, vocabulary items from committed
+content, review dates, and closed difficulty reasons only; it has no raw-audio or transcript-text
+column. Automated local-AI and emulator smokes use an isolated cache database and remove it so they
+cannot alter the learner's development history. History deletion requires an explicit CLI
+confirmation flag. Release packaging still needs an OS-appropriate protected per-user data path.
+
 Godot's Milestone 2 control client also opens an outbound loopback WebSocket; the renderer opens no
 listener. It accepts a closed action set, validates UUIDs and integer-microsecond bounds, and
 acknowledges commands. This loopback connection relies on the trusted desktop-user boundary and is

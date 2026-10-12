@@ -15,6 +15,7 @@ if ($Profile -eq 'speech') {
     $env:PYTHONPATH = @(
         (Join-Path $script:RepositoryRoot 'packages\domain\src'),
         (Join-Path $script:RepositoryRoot 'packages\provider_interfaces\src'),
+        (Join-Path $script:RepositoryRoot 'packages\progress\src'),
         (Join-Path $script:RepositoryRoot 'packages\contracts\python'),
         (Join-Path $script:RepositoryRoot 'services\speech\src')
     ) -join [IO.Path]::PathSeparator
@@ -42,13 +43,14 @@ if ($Profile -eq 'local-ai') {
     $output = Join-Path $script:CacheRoot 'local-ai-benchmark.json'
     $candidateOutput = Join-Path $script:CacheRoot 'local-ai-candidate-1.7b.json'
     $hostSmokeOutput = Join-Path $script:CacheRoot 'local-ai-host-smoke.json'
+    $progressDatabase = Join-Path $script:CacheRoot 'local-ai-host-smoke-progress.sqlite3'
     $stdoutLog = Join-Path $script:CacheRoot 'llama-benchmark.stdout.log'
     $stderrLog = Join-Path $script:CacheRoot 'llama-benchmark.stderr.log'
     $candidateStdoutLog = Join-Path $script:CacheRoot 'llama-candidate.stdout.log'
     $candidateStderrLog = Join-Path $script:CacheRoot 'llama-candidate.stderr.log'
     foreach ($path in @(
         $output, $candidateOutput, $hostSmokeOutput, $stdoutLog, $stderrLog,
-        $candidateStdoutLog, $candidateStderrLog
+        $candidateStdoutLog, $candidateStderrLog, $progressDatabase
     )) {
         if (Test-Path -LiteralPath $path) { Remove-Item -LiteralPath $path -Force }
     }
@@ -56,6 +58,7 @@ if ($Profile -eq 'local-ai') {
     $env:PYTHONPATH = @(
         (Join-Path $script:RepositoryRoot 'packages\domain\src'),
         (Join-Path $script:RepositoryRoot 'packages\provider_interfaces\src'),
+        (Join-Path $script:RepositoryRoot 'packages\progress\src'),
         (Join-Path $script:RepositoryRoot 'packages\contracts\python'),
         (Join-Path $script:RepositoryRoot 'services\local_ai\src'),
         (Join-Path $script:RepositoryRoot 'services\speech\src'),
@@ -134,6 +137,7 @@ if ($Profile -eq 'local-ai') {
             '--audio-fixture', "english-jfk|$($script:CacheRoot)\audio-fixtures\whisper-jfk.wav|en|country you",
             '--audio-fixture', "bulgarian-voxforge|$($script:CacheRoot)\audio-fixtures\voxforge-bg\dtd-20120908-cuf\wav\bg-0044.wav|bg|\u043e\u0442\u043a\u043b\u044e\u0447\u0432\u0430\u043c \u043b\u0435\u0441\u043d\u043e"
         )
+        $env:GOVOR_PROGRESS_DATABASE = $progressDatabase
         Invoke-Checked -FilePath 'uv' -ArgumentList @(
             'run', '--frozen', '--extra', 'speech', 'python', 'scripts/local_ai_host_smoke.py',
             '--whisper-executable', $whisperCli,
@@ -171,6 +175,10 @@ if ($Profile -eq 'local-ai') {
     }
     finally {
         if (-not $serverProcess.HasExited) { Stop-Process -Id $serverProcess.Id -Force }
+        Remove-Item Env:GOVOR_PROGRESS_DATABASE -ErrorAction SilentlyContinue
+        if (Test-Path -LiteralPath $progressDatabase) {
+            Remove-Item -LiteralPath $progressDatabase -Force
+        }
     }
     exit 0
 }

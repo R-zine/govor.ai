@@ -10,7 +10,7 @@ criterion has direct evidence).
 | 2. Session orchestration | complete | M1 architecture decision (satisfied) | Complete validated fake turn cycle across host/Android/renderer; cancellation/timeouts/errors; leak-free repeated sessions |
 | 3. Local AI/bilingual | complete | M2 contracts/orchestration | Local LLM/STT, English/Bulgarian/mixed intents, valid structured output, human-speech transcription, measured latency/memory |
 | 4. Speech/phonemes | complete | M3 providers | Local English/Bulgarian speech, deterministic fallback, actual-or-null timing, IPA, Android highlighting/replay/rates, and human listening confirmation pass |
-| 5. Teaching/progress | not started | M3-4 | Four complete guided scenarios, adaptive explainable teaching, questions do not break lessons, SQLite persistence/resume |
+| 5. Teaching/progress | complete | M3-4 | Four complete guided scenarios, adaptive explainable teaching, questions do not break lessons, SQLite persistence/resume |
 | 6. Avatar/scenes | not started | M1 media decision, M4 timing | Avatar and four validated dynamic environments, lip sync/fallback, memory/performance evidence |
 | 7. Optional cloud/privacy | not started | Stable provider interfaces | Independent opt-in providers, offline default, OS secret storage, no unintended cloud/secret logging |
 | 8. Packaging/distribution | not started | M1-7 | Clean Windows install/launcher, signed stable APK/update, integrity-checked models, no dev tools, clean shutdown |
@@ -138,9 +138,34 @@ Deferred release acceptance (Milestone 9, not a Milestone 1 blocker):
 - Production pairing/WSS and release network security; the development token and cleartext
   signaling remain development-only.
 
-Milestones 1–4 are complete on their verified software/native-emulator and stated human-listening
+Milestones 1–5 are complete on their verified software/native-emulator and stated human-listening
 criteria. The deferred hardware bundle must remain visible and must pass before Milestone 9 can
 complete.
+
+## Milestone 5 acceptance tracking
+
+Verified software/native-emulator evidence:
+
+- Four committed functional scenarios each contain objectives, target vocabulary, examples, three
+  difficulty prompts, expected learner intents, misunderstandings, completion conditions, gentle
+  correction, and Bulgarian help.
+- The framework-independent engine completed every scenario in parameterized tests. Bulgarian,
+  mixed-language help, questions, repetition, no-speech, and model-proposed progress cannot count
+  as successful English production.
+- Two failed attempts reduce difficulty; two consecutive first-try successes increase it. Closed
+  reason values travel to Android and are covered by deterministic tests.
+- SQLite persists active exercise, completion counts, vocabulary/comprehension outcomes,
+  difficulty history, English accent, and optional spaced-review state. A reopened database resumes
+  an interrupted lesson and contains neither audio nor full transcript fields.
+- Android selects all four scenarios plus GB/US accent and review preference, and displays progress.
+  The final API 34 emulator UI hierarchy showed every control; no media server or audio was started.
+- Local CLI view/export/delete and host final-playback completion behavior pass. The final full
+  suite passed with 111 Python tests at 85.69% coverage, 18 contract tests, 13 Kotlin tests, 7 C#
+  tests, 15 media tests, Godot validation, and the Android APK build.
+
+Milestone 5 is complete. This evidence establishes deterministic guided progression and local
+structured persistence, not broad pedagogical effectiveness or live-human recognition quality.
+Milestone 6 may begin; all target-hardware acceptance remains Milestone 9.
 
 ## Milestone 9 target-hardware acceptance tracking
 

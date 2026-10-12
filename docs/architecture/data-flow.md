@@ -13,12 +13,21 @@
 8. The host recognizes speech, classifies intent, applies lesson policy, and creates the next turn.
 
 Android's `/v1/control` connection sends
-`session.start`, playback completion, recording start/submission metadata, retry, and cancellation.
+`session.start` with an allow-listed scenario, English accent, and spaced-review preference,
+followed by playback completion, recording start/submission metadata, retry, and cancellation.
 The microphone itself remains on the WebRTC track. In `local` mode, recording start opens a single
 bounded capture in the media service; received frames are resampled to 16 kHz mono PCM. Submission
 closes the capture and returns an in-memory WAV over a loopback-only internal HTTP endpoint. The
 host passes that WAV to whisper.cpp, deletes the recognizer's temporary input/output files, sends a
 validated transcript when speech exists, and invokes the bilingual dialogue pipeline.
+
+At lesson start, the host opens or resumes the selected scenario from local SQLite. The dialogue
+provider sees the current exercise context, but the pure teaching engine independently evaluates
+the validated recognition. Help/Bulgarian/mixed/no-speech turns retain the exercise. An English
+production attempt records only structured success/failure and vocabulary counters. The engine
+selects the committed correction or next prompt and applies an explainable bounded difficulty
+change when appropriate. Every `teacher.turn` carries the resulting progress snapshot. After a
+completed lesson's final audio finishes, the host ends the session with reason `completed`.
 
 The local dialogue adapter sends the recognized utterance, lesson context, deterministic intent
 hint, and at most the configured number of recent turns to llama.cpp. Closed structured output is
@@ -60,7 +69,9 @@ Raw microphone audio is held only long enough to process an utterance and is not
 default. Normal logs contain event names, timing, correlation IDs, and error classes—not audio,
 credentials, or full transcripts. The transcript is sent to the active Android session but is not
 written to normal logs. Conversation memory is session-local, bounded, and cleared with its lesson
-service; progress is stored locally in SQLite in a later milestone.
+service. Progress is stored locally in SQLite as settings and structured counters; raw audio and
+complete transcript text are not persisted. A local CLI can view/export those counters or delete
+history while preserving explicit settings.
 
 ## Timing
 

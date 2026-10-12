@@ -93,10 +93,16 @@ $env:GOVOR_KOKORO_MODEL = Join-Path $script:ToolsRoot 'models\speech\kokoro-v1.0
 $env:GOVOR_KOKORO_VOICES = Join-Path $script:ToolsRoot 'models\speech\voices-v1.0.bin'
 $env:GOVOR_PIPER_BG_MODEL = Join-Path $script:ToolsRoot 'models\speech\bg_BG-dimitar-medium.onnx'
 $env:GOVOR_PIPER_BG_CONFIG = Join-Path $script:ToolsRoot 'models\speech\bg_BG-dimitar-medium.onnx.json'
+$progressDatabase = Join-Path $script:CacheRoot 'emulator-speech-progress.sqlite3'
+if (Test-Path -LiteralPath $progressDatabase) {
+    Remove-Item -LiteralPath $progressDatabase -Force
+}
+$env:GOVOR_PROGRESS_DATABASE = $progressDatabase
 $env:PYTHONPATH = @(
     (Join-Path $script:RepositoryRoot 'apps\host\src'),
     (Join-Path $script:RepositoryRoot 'packages\domain\src'),
     (Join-Path $script:RepositoryRoot 'packages\provider_interfaces\src'),
+    (Join-Path $script:RepositoryRoot 'packages\progress\src'),
     (Join-Path $script:RepositoryRoot 'packages\contracts\python'),
     (Join-Path $script:RepositoryRoot 'services\local_ai\src'),
     (Join-Path $script:RepositoryRoot 'services\speech\src'),
@@ -238,8 +244,11 @@ finally {
         'GOVOR_DEV_PAIRING_TOKEN', 'GOVOR_MEDIA_SOURCE', 'GOVOR_MODE',
         'GOVOR_RENDERER_REQUIRED', 'GOVOR_PROVIDER_TIMEOUT_SECONDS',
         'GOVOR_KOKORO_MODEL', 'GOVOR_KOKORO_VOICES', 'GOVOR_PIPER_BG_MODEL',
-        'GOVOR_PIPER_BG_CONFIG'
+        'GOVOR_PIPER_BG_CONFIG', 'GOVOR_PROGRESS_DATABASE'
     )) {
         Remove-Item "Env:$name" -ErrorAction SilentlyContinue
+    }
+    if (Test-Path -LiteralPath $progressDatabase) {
+        Remove-Item -LiteralPath $progressDatabase -Force
     }
 }

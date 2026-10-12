@@ -8,6 +8,7 @@ from uuid import uuid4
 import pytest
 from fastapi.testclient import TestClient
 from govor_contracts import RendererCommandPayload
+from govor_domain import DetectedLanguage, LearnerIntent
 from govor_host.app import create_app
 from govor_host.config import Settings
 from govor_host.fake_lesson import FakeLessonService
@@ -59,8 +60,18 @@ class PronunciationLessonService(FakeLessonService):
         super().__init__()
         self.replays: list[tuple[str, str, float]] = []
 
-    async def initial_turn(self) -> TeacherTurn:
-        turn = await super().initial_turn()
+    async def initial_turn(
+        self,
+        scenario_id: str = "cafe-ordering",
+        *,
+        english_locale: str = "en-GB",
+        spaced_review_enabled: bool = False,
+    ) -> TeacherTurn:
+        turn = await super().initial_turn(
+            scenario_id,
+            english_locale=english_locale,
+            spaced_review_enabled=spaced_review_enabled,
+        )
         return replace(
             turn,
             pronunciations=(
@@ -78,6 +89,24 @@ class PronunciationLessonService(FakeLessonService):
     async def replay_word(self, word: str, locale: str, *, speed: float = 1.0) -> TeacherTurn:
         self.replays.append((word, locale, speed))
         return await super().replay_word(word, locale, speed=speed)
+
+
+class CompletingLessonService(FakeLessonService):
+    async def respond(self, audio: UtteranceAudio) -> LessonResult:
+        transcript = await self.recognizer.transcribe(audio)
+        answers = (
+            transcript.text,
+            "That is all, thank you.",
+            "For here, please.",
+        )
+        for answer in answers:
+            outcome = self._engine.evaluate(  # noqa: SLF001 - focused test service
+                answer,
+                DetectedLanguage.ENGLISH,
+                LearnerIntent.ENGLISH_ANSWER,
+            )
+        turn = await self.speech.synthesize(outcome.reply_text, outcome.reply_locale)
+        return LessonResult(transcript=transcript, turn=turn)
 
 
 def envelope(message_type: str, payload: dict[str, object]) -> dict[str, object]:
@@ -193,6 +222,73 @@ def test_complete_fake_lesson_turn_cycle(caplog: pytest.LogCaptureFixture) -> No
     assert "correlation_id=" in caplog.text
     assert "I would like coffee" not in caplog.text
     assert "audio_base64" not in caplog.text
+
+
+def test_selected_scenario_is_reported_in_teacher_progress() -> None:
+    app = create_app(Settings(), renderer=FakeRendererControl())
+    with TestClient(app).websocket_connect("/v1/control") as socket:
+        socket.send_json(
+            envelope(
+                "session.start",
+                {
+                    "client_id": str(uuid4()),
+                    "scenario_id": "supermarket-shopping",
+                    "english_locale": "en-US",
+                    "spaced_review_enabled": True,
+                },
+            )
+        )
+        assert socket.receive_json()["payload"]["state"] == "ready"
+        turn = socket.receive_json()
+
+    progress = turn["payload"]["lesson_progress"]
+    assert progress["scenario_id"] == "supermarket-shopping"
+    assert progress["exercise_number"] == 1
+    assert progress["difficulty"] == "intermediate"
+    assert turn["payload"]["locale"] == "en-US"
+    assert "milk" in turn["payload"]["text"].lower()
+
+
+def test_completed_lesson_ends_after_final_teacher_playback() -> None:
+    app = create_app(
+        Settings(),
+        renderer=FakeRendererControl(),
+        lesson=CompletingLessonService(),
+    )
+    with TestClient(app).websocket_connect("/v1/control") as socket:
+        session_id, turn_id = start_session(socket)
+        utterance_id = enter_recording(socket, session_id, turn_id)
+        socket.send_json(
+            envelope(
+                "learner.recording_submitted",
+                {
+                    "session_id": session_id,
+                    "utterance_id": utterance_id,
+                    "duration_us": 500_000,
+                    "audio_reference": "webrtc",
+                },
+            )
+        )
+        assert socket.receive_json()["payload"]["state"] == "processing"
+        assert socket.receive_json()["message_type"] == "learner.transcript"
+        final_turn = socket.receive_json()
+        assert final_turn["payload"]["lesson_progress"]["status"] == "completed"
+
+        socket.send_json(
+            envelope(
+                "teacher.playback_completed",
+                {
+                    "session_id": session_id,
+                    "turn_id": final_turn["payload"]["turn_id"],
+                },
+            )
+        )
+        assert socket.receive_json()["payload"]["state"] == "ending"
+        ended = socket.receive_json()
+
+    assert ended["message_type"] == "session.ended"
+    assert ended["payload"]["reason"] == "completed"
+    assert app.state.session_registry.active_count == 0
 
 
 def test_selected_word_replay_preserves_awaiting_learner_state() -> None:
