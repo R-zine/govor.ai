@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     capture_timeout_seconds: float = Field(default=2.0, gt=0.0, le=10.0)
     renderer_ack_timeout_seconds: float = Field(default=2.0, gt=0.0, le=30.0)
     playback_timeout_seconds: float = Field(default=10.0, gt=0.0, le=120.0)
-    recording_timeout_seconds: float = Field(default=30.0, gt=0.0, le=120.0)
+    recording_timeout_seconds: float = Field(default=60.0, gt=0.0, le=120.0)
     renderer_required: bool = True
     media_capture_url: str = "http://127.0.0.1:8766"
     llama_base_url: str = "http://127.0.0.1:8767"
@@ -30,6 +30,12 @@ class Settings(BaseSettings):
     whisper_executable: str = ".tools/whisper.cpp/b5454/Release/whisper-cli.exe"
     whisper_model: str = ".tools/models/whisper/ggml-small.bin"
     conversation_memory_turns: int = Field(default=8, ge=1, le=32)
+    kokoro_model: str = ".tools/models/speech/kokoro-v1.0.onnx"
+    kokoro_voices: str = ".tools/models/speech/voices-v1.0.bin"
+    kokoro_voice_gb: str = "bf_emma"
+    kokoro_voice_us: str = "af_heart"
+    piper_bg_model: str = ".tools/models/speech/bg_BG-dimitar-medium.onnx"
+    piper_bg_config: str = ".tools/models/speech/bg_BG-dimitar-medium.onnx.json"
 
 
 @lru_cache

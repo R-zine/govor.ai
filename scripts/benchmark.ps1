@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [ValidateSet('inventory', 'media-poc', 'local-ai')]
+    [ValidateSet('inventory', 'media-poc', 'local-ai', 'speech')]
     [string]$Profile = 'inventory'
 )
 
@@ -9,6 +9,28 @@ Initialize-GovorEnvironment
 
 if ($Profile -eq 'media-poc') {
     throw 'The media hardware benchmark is not yet implemented. No simulated performance result was generated.'
+}
+
+if ($Profile -eq 'speech') {
+    $env:PYTHONPATH = @(
+        (Join-Path $script:RepositoryRoot 'packages\domain\src'),
+        (Join-Path $script:RepositoryRoot 'packages\provider_interfaces\src'),
+        (Join-Path $script:RepositoryRoot 'packages\contracts\python'),
+        (Join-Path $script:RepositoryRoot 'services\speech\src')
+    ) -join [IO.Path]::PathSeparator
+    $output = Join-Path $script:CacheRoot 'speech-benchmark.json'
+    $samples = Join-Path $script:CacheRoot 'speech-samples'
+    Invoke-Checked -FilePath 'uv' -ArgumentList @(
+        'run', '--frozen', '--extra', 'speech', 'python', 'scripts/speech_benchmark.py',
+        '--kokoro-model', (Join-Path $script:ToolsRoot 'models\speech\kokoro-v1.0.onnx'),
+        '--kokoro-voices', (Join-Path $script:ToolsRoot 'models\speech\voices-v1.0.bin'),
+        '--piper-model', (Join-Path $script:ToolsRoot 'models\speech\bg_BG-dimitar-medium.onnx'),
+        '--piper-config', (Join-Path $script:ToolsRoot 'models\speech\bg_BG-dimitar-medium.onnx.json'),
+        '--sample-directory', $samples,
+        '--output', $output
+    )
+    Write-Output "Speech benchmark passed. Results: $output"
+    exit 0
 }
 
 if ($Profile -eq 'local-ai') {
@@ -36,6 +58,7 @@ if ($Profile -eq 'local-ai') {
         (Join-Path $script:RepositoryRoot 'packages\provider_interfaces\src'),
         (Join-Path $script:RepositoryRoot 'packages\contracts\python'),
         (Join-Path $script:RepositoryRoot 'services\local_ai\src'),
+        (Join-Path $script:RepositoryRoot 'services\speech\src'),
         (Join-Path $script:RepositoryRoot 'apps\host\src')
     ) -join [IO.Path]::PathSeparator
 
@@ -112,7 +135,7 @@ if ($Profile -eq 'local-ai') {
             '--audio-fixture', "bulgarian-voxforge|$($script:CacheRoot)\audio-fixtures\voxforge-bg\dtd-20120908-cuf\wav\bg-0044.wav|bg|\u043e\u0442\u043a\u043b\u044e\u0447\u0432\u0430\u043c \u043b\u0435\u0441\u043d\u043e"
         )
         Invoke-Checked -FilePath 'uv' -ArgumentList @(
-            'run', '--frozen', 'python', 'scripts/local_ai_host_smoke.py',
+            'run', '--frozen', '--extra', 'speech', 'python', 'scripts/local_ai_host_smoke.py',
             '--whisper-executable', $whisperCli,
             '--whisper-model', $whisperModel,
             '--bulgarian-fixture', "$($script:CacheRoot)\audio-fixtures\voxforge-bg\dtd-20120908-cuf\wav\bg-0044.wav",

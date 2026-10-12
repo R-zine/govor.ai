@@ -26,11 +26,39 @@ class ContractsTest {
         ).readText()
         val envelope = ControlContractCodec.decodeEnvelope(fixture)
 
-        val turn = ControlContractCodec.decodePayload<TeacherTurnPayload>(envelope)
+        val turn = ControlContractCodec.decodePayload<TeacherTurnPayload>(envelope).validate()
 
         assertEquals("Welcome. What would you like to order?", turn.text)
         assertEquals(150_000, turn.duration_us)
         assertTrue(turn.provider_id.startsWith("fake-"))
+        assertEquals("ˈwɛlkəm", turn.pronunciations.first().ipa)
+        assertEquals(0, turn.word_alignment?.first()?.word_index)
+        assertFalse(turn.fallback_used)
+    }
+
+    @Test
+    fun `word replay request and audio fixtures deserialize strictly`() {
+        val requestEnvelope = ControlContractCodec.decodeEnvelope(
+            requireNotNull(
+                javaClass.classLoader.getResource("valid/control-word-replay-request.json"),
+            ).readText(),
+        )
+        val audioEnvelope = ControlContractCodec.decodeEnvelope(
+            requireNotNull(
+                javaClass.classLoader.getResource("valid/control-word-audio.json"),
+            ).readText(),
+        )
+
+        val request = ControlContractCodec.decodePayload<TeacherWordReplayRequestPayload>(
+            requestEnvelope,
+        )
+        val audio = ControlContractCodec.decodePayload<TeacherWordAudioPayload>(audioEnvelope)
+
+        assertEquals(0.75f, request.playback_rate)
+        assertEquals(request.turn_id, audio.turn_id)
+        assertEquals(request.word_index, audio.word_index)
+        assertEquals("Welcome", audio.word)
+        assertFalse(audio.fallback_used)
     }
 
     @Test

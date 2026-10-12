@@ -18,6 +18,13 @@ events, host state/turn/error events, and the loopback Godot command/acknowledge
 Unknown message types and payload fields are rejected. Session, turn, utterance, command, event,
 and correlation identifiers are UUIDs; media durations and offsets are integer microseconds.
 
+Milestone 4 extends the same version with understood additive fields and closed message variants.
+`teacher.turn` contains bounded PCM16 WAV, an explicit sample rate, exact pronunciation ranges,
+accent-specific IPA, nullable provider-derived word/phoneme spans, and `fallback_used`.
+`teacher.word_replay_requested` identifies an active turn/word plus bounded rate;
+`teacher.word_audio` returns one bounded isolated-word WAV. Android and Python validate references,
+duration, locale, and audio metadata before use.
+
 `local-ai-dialogue.schema.json` is the closed model-output shape used at the local inference
 boundary. It permits only an intent, bounded reply text, `en-GB`/`bg-BG` locale, and a proposed
 exercise-advance boolean. It is not a wire envelope because it never leaves the trusted desktop;

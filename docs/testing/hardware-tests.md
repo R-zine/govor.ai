@@ -150,3 +150,21 @@ This did not use a physical phone or the intended Wi-Fi/acoustic path. The recor
 fixtures, the host smoke injects them at the microphone-source boundary, and response audio is a
 diagnostic marker rather than TTS. It changes no Milestone 9 row: phone microphones, speakers,
 Wi-Fi, codecs, concurrent target load, latency, thermals, lifecycle, and soak remain not executed.
+
+## 2026-10-12 Milestone 4 speech emulator run
+
+`./scripts/emulator-speech-smoke.ps1` passed on the API 34 AVD through debug-only `adb reverse`.
+The native Android client decoded and played the real Kokoro `en-GB` PCM16 WAV, advanced all seven
+word highlights using model-reported media timestamps, completed a 0.75× replay without advancing
+the host lesson twice, selected the first word, and completed a separately synthesized word WAV.
+The ignored evidence files are `.cache/speech-emulator-android.log`,
+`.cache/speech-emulator-lesson.xml`, and `.cache/speech-emulator-window.xml`.
+
+The smoke used generated diagnostic WebRTC media only to keep the existing Android connection
+surface active; the teacher voice itself came from Kokoro over the bounded control contract. Its
+`finally` path force-stopped the app, control server, media server, and reverse mappings. Ports
+8765/8766 and Android playback were checked inactive afterward, so no tone or speech remained.
+
+This proves native-emulator decoding, scheduling, interaction, and cleanup. It does not prove a
+physical speaker, phone, acoustics, Wi-Fi, hardware codec, target performance, or speech
+naturalness. All such target-hardware rows remain not executed in Milestone 9.

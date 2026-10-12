@@ -23,8 +23,16 @@ validated transcript when speech exists, and invokes the bilingual dialogue pipe
 The local dialogue adapter sends the recognized utterance, lesson context, deterministic intent
 hint, and at most the configured number of recent turns to llama.cpp. Closed structured output is
 parsed, then the domain policy can reject unsafe locale/progress choices and use a deterministic
-fallback. The current bounded WAV in `teacher.turn` is a 150 ms diagnostic marker; it is explicitly
-not synthesized speech. Real TTS and its final media routing are Milestone 4 work.
+fallback. The bounded WAV in `teacher.turn` is local synthesized PCM16 speech. The speech router
+uses Kokoro for explicit `en-GB`/`en-US`, Piper for `bg-BG`, and deterministic eSpeak NG when a
+neural provider fails. The turn also carries exact word/IPA character ranges and nullable model
+timing. Android plays the WAV with `AudioTrack`; playback-head frames define media time for
+subtitle highlighting. Missing alignment disables highlighting without blocking playback.
+
+After the host enters `awaiting_learner`, Android may replay the cached full turn locally without
+emitting another lesson-completion event. Selecting an annotated word sends
+`teacher.word_replay_requested`; the host validates the active turn/index, synthesizes only that
+word at the selected rate, and returns `teacher.word_audio` without changing session state.
 
 For every state change, the host dispatches an allow-listed `renderer.command` over a separate
 loopback WebSocket opened by Godot and waits for `renderer.ack`. Renderer loss becomes a

@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [ValidateSet('fast', 'python', 'contracts', 'kotlin', 'csharp', 'media', 'godot', 'all', 'hardware')]
+    [ValidateSet('fast', 'python', 'contracts', 'kotlin', 'csharp', 'media', 'speech', 'godot', 'all', 'hardware')]
     [string]$Scope = 'fast'
 )
 
@@ -9,10 +9,21 @@ Initialize-GovorEnvironment
 $env:JAVA_HOME = Get-GovorJavaHome
 
 function Test-Python {
-    Invoke-Checked -FilePath 'uv' -ArgumentList @('run', '--frozen', 'ruff', 'check', '.')
-    Invoke-Checked -FilePath 'uv' -ArgumentList @('run', '--frozen', 'ruff', 'format', '--check', '.')
-    Invoke-Checked -FilePath 'uv' -ArgumentList @('run', '--frozen', 'mypy')
-    Invoke-Checked -FilePath 'uv' -ArgumentList @('run', '--frozen', 'pytest', '-q', '--cov', '--cov-report=term-missing', '--cov-fail-under=85')
+    Invoke-Checked -FilePath 'uv' -ArgumentList @('run', '--frozen', '--extra', 'speech', 'ruff', 'check', '.')
+    Invoke-Checked -FilePath 'uv' -ArgumentList @('run', '--frozen', '--extra', 'speech', 'ruff', 'format', '--check', '.')
+    Invoke-Checked -FilePath 'uv' -ArgumentList @('run', '--frozen', '--extra', 'speech', 'mypy')
+    Invoke-Checked -FilePath 'uv' -ArgumentList @('run', '--frozen', '--extra', 'speech', 'pytest', '-q', '--cov', '--cov-report=term-missing', '--cov-fail-under=85')
+}
+
+function Test-Speech {
+    Invoke-Checked -FilePath 'uv' -ArgumentList @(
+        'run', '--frozen', '--extra', 'speech', 'mypy',
+        'services/speech/src', 'packages/provider_interfaces/src',
+        'packages/contracts/python', 'packages/domain/src'
+    )
+    Invoke-Checked -FilePath 'uv' -ArgumentList @(
+        'run', '--frozen', '--extra', 'speech', 'pytest', 'services/speech/tests', '-q'
+    )
 }
 
 function Test-Contracts {
@@ -84,6 +95,7 @@ if ($Scope -eq 'contracts') { Test-Contracts }
 if ($Scope -in @('fast', 'kotlin', 'all')) { Test-Kotlin }
 if ($Scope -in @('fast', 'csharp', 'all')) { Test-CSharp }
 if ($Scope -in @('media', 'all')) { Test-Media }
+if ($Scope -eq 'speech') { Test-Speech }
 if ($Scope -in @('godot', 'all')) { Test-Godot }
 
 if ($Scope -eq 'all') {

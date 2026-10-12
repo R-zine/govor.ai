@@ -24,10 +24,10 @@ media item. Wall-clock timestamps are UTC ISO 8601 and are never used for media 
 
 - `fake`: deterministic scripted lesson and generated test tone. Development/test only, labeled
   in health and response metadata.
-- `local`: real loopback-only llama.cpp dialogue and whisper.cpp multilingual recognition. The
-  selected dialogue model is Qwen3 4B Q4_K_M; a deterministic policy owns teaching invariants and
-  bounded session memory. The current audio response is explicitly a Milestone 3 diagnostic tone,
-  not speech. Kokoro, Bulgarian speech, and alignment begin in Milestone 4.
+- `local`: real loopback-only llama.cpp dialogue, whisper.cpp multilingual recognition, Kokoro
+  English speech, Piper Bulgarian speech, and eSpeak NG fallback. The selected dialogue model is
+  Qwen3 4B Q4_K_M; deterministic policy owns teaching invariants and bounded session memory.
+  Provider-reported alignment is optional and never estimated.
 - `cloud`: optional future adapters, independently configured, opt-in, and disabled by default.
 
 The host should remain useful in deterministic scripted lesson mode if local model inference
@@ -45,6 +45,15 @@ Provider calls run in cancellable tasks with explicit deadlines, while playback 
 steps have their own deadlines. A connection owns at most one lesson session, and disconnect/end
 cancels outstanding work, resets the renderer, and removes the session from the host registry.
 See ADR-0005.
+
+## Speech boundary
+
+`services/speech` owns local synthesis and phonemization adapters. English `en-GB` and `en-US`
+route to distinct Kokoro voices; `bg-BG` routes to Piper; provider failure routes to process-isolated
+eSpeak NG. The host emits bounded PCM16 WAV, exact pronunciation character ranges, and nullable
+model-derived word/phoneme alignment. Android owns `AudioTrack` playout, media-time highlighting,
+0.75×/1×/1.25× speed, full replay, word selection, IPA/explanation display, and isolated-word
+playback. Godot and the domain do not depend on a speech SDK. See ADR-0007.
 
 ## Local AI boundary
 

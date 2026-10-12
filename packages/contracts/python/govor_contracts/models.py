@@ -12,7 +12,19 @@ from enum import StrEnum
 from typing import Any, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+
+
+def _validate_wav_base64(value: str) -> str:
+    try:
+        audio = base64.b64decode(value, validate=True)
+    except (ValueError, binascii.Error) as error:
+        raise ValueError("audio_base64 must be valid base64") from error
+    if not audio.startswith(b"RIFF") or audio[8:12] != b"WAVE":
+        raise ValueError("audio_base64 must contain a WAV file")
+    if len(audio) > 1_500_044:
+        raise ValueError("audio_base64 WAV exceeds the accepted size")
+    return value
 
 
 class StrictModel(BaseModel):
@@ -82,28 +94,96 @@ class SessionEndedPayload(SessionScopedPayload):
     reason: Literal["cancelled", "completed", "disconnected"]
 
 
+class PronunciationPayload(StrictModel):
+    word: str = Field(min_length=1, max_length=128)
+    start_char: int = Field(ge=0, le=2_047)
+    end_char: int = Field(ge=1, le=2_048)
+    ipa: str = Field(min_length=1, max_length=256)
+    locale: str = Field(pattern=r"^[a-z]{2,3}(?:-[A-Z]{2})?$", max_length=16)
+    explanation: str | None = Field(default=None, max_length=512)
+
+    @model_validator(mode="after")
+    def validate_range(self) -> PronunciationPayload:
+        if self.end_char <= self.start_char:
+            raise ValueError("pronunciation range is invalid")
+        return self
+
+
+class WordAlignmentPayload(StrictModel):
+    word_index: int = Field(ge=0, le=255)
+    start_us: int = Field(ge=0, le=30_000_000)
+    end_us: int = Field(ge=1, le=30_000_000)
+
+    @model_validator(mode="after")
+    def validate_range(self) -> WordAlignmentPayload:
+        if self.end_us <= self.start_us:
+            raise ValueError("word alignment range is invalid")
+        return self
+
+
+class PhonemeAlignmentPayload(WordAlignmentPayload):
+    symbol: str = Field(min_length=1, max_length=16)
+
+
 class TeacherTurnPayload(SessionScopedPayload):
     turn_id: UUID
     text: str = Field(min_length=1, max_length=2_048)
     locale: str = Field(pattern=r"^[a-z]{2,3}(?:-[A-Z]{2})?$", max_length=16)
     provider_id: str = Field(min_length=1, max_length=64)
     audio_format: Literal["wav"] = "wav"
-    sample_rate_hz: Literal[16000, 24000, 48000]
+    sample_rate_hz: Literal[16000, 22050, 24000, 48000]
     duration_us: int = Field(ge=1, le=30_000_000)
-    audio_base64: str = Field(min_length=4, max_length=1_398_104)
-    word_alignment: None = None
-    phoneme_alignment: None = None
+    audio_base64: str = Field(min_length=4, max_length=2_000_060)
+    pronunciations: list[PronunciationPayload] = Field(max_length=256)
+    word_alignment: list[WordAlignmentPayload] | None = Field(default=None, max_length=256)
+    phoneme_alignment: list[PhonemeAlignmentPayload] | None = Field(
+        default=None,
+        max_length=2_048,
+    )
+    fallback_used: bool = False
 
     @field_validator("audio_base64")
     @classmethod
     def validate_audio_base64(cls, value: str) -> str:
-        try:
-            audio = base64.b64decode(value, validate=True)
-        except (ValueError, binascii.Error) as error:
-            raise ValueError("audio_base64 must be valid base64") from error
-        if not audio.startswith(b"RIFF") or audio[8:12] != b"WAVE":
-            raise ValueError("audio_base64 must contain a WAV file")
-        return value
+        return _validate_wav_base64(value)
+
+    @model_validator(mode="after")
+    def validate_speech_metadata(self) -> TeacherTurnPayload:
+        for index, pronunciation in enumerate(self.pronunciations):
+            if pronunciation.end_char > len(self.text):
+                raise ValueError("pronunciation exceeds teacher text")
+            if self.text[pronunciation.start_char : pronunciation.end_char] != pronunciation.word:
+                raise ValueError(f"pronunciation {index} does not match teacher text")
+        for alignment in [*(self.word_alignment or []), *(self.phoneme_alignment or [])]:
+            if alignment.word_index >= len(self.pronunciations):
+                raise ValueError("alignment references an unknown pronunciation")
+            if alignment.end_us > self.duration_us:
+                raise ValueError("alignment exceeds teacher audio")
+        return self
+
+
+class TeacherWordReplayRequestPayload(SessionScopedPayload):
+    turn_id: UUID
+    word_index: int = Field(ge=0, le=255)
+    playback_rate: float = Field(ge=0.5, le=2.0)
+
+
+class TeacherWordAudioPayload(SessionScopedPayload):
+    turn_id: UUID
+    word_index: int = Field(ge=0, le=255)
+    word: str = Field(min_length=1, max_length=128)
+    locale: str = Field(pattern=r"^[a-z]{2,3}(?:-[A-Z]{2})?$", max_length=16)
+    provider_id: str = Field(min_length=1, max_length=64)
+    audio_format: Literal["wav"] = "wav"
+    sample_rate_hz: Literal[16000, 22050, 24000, 48000]
+    duration_us: int = Field(ge=1, le=30_000_000)
+    audio_base64: str = Field(min_length=4, max_length=2_000_060)
+    fallback_used: bool = False
+
+    @field_validator("audio_base64")
+    @classmethod
+    def validate_audio_base64(cls, value: str) -> str:
+        return _validate_wav_base64(value)
 
 
 class LearnerTranscriptPayload(SessionScopedPayload):

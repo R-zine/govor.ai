@@ -137,6 +137,10 @@ def main() -> int:
                 raise RuntimeError("host did not emit a transcript")
             if teacher_turn["message_type"] != "teacher.turn":
                 raise RuntimeError("host did not emit a teacher turn")
+            if teacher_turn["payload"]["provider_id"] == "milestone3-diagnostic-tone":
+                raise RuntimeError("local host returned the obsolete diagnostic tone")
+            if not teacher_turn["payload"]["pronunciations"]:
+                raise RuntimeError("local host returned no pronunciation metadata")
             if not transcript["payload"]["locale"].startswith(expected_language):
                 raise RuntimeError("host transcript language did not match the fixture")
             turns.append(
@@ -145,6 +149,9 @@ def main() -> int:
                     "transcript_locale": transcript["payload"]["locale"],
                     "teacher_provider": teacher_turn["payload"]["provider_id"],
                     "teacher_locale": teacher_turn["payload"]["locale"],
+                    "teacher_word_alignment_available": (
+                        teacher_turn["payload"]["word_alignment"] is not None
+                    ),
                 }
             )
             active_turn_id = teacher_turn["payload"]["turn_id"]

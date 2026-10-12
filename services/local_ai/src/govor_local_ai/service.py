@@ -42,6 +42,12 @@ class LocalAiSettings(Protocol):
     provider_timeout_seconds: float
     conversation_memory_turns: int
     dialogue_provider_id: str
+    kokoro_model: str
+    kokoro_voices: str
+    kokoro_voice_gb: str
+    kokoro_voice_us: str
+    piper_bg_model: str
+    piper_bg_config: str
 
 
 class DiagnosticToneSpeechProvider:
@@ -54,12 +60,14 @@ class DiagnosticToneSpeechProvider:
         features=frozenset({"development_only", "not_speech", "wav"}),
     )
 
-    async def synthesize(self, text: str, locale: str) -> TeacherTurn:
+    async def synthesize(self, text: str, locale: str, *, speed: float = 1.0) -> TeacherTurn:
+        _ = speed
         audio, duration_us = _tone_wav(440.0 if locale == "en-GB" else 392.0)
         return TeacherTurn(
             text=text,
             locale=locale,
             audio_wav=audio,
+            sample_rate_hz=16_000,
             duration_us=duration_us,
             provider_id="milestone3-diagnostic-tone",
         )
@@ -91,6 +99,9 @@ class LocalLessonService:
 
     async def initial_turn(self) -> TeacherTurn:
         return await self.speech.synthesize(self.lesson.teacher_prompt, "en-GB")
+
+    async def replay_word(self, word: str, locale: str, *, speed: float = 1.0) -> TeacherTurn:
+        return await self.speech.synthesize(word, locale, speed=speed)
 
     async def respond(self, audio: UtteranceAudio) -> LessonResult:
         try:
@@ -134,6 +145,8 @@ class LocalLessonService:
 
 
 def build_local_lesson_service(settings: LocalAiSettings) -> LocalLessonService:
+    from govor_speech import build_local_speech_provider
+
     return LocalLessonService(
         recognizer=WhisperCppRecognizer(
             settings.whisper_executable,
@@ -145,6 +158,7 @@ def build_local_lesson_service(settings: LocalAiSettings) -> LocalLessonService:
             timeout_seconds=max(1.0, settings.provider_timeout_seconds / 2),
             provider_id=settings.dialogue_provider_id,
         ),
+        speech=build_local_speech_provider(settings),
         memory_turns=settings.conversation_memory_turns,
     )
 

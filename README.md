@@ -10,9 +10,10 @@ part of the project stack.
 
 The project is under active development. Milestone 0 established a reproducible monorepo,
 Milestone 1 completed the native-emulator media architecture proof, Milestone 2 completed the
-validated session skeleton, and Milestone 3 integrated local bilingual recognition/dialogue with
-whisper.cpp, llama.cpp, and Qwen3. Physical-phone, Wi-Fi, hardware-codec, performance, and soak
-acceptance remains mandatory in the final release milestone.
+validated session skeleton, Milestone 3 integrated local bilingual recognition/dialogue, and
+Milestone 4 completed Kokoro/Piper/eSpeak speech, accent-aware IPA, real alignment, synchronized
+subtitles, speed control, and word replay. Physical-phone, Wi-Fi, hardware-codec, performance, and
+soak acceptance remains mandatory in the final release milestone.
 
 ## Quick start (Windows PowerShell)
 
@@ -34,8 +35,8 @@ and exact resume commands.
 - Cloud providers and telemetry are absent and therefore disabled.
 - Local inference services must remain loopback-only.
 - Microphone recordings and learner data are ignored and must not be committed.
-- Health metadata distinguishes fake and local providers. Milestone 3 local inference is real, but
-  its diagnostic response tone is not TTS; natural speech begins in Milestone 4.
+- Health metadata distinguishes fake and local providers. Local mode uses real offline
+  recognition, dialogue, and speech; deterministic development fakes remain explicitly labeled.
 - The Milestone 1 media peer is real WebRTC with generated diagnostic media, not a provider mock;
   its cleartext trusted-LAN signaling and debug APK are not production-safe.
 - No hardware acceptance claim is made without a physical Android device test record.

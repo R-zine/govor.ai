@@ -12,6 +12,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
+import androidx.compose.foundation.text.ClickableText
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,6 +21,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
@@ -37,6 +40,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -61,6 +67,10 @@ private fun GovorApp(model: MediaSessionViewModel = viewModel()) {
     val lessonState by model.lesson.state.collectAsStateWithLifecycle()
     val lessonError by model.lesson.error.collectAsStateWithLifecycle()
     val teacherText by model.lesson.teacherText.collectAsStateWithLifecycle()
+    val pronunciations by model.lesson.pronunciations.collectAsStateWithLifecycle()
+    val highlightedWordIndex by model.lesson.highlightedWordIndex.collectAsStateWithLifecycle()
+    val selectedPronunciation by model.lesson.selectedPronunciation.collectAsStateWithLifecycle()
+    val playbackRate by model.lesson.playbackRate.collectAsStateWithLifecycle()
     val transcript by model.lesson.transcript.collectAsStateWithLifecycle()
     // Debug emulator defaults use adb reverse for control 8765 and media 8766.
     var mediaHost by remember { mutableStateOf("127.0.0.1:8766") }
@@ -169,8 +179,86 @@ private fun GovorApp(model: MediaSessionViewModel = viewModel()) {
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(16.dp),
                     ) {
-                        teacherText?.let {
-                            Text("Teacher: $it", color = Color.White, fontSize = 18.sp)
+                        teacherText?.let { text ->
+                            val annotated = buildAnnotatedString {
+                                append("Teacher: ")
+                                val prefixLength = length
+                                append(text)
+                                pronunciations.forEachIndexed { index, pronunciation ->
+                                    val start = prefixLength + pronunciation.start_char
+                                    val end = prefixLength + pronunciation.end_char
+                                    addStringAnnotation("word", index.toString(), start, end)
+                                    addStyle(
+                                        SpanStyle(
+                                            color = Color.White,
+                                            background = if (index == highlightedWordIndex) {
+                                                Color(0xFF00796B)
+                                            } else {
+                                                Color.Transparent
+                                            },
+                                            textDecoration = TextDecoration.Underline,
+                                        ),
+                                        start,
+                                        end,
+                                    )
+                                }
+                            }
+                            ClickableText(
+                                text = annotated,
+                                style = MaterialTheme.typography.bodyLarge.copy(
+                                    color = Color.White,
+                                    fontSize = 18.sp,
+                                ),
+                                onClick = { offset ->
+                                    annotated.getStringAnnotations("word", offset, offset)
+                                        .firstOrNull()
+                                        ?.item
+                                        ?.toIntOrNull()
+                                        ?.let(model.lesson::selectWord)
+                                },
+                            )
+                        }
+                        if (teacherText != null) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Button(
+                                    onClick = model.lesson::replayTurn,
+                                    enabled = lessonState == SessionState.AWAITING_LEARNER,
+                                ) { Text("Replay") }
+                                ai.govor.core.SpeechTimeline.supportedRates.forEach { rate ->
+                                    Button(onClick = { model.lesson.setPlaybackRate(rate) }) {
+                                        Text(
+                                            if (rate == playbackRate) "${rate}× ✓" else "${rate}×",
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                        if (pronunciations.isNotEmpty()) {
+                            LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                itemsIndexed(pronunciations) { index, pronunciation ->
+                                    Button(onClick = { model.lesson.selectWord(index) }) {
+                                        Text(pronunciation.word)
+                                    }
+                                }
+                            }
+                        }
+                        selectedPronunciation?.let { pronunciation ->
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth(0.9f)
+                                    .background(Color(0xE6263D38), MaterialTheme.shapes.medium)
+                                    .padding(12.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                            ) {
+                                Text(
+                                    "${pronunciation.word}  /${pronunciation.ipa}/",
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Bold,
+                                )
+                                pronunciation.explanation?.let { explanation ->
+                                    Text(explanation, color = Color(0xFFB8D9D1))
+                                }
+                            }
                         }
                         transcript?.let {
                             Text("You: $it", color = Color(0xFFB8D9D1), fontSize = 15.sp)

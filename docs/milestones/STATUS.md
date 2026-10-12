@@ -1,6 +1,6 @@
 # Current verified status
 
-Last updated: 2026-10-11
+Last updated: 2026-10-12
 
 ## Outcome
 
@@ -22,8 +22,15 @@ Milestone 3 is complete. The local path now uses real pinned llama.cpp/Qwen3 dia
 whisper.cpp multilingual recognition, provider-neutral interfaces, conservative language/intent
 detection, deterministic bilingual policy, lesson context, configurable bounded memory, explicit
 capabilities, bounded retry/fallback, and ephemeral WebRTC microphone capture. Real English and
-Bulgarian human recordings and a two-turn host integration passed. The current response sound is
-an explicitly labeled 150 ms diagnostic tone; it is not speech synthesis or Milestone 4 evidence.
+Bulgarian human recordings and a two-turn host integration passed. At the Milestone 3 handoff, its
+response sound was an explicitly labeled 150 ms diagnostic tone; Milestone 4 replaced that marker.
+
+Milestone 4 is complete. Local mode now uses
+Kokoro for explicit British/American English, Piper for Bulgarian, and process-isolated eSpeak NG
+fallback, with accent-aware IPA, actual-or-null timing, synchronized Android highlighting,
+0.75×/1×/1.25× speed, full replay, pronunciation inspection, and isolated-word replay. Automated,
+native-emulator, and local-provider evidence passed, and the user confirmed on 2026-10-12 that the
+generated GB-English and Bulgarian samples were intelligible and acceptably natural.
 
 ADR-0003 now selects Godot 4.7.2 .NET as the only renderer. The earlier proof from the proprietary
 engine was removed completely, including source, project metadata, build scripts, and dependencies.
@@ -80,6 +87,17 @@ measurements fail.
   JSON files are removed after every result, including failures.
 - Empty valid recognition is treated as no speech, not malformed provider output: no transcript is
   invented, no memory entry is stored, and the learner receives a Bulgarian request to repeat.
+- `services/speech` routes `en-GB` and `en-US` to distinct Kokoro v1.0 voices, `bg-BG` to the
+  Bulgarian Piper voice, and bounded provider failures to an eSpeak NG subprocess. Text crosses the
+  fallback boundary over stdin and is neither a command-line argument nor a log field.
+- Pronunciation metadata has exact character ranges, explicit locale, IPA, and optional Bulgarian
+  articulation notes. Kokoro duration output and Piper model sample counts become integer
+  microseconds only when provider word groups exactly match independent tokenization; otherwise
+  alignment is null.
+- Android decodes 16/22.05/24/48 kHz mono PCM16 WAV, uses `AudioTrack` media frames for highlight
+  time, and exposes replay, three rates, word buttons, IPA/explanation, and isolated-word audio.
+  Full replay cannot send a second lesson-completion event; word replay preserves
+  `awaiting_learner` and refreshes its deadline.
 - Android owns bounded WAV playback and the real WebRTC push-to-talk microphone lifecycle. Godot
   connects outbound to a loopback-only control endpoint and accepts only six visual actions.
 - The emulator smoke deliberately exercises renderer-unavailable recovery before completing a
@@ -90,11 +108,11 @@ measurements fail.
 | Command or check | Result | Evidence and limits |
 | --- | --- | --- |
 | `./scripts/bootstrap.ps1 -IncludeMedia -IncludeRenderer -NoDownload` | verified passing | Pinned local Python/.NET/Godot assets and locked dependencies restored without a download |
-| `./scripts/test.ps1 -Scope all` | verified passing | 2026-10-10 final run; Python, contracts, Kotlin, C#, media, Godot, and Android APK build |
-| Python gate | verified passing | Ruff check/format, strict mypy, 79 tests, 87.26% branch coverage |
-| Contract schema gate | verified passing | 15 schema and valid/invalid shared-fixture tests, including closed local model output |
-| Kotlin gate | verified passing | 9 JVM contract/state-machine tests |
-| Pure C# gate | verified passing | 5 .NET contract/allow-list tests |
+| `./scripts/test.ps1 -Scope all` | verified passing | 2026-10-12 final Milestone 4 run; Python, contracts, Kotlin, C#, media, Godot, and Android APK build |
+| Python gate | verified passing | Ruff check/format, strict mypy, 93 tests, 85.23% branch coverage |
+| Contract schema gate | verified passing | Shared schema/fixture coverage includes closed teacher-turn, word-replay-request, and word-audio messages |
+| Kotlin gate | verified passing | 12 JVM contract/state-machine/timeline tests, including both shared word-replay fixtures |
+| Pure C# gate | verified passing | 7 .NET contract/allow-list tests, including both shared word-replay fixtures |
 | Media gate | verified passing | Strict mypy and 15 tests, including real aiortc loopback, flushed 48-to-16 kHz microphone resampling, renderer-buffer validation, and clean remote-track teardown |
 | Godot gate | verified passing | Headless import, successful C# build, and self-test marker; offline NuGet vulnerability lookup and Windows certificate-store warnings are recorded below |
 | `./scripts/build.ps1 -Target renderer` | verified passing | 109,372,928-byte Windows export; SHA-256 `65d86d986f0f5508a2dede1bce653bfb21fc6fd8cf06aed43872c0806e679175` |
@@ -102,25 +120,31 @@ measurements fail.
 | Supervised audible renderer smoke | verified passing | Brief PC check only; tone completion marker at two seconds and process stopped |
 | `./scripts/emulator-renderer-smoke.ps1` | verified passing with limits | Complete fake turn and recovery path; aiortc received non-black 1280x720 Godot RGBA (`rgb_max=255`) and 48 kHz PCM (`peak=2621`); Android reported 120 received/rendered frames, zero drops, over 4.002 seconds (30.0 fps); video and 48 kHz/960-sample microphone return passed again after reconnect |
 | `./scripts/bootstrap.ps1 -IncludeMedia -IncludeRenderer -IncludeLocalAi` | verified passing | Pinned/checksummed runtimes, two Qwen candidates, Whisper model, and human-speech fixtures available; comparison model downloaded from the pinned official revision |
-| `./scripts/benchmark.ps1 -Profile local-ai` | verified passing | Qwen3 4B and 1.7B each passed 7/7 bilingual structured cases; selected 4B, two real STT fixtures, and two-turn host integration passed; all local servers stopped |
-| Qwen3 4B dialogue | verified passing with limits | 1,002.8 ms median, 2,883.6 ms max; 1 policy correction; 2,706,542,592-byte working set and 3,207,282,688-byte peak on this machine |
-| Qwen3 1.7B comparison | verified passing with limits | 688.5 ms median, 2,639.7 ms max; 3 policy corrections; 1,314,185,216-byte working set; comparison only |
-| whisper.cpp human recordings | verified passing with limits | English and Bulgarian language/required-word checks passed at 5,803.9 ms median; Bulgarian had word errors; no broad accuracy claim |
-| Local-provider host turn | verified passing | Bulgarian fixture then English fixture completed one session, returned to English, dispatched expected renderer states, retained zero recordings, and leaked zero sessions |
+| `./scripts/benchmark.ps1 -Profile local-ai` | verified passing | 2026-10-12 regression: Qwen3 4B and 1.7B each passed 7/7 bilingual structured cases; two real STT fixtures and two-turn host integration used real Piper/Kokoro audio, retained no recordings, leaked no sessions, and stopped all local servers |
+| `./scripts/test.ps1 -Scope speech` | verified passing | Strict speech/provider mypy and 11 tests covering both neural adapter shapes, real eSpeak subprocess output, fallback routing, accent IPA, timing/null fallback, WAV bounds, and factory wiring |
+| `./scripts/benchmark.ps1 -Profile speech` | verified passing | Real Kokoro GB/US, Piper Bulgarian, and eSpeak fallback generated non-silent WAV; neural timing present, fallback timing null, speed duration ordered, IPA regression passed |
+| Speech benchmark latency | verified with limits | Final 1× examples: Kokoro GB 403.7 ms, Piper BG 784.9 ms, eSpeak fallback 276.5 ms; cold/accent cases recorded separately; development CPU only |
+| `./scripts/emulator-speech-smoke.ps1` | verified passing with limits | API 34 emulator completed real Kokoro `AudioTrack` playout, seven word highlights, 0.75× replay, IPA word selection, isolated-word synthesis/playback, and clean shutdown |
+| Generated speech listening path | verified passing | GB English, US English, Bulgarian, and fallback WAVs each completed one synchronous PC playback and closed; the user confirmed the GB-English and Bulgarian samples sounded good on 2026-10-12 |
+| Qwen3 4B dialogue | verified passing with limits | 999.3 ms median, 2,784.6 ms max; 1 policy correction; 2,706,419,712-byte working set and 3,207,090,176-byte peak on this machine |
+| Qwen3 1.7B comparison | verified passing with limits | 630.4 ms median, 2,570.1 ms max; 3 policy corrections; 1,309,011,968-byte working set; comparison only |
+| whisper.cpp human recordings | verified passing with limits | English and Bulgarian language/required-word checks passed at 5,840.2 ms median; Bulgarian had word errors; no broad accuracy claim |
+| Local-provider host turn | verified passing | Bulgarian fixture then English fixture completed one session with Piper then Kokoro audio, returned to English, dispatched expected renderer states, retained zero recordings, and leaked zero sessions. Both free-form replies safely returned null alignment when provider groups did not exactly match tokenization. |
 | `./scripts/dev.ps1 -Mode local ...` | verified passing | Host, renderer, media, and llama.cpp health passed on loopback; health exposed the three real/diagnostic capabilities; terminating the foreground host stopped ports 8765–8768, Godot, and llama.cpp |
 | Godot emulator screenshot | inconclusive | UI/status captured, but the WebRTC `SurfaceView` area is black in ADB screencaps; transport logs prove non-black input and Android render callbacks, not a screenshot of scene pixels |
 | Renderer-source reconnect/teardown | verified passing on emulator | Second peer received non-black Godot video and microphone frames; no unobserved task exception and no retained tone block replay |
 | Milestone 1 development architecture gate | complete | ADR-0002/0003 confirmed on native-emulator evidence; ADR-0004 defers all physical target-environment acceptance to Milestone 9 |
-| Android APK build | verified passing | 58,656,824 bytes; SHA-256 `eef822f1ddca3ed4338163936c0b71acd1134f0cefe0efa82d2e258d48730b79` |
+| Android APK build | verified passing | 58,712,920 bytes; SHA-256 `9c206f7ff849e860c2ffd057a4011bf2dab02aed1feb7b8fa3bec3c071a874fc` |
 | `uv run --frozen pip-audit --cache-dir .cache/pip-audit-m2-final` | verified passing | Final Milestone 2 audit: no known vulnerabilities found; sandbox network denial was repeated with approved network access |
 | `uv run --frozen pip-audit --cache-dir .cache/pip-audit-m3-final` | verified passing | Final Milestone 3 audit: no known vulnerabilities found; sandbox network denial was repeated with approved network access |
-| Pre-commit across all tracked/untracked sources | verified passing | JSON/YAML, line endings/whitespace, secret/size checks, Ruff, and contract tests; first pass normalized three generated lock files, second pass clean |
+| `uv run --frozen --extra media --extra speech pip-audit --cache-dir .cache/pip-audit-m4-final` | verified passing | Final Milestone 4 audit, including media and speech extras: no known vulnerabilities found; sandbox network denial was repeated with approved network access |
+| Pre-commit across all tracked/untracked sources | verified passing | Final Milestone 4 run passed JSON/YAML, line endings/whitespace, secret/size checks, Ruff, and contract tests; initial sandbox runs could not use the managed-account hook cache, and the approved-context rerun passed |
 | `./scripts/hardware-test.ps1` | Milestone 9 not executed | Ignores the active emulator and exits 2 because no physical phone is connected; this does not reopen Milestone 1 |
 | Physical Android/Wi-Fi/media/soak bundle | Milestone 9 not executed | No suitable physical phone; mandatory before release, not a prerequisite for Milestones 2-8 |
 | Remote GitHub Actions | not executed | Workflow includes the Godot renderer job, but the current milestone snapshot has not run remotely |
 
-The final `./scripts/test.ps1 -Scope all` run passed on 2026-10-11: 79 Python tests at 87.26%
-branch coverage, 15 contract tests, 9 Kotlin tests, 5 pure C# tests, 15 media tests, Godot
+The final `./scripts/test.ps1 -Scope all` run passed on 2026-10-12: 93 Python tests at 85.23%
+branch coverage, 12 Kotlin tests, 7 pure C# tests, 15 media tests, Godot
 import/build/self-test, and the Android debug APK build. Pytest emitted the existing Starlette
 `httpx` deprecation warning. Godot could not read the Windows root-certificate store and Android
 analytics could not write outside the workspace; both are previously recorded managed-environment
@@ -147,6 +171,24 @@ or short human audio, and a spoken mixed-language recording. Those are not infer
 fixtures. They remain evaluation inputs for future teaching/speech work, while physical-phone,
 Wi-Fi, acoustics, codecs, concurrent target load, thermals, and soak remain mandatory Milestone 9
 criteria.
+
+## Milestone 4 acceptance and handoff
+
+| Acceptance criterion | Status | Direct evidence |
+| --- | --- | --- |
+| Natural English and Bulgarian speech | verified passing with stated scope | Real Kokoro `en-GB`/`en-US` and Piper `bg-BG` produced non-silent WAVs and traversed native Android playback; the user confirmed GB-English and Bulgarian intelligibility/acceptable naturalness on 2026-10-12. |
+| Deterministic offline fallback | verified passing | Two eSpeak NG runs returned byte-identical WAV; provider ID/fallback flag were explicit and timing was null. |
+| Word highlighting follows actual speech when available | verified passing with emulator limit | Kokoro/Piper benchmark timing came from model duration/sample output; Android logged all seven Kokoro word indices from playback-head media time. |
+| IPA on demand and pronunciation explanation | verified passing with emulator limit | Accent-specific curated IPA regression passed; Android word selection triggered inspection and isolated-word audio. |
+| Full/word replay and speech speed | verified passing with emulator limit | 0.75× replay completed without a second host lesson-completion event; provider benchmarks proved ordered 0.75×/1×/1.25× duration; isolated word completed. |
+| Missing alignment does not block playback | verified passing | Real deterministic fallback returned null timing; Kotlin timeline returned no highlight and the WAV remained valid/playable. |
+| `en-GB` versus `en-US` is consistent | verified passing with bounded scope | Distinct configured voices and locale-specific IPA produced the expected `water`/`schedule` differences. |
+
+Implementation, commands, exact metrics, hashes, transient failures, and limits are recorded in
+ADR-0007 and `docs/benchmarks/2026-10-12-local-speech-and-emulator.md`. The GPL speech stack is
+acceptable for local development, but Milestone 8 must either meet its distribution obligations or
+replace it. The human listening confirmation closes the final Milestone 4 acceptance item; this
+handoff is the required focused milestone commit.
 
 ## Renderer evidence and limitations
 
@@ -185,14 +227,8 @@ Detailed migration evidence is in `docs/benchmarks/2026-10-09-godot-renderer-mig
 
 ## Next steps
 
-Milestone 4 is now the next eligible implementation milestone:
-
-1. Replace the diagnostic tone with independent natural English, Bulgarian, and deterministic
-   offline fallback speech providers using the defined audio contract.
-2. Add replay and speed control plus real word/phoneme timing where available; represent missing
-   alignment as null and implement the specified fallback hierarchy.
-3. Synchronize subtitles, word replay, pronunciation feedback, and renderer mouth/viseme events
-   without moving lesson policy into Android or Godot.
+Milestone 4 is complete. Create its focused handoff commit, then begin Milestone 5 teaching and
+progress work. Renderer visemes remain Milestone 6 work.
 
 Deferred mandatory Milestone 9 work:
 
@@ -213,6 +249,9 @@ Milestone 9 must not pass using emulator evidence.
 git -c safe.directory='C:/Users/PC/Documents/GitHub/govor.ai' status --short --branch
 ./scripts/bootstrap.ps1 -IncludeMedia -IncludeRenderer -IncludeLocalAi -NoDownload
 ./scripts/test.ps1 -Scope all
+./scripts/test.ps1 -Scope speech
+./scripts/benchmark.ps1 -Profile speech
+./scripts/emulator-speech-smoke.ps1
 ./scripts/benchmark.ps1 -Profile local-ai
 ./scripts/build.ps1 -Target renderer
 ./scripts/renderer-smoke.ps1

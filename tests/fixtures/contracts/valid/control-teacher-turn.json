@@ -12,7 +12,25 @@
     "sample_rate_hz": 16000,
     "duration_us": 150000,
     "audio_base64": "UklGRgQAAABXQVZF",
-    "word_alignment": null,
-    "phoneme_alignment": null
+    "pronunciations": [
+      {"word":"Welcome","start_char":0,"end_char":7,"ipa":"ˈwɛlkəm","locale":"en-GB","explanation":"/ə/ is an unstressed neutral vowel."},
+      {"word":"What","start_char":9,"end_char":13,"ipa":"wɒt","locale":"en-GB","explanation":null},
+      {"word":"would","start_char":14,"end_char":19,"ipa":"wʊd","locale":"en-GB","explanation":null},
+      {"word":"you","start_char":20,"end_char":23,"ipa":"juː","locale":"en-GB","explanation":null},
+      {"word":"like","start_char":24,"end_char":28,"ipa":"laɪk","locale":"en-GB","explanation":null},
+      {"word":"to","start_char":29,"end_char":31,"ipa":"tə","locale":"en-GB","explanation":null},
+      {"word":"order","start_char":32,"end_char":37,"ipa":"ˈɔːdə","locale":"en-GB","explanation":null}
+    ],
+    "word_alignment": [
+      {"word_index":0,"start_us":0,"end_us":20000},
+      {"word_index":1,"start_us":21000,"end_us":40000},
+      {"word_index":2,"start_us":41000,"end_us":60000},
+      {"word_index":3,"start_us":61000,"end_us":80000},
+      {"word_index":4,"start_us":81000,"end_us":100000},
+      {"word_index":5,"start_us":101000,"end_us":120000},
+      {"word_index":6,"start_us":121000,"end_us":149000}
+    ],
+    "phoneme_alignment": null,
+    "fallback_used": false
   }
 }

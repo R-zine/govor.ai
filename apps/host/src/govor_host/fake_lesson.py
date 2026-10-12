@@ -63,13 +63,16 @@ class FakeSpeechProvider:
         text: str,
         locale: str,
         *,
-        frequency_hz: float,
+        speed: float = 1.0,
+        frequency_hz: float = 440.0,
     ) -> TeacherTurn:
+        _ = speed
         audio, duration_us = _tone_wav(frequency_hz=frequency_hz)
         return TeacherTurn(
             text=text,
             locale=locale,
             audio_wav=audio,
+            sample_rate_hz=16_000,
             duration_us=duration_us,
             provider_id="fake-scripted-speech",
         )
@@ -102,6 +105,9 @@ class FakeLessonService:
             "en-GB",
             frequency_hz=440.0,
         )
+
+    async def replay_word(self, word: str, locale: str, *, speed: float = 1.0) -> TeacherTurn:
+        return await self.speech.synthesize(word, locale, speed=speed)
 
     async def respond(self, audio: UtteranceAudio) -> LessonResult:
         transcript = await self.recognizer.transcribe(audio)

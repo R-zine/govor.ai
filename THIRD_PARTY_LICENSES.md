@@ -25,8 +25,15 @@ files.
 | Whisper multilingual small model | revision `5359861c` | huggingface.co/ggerganov/whisper.cpp | MIT | 488 MB development model is checksum-pinned and ignored; distribution packaging remains a later review |
 | whisper.cpp `jfk.wav` test recording | b5454 | github.com/ggml-org/whisper.cpp | MIT | Ignored, checksum-pinned human-speech test fixture; not packaged |
 | VoxForge Bulgarian `dtd-20120908-cuf` recording | 2012-09-08 archive | repository.voxforge1.org | GPL-3.0-or-later | Ignored, checksum-pinned test fixture only; must not be bundled without GPL distribution review |
+| kokoro-onnx | 0.6.1 | github.com/thewh1teagle/kokoro-onnx | MIT | Local adapter; retain notice if distributed |
+| Kokoro v1.0 ONNX model and voices | release `model-files-v1.1` | github.com/thewh1teagle/kokoro-onnx | Apache-2.0 | Ignored, checksum-pinned development assets; attribution and packaging review required |
+| piper-tts | 1.8.0 | github.com/OHF-Voice/piper1-gpl | GPL-3.0-or-later | Local adapter only; bundling creates GPL obligations and requires a Milestone 8 distribution decision |
+| Piper `bg_BG-dimitar-medium` voice | revision `7c89b592` | huggingface.co/rhasspy/piper-voices | CC0-1.0 dataset/model card; engine GPL applies separately | Ignored, checksum-pinned development model and config; verify all generated distribution notices |
+| phonemizer | 3.4.0 | github.com/bootphon/phonemizer | GPL-3.0-or-later | Used locally for IPA; bundling requires GPL source/notice compliance review |
+| espeakng-loader / bundled eSpeak NG | 0.2.4 / 1.52.0 library | pypi.org/project/espeakng-loader, github.com/espeak-ng/espeak-ng | Loader wheel metadata does not declare a wrapper license; bundled eSpeak NG is GPL-3.0-or-later | Treat the combined wheel as GPL pending a packaging review; process isolation is technical containment, not a license exception |
 
 Model weights, voices, avatars, environment assets, and eSpeak/phonemizer components are not
-distributed by this source repository. The two Milestone 3 development weights above are downloaded
-to ignored local tooling storage; their redistributability must be reviewed again before packaging.
-In particular, no GPL component may be bundled until its distribution implications are recorded.
+distributed by this source repository. Development weights are downloaded to ignored local tooling
+storage; their redistributability must be reviewed again before packaging. The selected Piper,
+Phonemizer, and eSpeak stack is GPL-3.0-or-later. Milestone 8 must either satisfy the corresponding
+source, notice, and combined-work obligations or replace those components before distribution.

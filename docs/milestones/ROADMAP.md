@@ -9,7 +9,7 @@ criterion has direct evidence).
 | 1. Native streaming proof | complete | M0 foundation | Native emulator diagnostic and Godot media, microphone return, reconnect, cleanup, and development architecture decision pass |
 | 2. Session orchestration | complete | M1 architecture decision (satisfied) | Complete validated fake turn cycle across host/Android/renderer; cancellation/timeouts/errors; leak-free repeated sessions |
 | 3. Local AI/bilingual | complete | M2 contracts/orchestration | Local LLM/STT, English/Bulgarian/mixed intents, valid structured output, human-speech transcription, measured latency/memory |
-| 4. Speech/phonemes | not started | M3 providers | English/Bulgarian TTS/fallback, speed/replay, IPA, real alignment/fallback, synchronized subtitles/word replay |
+| 4. Speech/phonemes | complete | M3 providers | Local English/Bulgarian speech, deterministic fallback, actual-or-null timing, IPA, Android highlighting/replay/rates, and human listening confirmation pass |
 | 5. Teaching/progress | not started | M3-4 | Four complete guided scenarios, adaptive explainable teaching, questions do not break lessons, SQLite persistence/resume |
 | 6. Avatar/scenes | not started | M1 media decision, M4 timing | Avatar and four validated dynamic environments, lip sync/fallback, memory/performance evidence |
 | 7. Optional cloud/privacy | not started | Stable provider interfaces | Independent opt-in providers, offline default, OS secret storage, no unintended cloud/secret logging |
@@ -65,10 +65,28 @@ Verified local software evidence:
 - Real local providers completed a Bulgarian turn followed by an English turn through host
   orchestration with zero retained recordings and zero leaked sessions.
 
-Milestone 3 is complete. The text conversation path is local and returns naturally to English.
-The 150 ms diagnostic tone is not speech or Milestone 4 evidence. The bounded fixture set is not a
-broad language-quality study, and missing audio categories must be expanded in later evaluation.
-Milestone 4 may begin.
+Milestone 3 is complete. At its handoff, the text conversation path was local and returned
+naturally to English while its 150 ms diagnostic tone was explicitly not speech evidence.
+Milestone 4 has now replaced that local-mode marker with real speech; the historical Milestone 3
+fixture limits remain documented separately.
+
+## Milestone 4 acceptance tracking
+
+Verified local software/native-emulator evidence:
+
+- Checksum-pinned Kokoro `en-GB`/`en-US`, Piper `bg-BG`, and deterministic eSpeak NG fallback
+  generated bounded non-silent PCM16 WAV.
+- Both neural providers returned actual model-derived word/phoneme timing for the benchmark
+  phrases; the fallback returned explicit null timing and remained playable.
+- Accent-specific curated IPA, Bulgarian-language articulation explanations, strict cross-language
+  contracts, full-turn replay, 0.75×/1×/1.25× speed, and isolated-word replay are implemented.
+- The API 34 native emulator completed Kokoro playback, seven media-time highlights, 0.75× replay,
+  word selection, and separate word playback; cleanup stopped the app, servers, reverse mappings,
+  and audio.
+
+Generated English GB/US, Bulgarian, and fallback samples were played synchronously once. The user
+confirmed on 2026-10-12 that the GB-English and Bulgarian samples sounded good, closing the
+subjective intelligibility/acceptable-naturalness criterion. Milestone 4 is complete.
 
 ## Milestone 0 acceptance tracking
 
@@ -120,8 +138,8 @@ Deferred release acceptance (Milestone 9, not a Milestone 1 blocker):
 - Production pairing/WSS and release network security; the development token and cleartext
   signaling remain development-only.
 
-Milestones 1–3 are complete on their verified software/native-emulator criteria. Milestone 4 may
-begin. The deferred hardware bundle must remain visible and must pass before Milestone 9 can
+Milestones 1–4 are complete on their verified software/native-emulator and stated human-listening
+criteria. The deferred hardware bundle must remain visible and must pass before Milestone 9 can
 complete.
 
 ## Milestone 9 target-hardware acceptance tracking

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any
 from uuid import uuid4
 
@@ -11,7 +11,7 @@ from govor_contracts import RendererCommandPayload
 from govor_host.app import create_app
 from govor_host.config import Settings
 from govor_host.fake_lesson import FakeLessonService
-from govor_provider_interfaces import LessonResult, UtteranceAudio
+from govor_provider_interfaces import LessonResult, Pronunciation, TeacherTurn, UtteranceAudio
 from starlette.websockets import WebSocketDisconnect
 
 
@@ -52,6 +52,32 @@ class NoSpeechLessonService(FakeLessonService):
             frequency_hz=440.0,
         )
         return LessonResult(transcript=None, turn=turn)
+
+
+class PronunciationLessonService(FakeLessonService):
+    def __init__(self) -> None:
+        super().__init__()
+        self.replays: list[tuple[str, str, float]] = []
+
+    async def initial_turn(self) -> TeacherTurn:
+        turn = await super().initial_turn()
+        return replace(
+            turn,
+            pronunciations=(
+                Pronunciation(
+                    word="Welcome",
+                    start_char=0,
+                    end_char=7,
+                    ipa="ˈwɛlkəm",
+                    locale="en-GB",
+                    explanation="Test pronunciation explanation.",
+                ),
+            ),
+        )
+
+    async def replay_word(self, word: str, locale: str, *, speed: float = 1.0) -> TeacherTurn:
+        self.replays.append((word, locale, speed))
+        return await super().replay_word(word, locale, speed=speed)
 
 
 def envelope(message_type: str, payload: dict[str, object]) -> dict[str, object]:
@@ -167,6 +193,43 @@ def test_complete_fake_lesson_turn_cycle(caplog: pytest.LogCaptureFixture) -> No
     assert "correlation_id=" in caplog.text
     assert "I would like coffee" not in caplog.text
     assert "audio_base64" not in caplog.text
+
+
+def test_selected_word_replay_preserves_awaiting_learner_state() -> None:
+    lesson = PronunciationLessonService()
+    app = create_app(Settings(), renderer=FakeRendererControl(), lesson=lesson)
+    with TestClient(app).websocket_connect("/v1/control") as socket:
+        socket.send_json(envelope("session.start", {"client_id": str(uuid4())}))
+        assert socket.receive_json()["payload"]["state"] == "ready"
+        turn = socket.receive_json()
+        session_id = turn["payload"]["session_id"]
+        turn_id = turn["payload"]["turn_id"]
+        assert turn["payload"]["pronunciations"][0]["ipa"] == "ˈwɛlkəm"
+
+        socket.send_json(
+            envelope(
+                "teacher.playback_completed",
+                {"session_id": session_id, "turn_id": turn_id},
+            )
+        )
+        assert socket.receive_json()["payload"]["state"] == "awaiting_learner"
+        socket.send_json(
+            envelope(
+                "teacher.word_replay_requested",
+                {
+                    "session_id": session_id,
+                    "turn_id": turn_id,
+                    "word_index": 0,
+                    "playback_rate": 0.75,
+                },
+            )
+        )
+        replay = socket.receive_json()
+
+    assert replay["message_type"] == "teacher.word_audio"
+    assert replay["payload"]["word"] == "Welcome"
+    assert replay["payload"]["sample_rate_hz"] == 16_000
+    assert lesson.replays == [("Welcome", "en-GB", 0.75)]
 
 
 def test_invalid_control_message_is_rejected_without_crashing() -> None:

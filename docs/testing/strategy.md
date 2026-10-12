@@ -22,7 +22,9 @@ Milestone 1 adds signaling, the real WebRTC peer, native-emulator video/audio/mi
 reconnect, cleanup, and renderer-bridge tests. Milestone 2 adds shared cross-language fixtures,
 complete host/Android/Godot turn-cycle tests, invalid/out-of-order message rejection, injected
 failure, timeout, cancellation, correlation/log-redaction, and repeated-session teardown tests.
-Later milestones add real provider, bilingual, phonetic, persistence, scene, privacy, and
-packaging suites. Milestone 9 owns the complete
+Milestone 4 adds real English/Bulgarian/fallback audio generation, curated accent-aware IPA,
+model-alignment/null-fallback checks, speed-duration ordering, deterministic fallback, native
+emulator `AudioTrack`/highlight/replay/word-selection evidence, and a separate human listening
+decision. Later milestones add persistence, scene, privacy, and packaging suites. Milestone 9 owns the complete
 physical-phone/Wi-Fi bundle: acoustic behavior, codecs, lifecycle, latency/resources,
 monitor-off/unfocused behavior, security on the physical network path, and the 30-minute soak.

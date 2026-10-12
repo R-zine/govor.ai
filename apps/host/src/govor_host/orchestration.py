@@ -19,6 +19,8 @@ from uuid import UUID, uuid4
 from govor_contracts import (
     LearnerTranscriptPayload,
     MessageEnvelope,
+    PhonemeAlignmentPayload,
+    PronunciationPayload,
     ProviderCapabilities,
     RecordingStartedPayload,
     RecordingSubmittedPayload,
@@ -32,6 +34,9 @@ from govor_contracts import (
     SessionStatePayload,
     TeacherPlaybackCompletedPayload,
     TeacherTurnPayload,
+    TeacherWordAudioPayload,
+    TeacherWordReplayRequestPayload,
+    WordAlignmentPayload,
 )
 from govor_domain import InvalidTransition, SessionEvent, SessionMachine, SessionState
 from govor_provider_interfaces import LessonResult, TeacherTurn, UtteranceAudio
@@ -50,6 +55,8 @@ class LessonService(Protocol):
     def capabilities(self) -> tuple[ProviderCapabilities, ...]: ...
 
     async def initial_turn(self) -> TeacherTurn: ...
+
+    async def replay_word(self, word: str, locale: str, *, speed: float = 1.0) -> TeacherTurn: ...
 
     async def respond(self, audio: UtteranceAudio) -> LessonResult: ...
 
@@ -79,6 +86,7 @@ class SessionRegistry:
 INBOUND_PAYLOADS: dict[str, type[BaseModel]] = {
     "session.start": SessionStartPayload,
     "teacher.playback_completed": TeacherPlaybackCompletedPayload,
+    "teacher.word_replay_requested": TeacherWordReplayRequestPayload,
     "learner.recording_started": RecordingStartedPayload,
     "learner.recording_submitted": RecordingSubmittedPayload,
     "session.cancel": SessionCancelPayload,
@@ -108,6 +116,7 @@ class ControlSession:
         self._session_id: UUID | None = None
         self._client_id: UUID | None = None
         self._turn_id: UUID | None = None
+        self._active_turn: TeacherTurn | None = None
         self._utterance_id: UUID | None = None
         self._work_task: asyncio.Task[None] | None = None
         self._deadline_task: asyncio.Task[None] | None = None
@@ -171,6 +180,11 @@ class ControlSession:
             await self._playback_completed(
                 envelope.correlation_id,
                 _require(payload, TeacherPlaybackCompletedPayload),
+            )
+        elif envelope.message_type == "teacher.word_replay_requested":
+            await self._word_replay_requested(
+                envelope.correlation_id,
+                _require(payload, TeacherWordReplayRequestPayload),
             )
         elif envelope.message_type == "learner.recording_started":
             await self._recording_started(
@@ -269,6 +283,59 @@ class ControlSession:
             code="recording_timeout",
         )
 
+    async def _word_replay_requested(
+        self,
+        correlation_id: UUID,
+        payload: TeacherWordReplayRequestPayload,
+    ) -> None:
+        if self._machine.state is not SessionState.AWAITING_LEARNER:
+            raise InvalidTransition("word replay is only available while awaiting the learner")
+        if payload.turn_id != self._turn_id or self._active_turn is None:
+            raise ValueError("turn_id does not match the active turn")
+        if payload.word_index >= len(self._active_turn.pronunciations):
+            raise ValueError("word_index does not exist in the active turn")
+        pronunciation = self._active_turn.pronunciations[payload.word_index]
+        self._cancel_deadline()
+        try:
+            async with asyncio.timeout(self._settings.provider_timeout_seconds):
+                replay = await self._lesson.replay_word(
+                    pronunciation.word,
+                    pronunciation.locale,
+                    speed=payload.playback_rate,
+                )
+            await self._send(
+                "teacher.word_audio",
+                correlation_id,
+                TeacherWordAudioPayload(
+                    session_id=self._require_active_session(),
+                    turn_id=payload.turn_id,
+                    word_index=payload.word_index,
+                    word=pronunciation.word,
+                    locale=replay.locale,
+                    provider_id=replay.provider_id,
+                    sample_rate_hz=replay.sample_rate_hz,
+                    duration_us=replay.duration_us,
+                    audio_base64=base64.b64encode(replay.audio_wav).decode("ascii"),
+                    fallback_used=replay.fallback_used,
+                ),
+            )
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            await self._send_error(
+                correlation_id,
+                code="word_replay_failed",
+                message="The selected word could not be synthesized.",
+                retryable=False,
+            )
+        finally:
+            if self._machine.state is SessionState.AWAITING_LEARNER:
+                self._arm_deadline(
+                    self._settings.recording_timeout_seconds,
+                    expected_state=SessionState.AWAITING_LEARNER,
+                    code="learner_response_timeout",
+                )
+
     async def _recording_submitted(
         self,
         correlation_id: UUID,
@@ -325,6 +392,7 @@ class ControlSession:
         response: bool,
     ) -> None:
         self._turn_id = uuid4()
+        self._active_turn = turn
         await self._renderer_command(
             "teacher_speaking",
             correlation_id,
@@ -342,15 +410,53 @@ class ControlSession:
                 text=turn.text,
                 locale=turn.locale,
                 provider_id=turn.provider_id,
-                sample_rate_hz=16_000,
+                sample_rate_hz=turn.sample_rate_hz,
                 duration_us=turn.duration_us,
                 audio_base64=base64.b64encode(turn.audio_wav).decode("ascii"),
-                word_alignment=None,
-                phoneme_alignment=None,
+                pronunciations=[
+                    PronunciationPayload(
+                        word=item.word,
+                        start_char=item.start_char,
+                        end_char=item.end_char,
+                        ipa=item.ipa,
+                        locale=item.locale,
+                        explanation=item.explanation,
+                    )
+                    for item in turn.pronunciations
+                ],
+                word_alignment=(
+                    [
+                        WordAlignmentPayload(
+                            word_index=item.word_index,
+                            start_us=item.start_us,
+                            end_us=item.end_us,
+                        )
+                        for item in turn.word_alignment
+                    ]
+                    if turn.word_alignment is not None
+                    else None
+                ),
+                phoneme_alignment=(
+                    [
+                        PhonemeAlignmentPayload(
+                            word_index=item.word_index,
+                            symbol=item.symbol,
+                            start_us=item.start_us,
+                            end_us=item.end_us,
+                        )
+                        for item in turn.phoneme_alignment
+                    ]
+                    if turn.phoneme_alignment is not None
+                    else None
+                ),
+                fallback_used=turn.fallback_used,
             ),
         )
         self._arm_deadline(
-            self._settings.playback_timeout_seconds,
+            max(
+                self._settings.playback_timeout_seconds,
+                turn.duration_us / 1_000_000 / 0.75 + 2.0,
+            ),
             expected_state=SessionState.TEACHER_SPEAKING,
             code="playback_timeout",
         )
@@ -520,6 +626,7 @@ class ControlSession:
         self._session_id = None
         self._client_id = None
         self._turn_id = None
+        self._active_turn = None
         self._utterance_id = None
         self._machine = SessionMachine()
 

@@ -16,5 +16,14 @@
     <None Include="..\..\..\..\tests\fixtures\contracts\valid\control-renderer-command.json"
           Link="fixtures\control-renderer-command.json"
           CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\..\..\tests\fixtures\contracts\valid\control-teacher-turn.json"
+          Link="fixtures\control-teacher-turn.json"
+          CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\..\..\tests\fixtures\contracts\valid\control-word-replay-request.json"
+          Link="fixtures\control-word-replay-request.json"
+          CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\..\..\tests\fixtures\contracts\valid\control-word-audio.json"
+          Link="fixtures\control-word-audio.json"
+          CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

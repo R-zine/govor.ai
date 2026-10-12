@@ -39,6 +39,7 @@ $env:PYTHONPATH = @(
     (Join-Path $script:RepositoryRoot 'packages\provider_interfaces\src'),
     (Join-Path $script:RepositoryRoot 'packages\contracts\python'),
     (Join-Path $script:RepositoryRoot 'services\local_ai\src'),
+    (Join-Path $script:RepositoryRoot 'services\speech\src'),
     (Join-Path $script:RepositoryRoot 'services\media\src')
 ) -join [IO.Path]::PathSeparator
 
@@ -58,6 +59,10 @@ try {
         $env:GOVOR_DIALOGUE_PROVIDER_ID = $DialogueProviderId
         $env:GOVOR_WHISPER_EXECUTABLE = $whisperCli
         $env:GOVOR_WHISPER_MODEL = $whisperModel
+        $env:GOVOR_KOKORO_MODEL = Join-Path $script:ToolsRoot 'models\speech\kokoro-v1.0.onnx'
+        $env:GOVOR_KOKORO_VOICES = Join-Path $script:ToolsRoot 'models\speech\voices-v1.0.bin'
+        $env:GOVOR_PIPER_BG_MODEL = Join-Path $script:ToolsRoot 'models\speech\bg_BG-dimitar-medium.onnx'
+        $env:GOVOR_PIPER_BG_CONFIG = Join-Path $script:ToolsRoot 'models\speech\bg_BG-dimitar-medium.onnx.json'
         $env:GOVOR_MEDIA_CAPTURE_URL = "http://127.0.0.1:$MediaPort"
         $env:GOVOR_PROVIDER_TIMEOUT_SECONDS = '60'
         $env:GOVOR_DEV_PAIRING_TOKEN = $PairingToken
@@ -81,7 +86,8 @@ try {
 
         $uv = (Get-Command uv -ErrorAction Stop).Source
         $mediaProcess = Start-Process -FilePath $uv -ArgumentList @(
-            'run', '--frozen', '--extra', 'media', 'uvicorn', 'govor_media.entrypoint:app',
+            'run', '--frozen', '--extra', 'media', '--extra', 'speech',
+            'uvicorn', 'govor_media.entrypoint:app',
             '--host', '127.0.0.1', '--port', $MediaPort.ToString()
         ) -PassThru -WindowStyle Hidden -RedirectStandardOutput $mediaStdout -RedirectStandardError $mediaStderr
         $managedProcesses.Add($mediaProcess)
@@ -110,10 +116,13 @@ try {
     $managedProcesses.Add($rendererProcess)
 
     Write-Output "Starting $Mode host on http://$BindHost`:$Port. Press Ctrl+C to stop all processes."
-    Invoke-Checked -FilePath 'uv' -ArgumentList @(
-        'run', '--frozen', 'uvicorn', 'govor_host.app:app',
+    $hostArguments = @('run', '--frozen')
+    if ($Mode -eq 'local') { $hostArguments += @('--extra', 'media', '--extra', 'speech') }
+    $hostArguments += @(
+        'uvicorn', 'govor_host.app:app',
         '--host', $BindHost, '--port', $Port.ToString()
     )
+    Invoke-Checked -FilePath 'uv' -ArgumentList $hostArguments
 }
 finally {
     foreach ($process in $managedProcesses) {

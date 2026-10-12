@@ -19,6 +19,10 @@ media = [
   "av==14.2.0",
   "numpy==2.3.3",
 ]
+speech = [
+  "kokoro-onnx==0.6.1",
+  "piper-tts[alignment]==1.8.0",
+]
 
 [dependency-groups]
 dev = [
@@ -40,6 +44,7 @@ testpaths = [
   "apps/host/tests",
   "packages/domain/tests",
   "services/local_ai/tests",
+  "services/speech/tests",
   "tests/contracts",
   "tests/integration",
 ]
@@ -49,6 +54,7 @@ pythonpath = [
   "packages/provider_interfaces/src",
   "packages/contracts/python",
   "services/local_ai/src",
+  "services/speech/src",
   "services/media/src",
 ]
 markers = [
@@ -80,17 +86,23 @@ files = [
   "packages/provider_interfaces/src",
   "packages/contracts/python",
   "services/local_ai/src",
+  "services/speech/src",
 ]
 plugins = ["pydantic.mypy"]
 
 [tool.coverage.run]
 branch = true
+omit = [
+  # Executed only in a child process; the parent integration test verifies its WAV result.
+  "services/speech/src/govor_speech/espeak_worker.py",
+]
 source = [
   "apps/host/src",
   "packages/domain/src",
   "packages/provider_interfaces/src",
   "packages/contracts/python",
   "services/local_ai/src",
+  "services/speech/src",
 ]
 
 [tool.coverage.report]

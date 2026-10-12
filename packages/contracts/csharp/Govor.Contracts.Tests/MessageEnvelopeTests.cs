@@ -48,6 +48,41 @@ public sealed class MessageEnvelopeTests
     }
 
     [Fact]
+    public void TeacherTurnDeserializesPronunciationAndAlignment()
+    {
+        string json = File.ReadAllText(
+            Path.Combine(AppContext.BaseDirectory, "fixtures", "control-teacher-turn.json"));
+
+        MessageEnvelope envelope = ControlContractCodec.DecodeEnvelope(json);
+        TeacherTurnPayload payload = ControlContractCodec.DecodePayload<TeacherTurnPayload>(envelope);
+
+        Assert.Equal("en-GB", payload.Locale);
+        Assert.Equal("ˈwɛlkəm", payload.Pronunciations[0].Ipa);
+        Assert.Equal(0, payload.WordAlignment?[0].WordIndex);
+        Assert.False(payload.FallbackUsed);
+    }
+
+    [Fact]
+    public void WordReplayRequestAndAudioFixturesDeserialize()
+    {
+        string requestJson = File.ReadAllText(
+            Path.Combine(AppContext.BaseDirectory, "fixtures", "control-word-replay-request.json"));
+        string audioJson = File.ReadAllText(
+            Path.Combine(AppContext.BaseDirectory, "fixtures", "control-word-audio.json"));
+
+        TeacherWordReplayRequestPayload request = ControlContractCodec.DecodePayload<TeacherWordReplayRequestPayload>(
+            ControlContractCodec.DecodeEnvelope(requestJson));
+        TeacherWordAudioPayload audio = ControlContractCodec.DecodePayload<TeacherWordAudioPayload>(
+            ControlContractCodec.DecodeEnvelope(audioJson));
+
+        Assert.Equal(0.75f, request.PlaybackRate);
+        Assert.Equal(request.TurnId, audio.TurnId);
+        Assert.Equal(request.WordIndex, audio.WordIndex);
+        Assert.Equal("Welcome", audio.Word);
+        Assert.False(audio.FallbackUsed);
+    }
+
+    [Fact]
     public void UnknownRendererPayloadFieldIsRejected()
     {
         using var payloadDocument = JsonDocument.Parse(

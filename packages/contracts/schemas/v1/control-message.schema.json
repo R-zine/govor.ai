@@ -16,6 +16,8 @@
         "session.ended",
         "teacher.turn",
         "teacher.playback_completed",
+        "teacher.word_replay_requested",
+        "teacher.word_audio",
         "learner.recording_started",
         "learner.recording_submitted",
         "learner.transcript",
@@ -62,6 +64,16 @@
         "properties": { "message_type": { "const": "teacher.playback_completed" } }
       },
       "then": { "properties": { "payload": { "$ref": "#/$defs/playbackCompleted" } } }
+    },
+    {
+      "if": {
+        "properties": { "message_type": { "const": "teacher.word_replay_requested" } }
+      },
+      "then": { "properties": { "payload": { "$ref": "#/$defs/wordReplayRequest" } } }
+    },
+    {
+      "if": { "properties": { "message_type": { "const": "teacher.word_audio" } } },
+      "then": { "properties": { "payload": { "$ref": "#/$defs/wordAudio" } } }
     },
     {
       "if": { "properties": { "message_type": { "const": "learner.recording_started" } } },
@@ -152,6 +164,17 @@
         "turn_id": { "$ref": "#/$defs/uuid" }
       }
     },
+    "wordReplayRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["session_id", "turn_id", "word_index", "playback_rate"],
+      "properties": {
+        "session_id": { "$ref": "#/$defs/uuid" },
+        "turn_id": { "$ref": "#/$defs/uuid" },
+        "word_index": { "type": "integer", "minimum": 0, "maximum": 255 },
+        "playback_rate": { "type": "number", "minimum": 0.5, "maximum": 2.0 }
+      }
+    },
     "recordingStarted": {
       "type": "object",
       "additionalProperties": false,
@@ -177,8 +200,8 @@
       "additionalProperties": false,
       "required": [
         "session_id", "turn_id", "text", "locale", "provider_id", "audio_format",
-        "sample_rate_hz", "duration_us", "audio_base64", "word_alignment",
-        "phoneme_alignment"
+        "sample_rate_hz", "duration_us", "audio_base64", "pronunciations",
+        "word_alignment", "phoneme_alignment", "fallback_used"
       ],
       "properties": {
         "session_id": { "$ref": "#/$defs/uuid" },
@@ -187,11 +210,95 @@
         "locale": { "type": "string", "pattern": "^[a-z]{2,3}(-[A-Z]{2})?$", "maxLength": 16 },
         "provider_id": { "type": "string", "minLength": 1, "maxLength": 64 },
         "audio_format": { "const": "wav" },
-        "sample_rate_hz": { "enum": [16000, 24000, 48000] },
+        "sample_rate_hz": { "enum": [16000, 22050, 24000, 48000] },
         "duration_us": { "type": "integer", "minimum": 1, "maximum": 30000000 },
-        "audio_base64": { "type": "string", "minLength": 4, "maxLength": 1398104 },
-        "word_alignment": { "type": "null" },
-        "phoneme_alignment": { "type": "null" }
+        "audio_base64": { "type": "string", "minLength": 4, "maxLength": 2000060 },
+        "pronunciations": {
+          "type": "array",
+          "maxItems": 256,
+          "items": { "$ref": "#/$defs/pronunciation" }
+        },
+        "word_alignment": {
+          "oneOf": [
+            { "type": "null" },
+            {
+              "type": "array",
+              "maxItems": 256,
+              "items": { "$ref": "#/$defs/wordAlignment" }
+            }
+          ]
+        },
+        "phoneme_alignment": {
+          "oneOf": [
+            { "type": "null" },
+            {
+              "type": "array",
+              "maxItems": 2048,
+              "items": { "$ref": "#/$defs/phonemeAlignment" }
+            }
+          ]
+        },
+        "fallback_used": { "type": "boolean" }
+      }
+    },
+    "pronunciation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["word", "start_char", "end_char", "ipa", "locale", "explanation"],
+      "properties": {
+        "word": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "start_char": { "type": "integer", "minimum": 0, "maximum": 2047 },
+        "end_char": { "type": "integer", "minimum": 1, "maximum": 2048 },
+        "ipa": { "type": "string", "minLength": 1, "maxLength": 256 },
+        "locale": { "type": "string", "pattern": "^[a-z]{2,3}(-[A-Z]{2})?$", "maxLength": 16 },
+        "explanation": {
+          "oneOf": [
+            { "type": "null" },
+            { "type": "string", "maxLength": 512 }
+          ]
+        }
+      }
+    },
+    "wordAlignment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["word_index", "start_us", "end_us"],
+      "properties": {
+        "word_index": { "type": "integer", "minimum": 0, "maximum": 255 },
+        "start_us": { "type": "integer", "minimum": 0, "maximum": 30000000 },
+        "end_us": { "type": "integer", "minimum": 1, "maximum": 30000000 }
+      }
+    },
+    "phonemeAlignment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["word_index", "symbol", "start_us", "end_us"],
+      "properties": {
+        "word_index": { "type": "integer", "minimum": 0, "maximum": 255 },
+        "symbol": { "type": "string", "minLength": 1, "maxLength": 16 },
+        "start_us": { "type": "integer", "minimum": 0, "maximum": 30000000 },
+        "end_us": { "type": "integer", "minimum": 1, "maximum": 30000000 }
+      }
+    },
+    "wordAudio": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "session_id", "turn_id", "word_index", "word", "locale", "provider_id",
+        "audio_format", "sample_rate_hz", "duration_us", "audio_base64", "fallback_used"
+      ],
+      "properties": {
+        "session_id": { "$ref": "#/$defs/uuid" },
+        "turn_id": { "$ref": "#/$defs/uuid" },
+        "word_index": { "type": "integer", "minimum": 0, "maximum": 255 },
+        "word": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "locale": { "type": "string", "pattern": "^[a-z]{2,3}(-[A-Z]{2})?$", "maxLength": 16 },
+        "provider_id": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "audio_format": { "const": "wav" },
+        "sample_rate_hz": { "enum": [16000, 22050, 24000, 48000] },
+        "duration_us": { "type": "integer", "minimum": 1, "maximum": 30000000 },
+        "audio_base64": { "type": "string", "minLength": 4, "maxLength": 2000060 },
+        "fallback_used": { "type": "boolean" }
       }
     },
     "transcript": {

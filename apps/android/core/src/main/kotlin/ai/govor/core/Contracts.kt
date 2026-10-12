@@ -105,6 +105,31 @@ data class SessionStatePayload(
 data class SessionEndedPayload(val session_id: String, val reason: String)
 
 @Serializable
+data class PronunciationPayload(
+    val word: String,
+    val start_char: Int,
+    val end_char: Int,
+    val ipa: String,
+    val locale: String,
+    val explanation: String? = null,
+)
+
+@Serializable
+data class WordAlignmentPayload(
+    val word_index: Int,
+    val start_us: Long,
+    val end_us: Long,
+)
+
+@Serializable
+data class PhonemeAlignmentPayload(
+    val word_index: Int,
+    val symbol: String,
+    val start_us: Long,
+    val end_us: Long,
+)
+
+@Serializable
 data class TeacherTurnPayload(
     val session_id: String,
     val turn_id: String,
@@ -115,8 +140,65 @@ data class TeacherTurnPayload(
     val sample_rate_hz: Int,
     val duration_us: Long,
     val audio_base64: String,
-    val word_alignment: String? = null,
-    val phoneme_alignment: String? = null,
+    val pronunciations: List<PronunciationPayload>,
+    val word_alignment: List<WordAlignmentPayload>? = null,
+    val phoneme_alignment: List<PhonemeAlignmentPayload>? = null,
+    val fallback_used: Boolean,
+) {
+    fun validate(): TeacherTurnPayload {
+        UUID.fromString(session_id)
+        UUID.fromString(turn_id)
+        require(text.length in 1..2_048 && text.isNotBlank())
+        require(locale in setOf("en-GB", "en-US", "bg-BG"))
+        require(provider_id.length in 1..64)
+        require(audio_format == "wav")
+        require(sample_rate_hz in setOf(16_000, 22_050, 24_000, 48_000))
+        require(duration_us in 1..30_000_000)
+        require(audio_base64.length in 4..2_000_060)
+        require(pronunciations.size <= 256)
+        require(word_alignment == null || word_alignment.size <= 256)
+        require(phoneme_alignment == null || phoneme_alignment.size <= 2_048)
+        pronunciations.forEach { pronunciation ->
+            require(pronunciation.start_char >= 0 && pronunciation.end_char <= text.length)
+            require(pronunciation.end_char > pronunciation.start_char)
+            require(text.substring(pronunciation.start_char, pronunciation.end_char) == pronunciation.word)
+            require(pronunciation.ipa.isNotBlank() && pronunciation.locale == locale)
+        }
+        word_alignment.orEmpty().forEach { alignment ->
+            require(alignment.word_index in pronunciations.indices)
+            require(alignment.start_us >= 0 && alignment.end_us in 1..duration_us)
+            require(alignment.end_us > alignment.start_us)
+        }
+        phoneme_alignment.orEmpty().forEach { alignment ->
+            require(alignment.word_index in pronunciations.indices)
+            require(alignment.start_us >= 0 && alignment.end_us in 1..duration_us)
+            require(alignment.end_us > alignment.start_us)
+        }
+        return this
+    }
+}
+
+@Serializable
+data class TeacherWordReplayRequestPayload(
+    val session_id: String,
+    val turn_id: String,
+    val word_index: Int,
+    val playback_rate: Float,
+)
+
+@Serializable
+data class TeacherWordAudioPayload(
+    val session_id: String,
+    val turn_id: String,
+    val word_index: Int,
+    val word: String,
+    val locale: String,
+    val provider_id: String,
+    val audio_format: String,
+    val sample_rate_hz: Int,
+    val duration_us: Long,
+    val audio_base64: String,
+    val fallback_used: Boolean,
 )
 
 @Serializable

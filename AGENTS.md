@@ -55,6 +55,7 @@ Milestone handoff.
 ./scripts/test.ps1 -Scope kotlin
 ./scripts/test.ps1 -Scope csharp
 ./scripts/test.ps1 -Scope media
+./scripts/test.ps1 -Scope speech
 ./scripts/test.ps1 -Scope godot
 ./scripts/test.ps1 -Scope all
 ./scripts/dev.ps1 -Mode mock
@@ -68,6 +69,7 @@ Hardware tests are separate:
 ./scripts/test.ps1 -Scope hardware
 ./scripts/benchmark.ps1 -Profile media-poc
 ./scripts/benchmark.ps1 -Profile local-ai
+./scripts/benchmark.ps1 -Profile speech
 ```
 
 Record the machine, device, network, exact command, timestamp, result, and artifacts in

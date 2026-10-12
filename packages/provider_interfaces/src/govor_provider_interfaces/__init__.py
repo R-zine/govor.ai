@@ -5,6 +5,8 @@ from .models import (
     DialogueRequest,
     LessonResult,
     NoSpeechRecognized,
+    PhonemeAlignment,
+    Pronunciation,
     ProviderError,
     ProviderMalformedOutput,
     ProviderResourceExhausted,
@@ -14,6 +16,7 @@ from .models import (
     TeacherTurn,
     Transcript,
     UtteranceAudio,
+    WordAlignment,
 )
 
 __all__ = [
@@ -21,6 +24,8 @@ __all__ = [
     "DialogueRequest",
     "LessonResult",
     "NoSpeechRecognized",
+    "PhonemeAlignment",
+    "Pronunciation",
     "ProviderError",
     "ProviderMalformedOutput",
     "ProviderResourceExhausted",
@@ -30,4 +35,5 @@ __all__ = [
     "TeacherTurn",
     "Transcript",
     "UtteranceAudio",
+    "WordAlignment",
 ]

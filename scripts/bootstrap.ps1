@@ -24,6 +24,9 @@ $syncArguments = @('sync', '--dev')
 if ($IncludeMedia) {
     $syncArguments += @('--extra', 'media')
 }
+if ($IncludeLocalAi) {
+    $syncArguments += @('--extra', 'speech')
+}
 if ($NoDownload) {
     $syncArguments += '--offline'
 }
@@ -195,6 +198,34 @@ if ($IncludeLocalAi) {
             Uri = 'https://huggingface.co/Qwen/Qwen3-1.7B-GGUF/resolve/7fb011e9aee6e4dc7adf8430df9ea8de6a466aa3/Qwen3-1.7B-Q4_K_M.gguf?download=true'
             Hash = '228fb5627f7510b8b3516cdb6435e4b0d2a2bf330fe5b0ab19284a3570a8bb1f'
             Size = 1107408544L
+        },
+        @{
+            Name = 'Kokoro v1.0 ONNX speech model'
+            Path = (Join-Path $script:ToolsRoot 'models\speech\kokoro-v1.0.onnx')
+            Uri = 'https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.1/kokoro-v1.0.onnx'
+            Hash = 'beb0d1848dee9a49da392cc3df26958d46cfa35d321edf434f52949153f0df3a'
+            Size = 325505369L
+        },
+        @{
+            Name = 'Kokoro v1.0 voice bundle'
+            Path = (Join-Path $script:ToolsRoot 'models\speech\voices-v1.0.bin')
+            Uri = 'https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.1/voices-v1.0.bin'
+            Hash = 'bca610b8308e8d99f32e6fe4197e7ec01679264efed0cac9140fe9c29f1fbf7d'
+            Size = 28214398L
+        },
+        @{
+            Name = 'Piper Bulgarian dimitar medium model'
+            Path = (Join-Path $script:ToolsRoot 'models\speech\bg_BG-dimitar-medium.onnx')
+            Uri = 'https://huggingface.co/rhasspy/piper-voices/resolve/7c89b592e94392a56c789bd35a860fec66a6583f/bg/bg_BG/dimitar/medium/bg_BG-dimitar-medium.onnx?download=true'
+            Hash = '4972fe764468e8501416407ad81662de94cc6c9cdc680fcf807daef04e319f13'
+            Size = 63221984L
+        },
+        @{
+            Name = 'Piper Bulgarian dimitar medium config'
+            Path = (Join-Path $script:ToolsRoot 'models\speech\bg_BG-dimitar-medium.onnx.json')
+            Uri = 'https://huggingface.co/rhasspy/piper-voices/resolve/7c89b592e94392a56c789bd35a860fec66a6583f/bg/bg_BG/dimitar/medium/bg_BG-dimitar-medium.onnx.json?download=true'
+            Hash = 'ec9a9abdd17384d3db225e83085b2f68b790b112f058417c3a8a2ac58b79e7f0'
+            Size = 5123L
         }
     )
     foreach ($artifact in $artifacts) {
@@ -259,6 +290,9 @@ if ($IncludeLocalAi) {
     Write-Output "Whisper model: $(Get-GovorWhisperModel)"
     Write-Output "English microphone fixture: $($artifacts[4].Path)"
     Write-Output "Bulgarian microphone fixture: $bulgarianFixture"
+    Write-Output "Kokoro model: $($artifacts[7].Path)"
+    Write-Output "Kokoro voices: $($artifacts[8].Path)"
+    Write-Output "Piper Bulgarian model: $($artifacts[9].Path)"
 }
 
 Write-Output 'Bootstrap complete.'

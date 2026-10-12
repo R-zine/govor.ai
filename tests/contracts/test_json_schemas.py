@@ -28,6 +28,8 @@ def test_schema_is_valid_draft_2020_12(schema_path: Path) -> None:
         ("message-envelope.schema.json", "message-envelope.json"),
         ("signaling-message.schema.json", "signaling-offer.json"),
         ("control-message.schema.json", "control-teacher-turn.json"),
+        ("control-message.schema.json", "control-word-replay-request.json"),
+        ("control-message.schema.json", "control-word-audio.json"),
         ("control-message.schema.json", "control-renderer-command.json"),
         ("local-ai-dialogue.schema.json", "local-ai-dialogue.json"),
     ],

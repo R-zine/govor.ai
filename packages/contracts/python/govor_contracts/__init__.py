@@ -5,6 +5,8 @@ from .models import (
     ErrorPayload,
     LearnerTranscriptPayload,
     MessageEnvelope,
+    PhonemeAlignmentPayload,
+    PronunciationPayload,
     ProviderCapabilities,
     ProviderHealth,
     RecordingStartedPayload,
@@ -22,6 +24,9 @@ from .models import (
     SessionStatePayload,
     TeacherPlaybackCompletedPayload,
     TeacherTurnPayload,
+    TeacherWordAudioPayload,
+    TeacherWordReplayRequestPayload,
+    WordAlignmentPayload,
 )
 
 __all__ = [
@@ -31,6 +36,8 @@ __all__ = [
     "MessageEnvelope",
     "ProviderCapabilities",
     "ProviderHealth",
+    "PhonemeAlignmentPayload",
+    "PronunciationPayload",
     "RecordingStartedPayload",
     "RecordingSubmittedPayload",
     "RendererAckPayload",
@@ -46,4 +53,7 @@ __all__ = [
     "SessionStatePayload",
     "TeacherPlaybackCompletedPayload",
     "TeacherTurnPayload",
+    "TeacherWordAudioPayload",
+    "TeacherWordReplayRequestPayload",
+    "WordAlignmentPayload",
 ]
