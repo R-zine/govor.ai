@@ -7,6 +7,21 @@
     "command_id": "19c369b5-6fca-43ea-bffc-764b51b7e7c2",
     "action": "teacher_speaking",
     "media_start_us": 0,
-    "duration_us": 150000
+    "duration_us": 150000,
+    "scene": null,
+    "avatar_animation": {
+      "duration_us": 150000,
+      "gesture": "speaking",
+      "expression": "encouraging",
+      "viseme_source": "provider_phoneme_alignment",
+      "speech_energy": [
+        { "media_time_us": 0, "level_milli": 220 },
+        { "media_time_us": 40000, "level_milli": 810 }
+      ],
+      "visemes": [
+        { "viseme": "closed", "start_us": 0, "end_us": 40000 },
+        { "viseme": "open", "start_us": 40000, "end_us": 150000 }
+      ]
+    }
   }
 }

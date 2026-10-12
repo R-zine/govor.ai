@@ -17,6 +17,7 @@ from typing import Any, Literal, Protocol, cast
 from uuid import UUID, uuid4
 
 from govor_contracts import (
+    AvatarAnimationPayload,
     LearnerTranscriptPayload,
     LessonProgressPayload,
     MessageEnvelope,
@@ -27,16 +28,21 @@ from govor_contracts import (
     RecordingSubmittedPayload,
     RendererAction,
     RendererCommandPayload,
+    SceneObjectPayload,
+    SceneSpecificationPayload,
     SessionCancelPayload,
     SessionEndedPayload,
     SessionErrorPayload,
     SessionScopedPayload,
     SessionStartPayload,
     SessionStatePayload,
+    SpeechEnergySamplePayload,
     TeacherPlaybackCompletedPayload,
     TeacherTurnPayload,
     TeacherWordAudioPayload,
     TeacherWordReplayRequestPayload,
+    Vector3Payload,
+    VisemeCuePayload,
     WordAlignmentPayload,
 )
 from govor_domain import (
@@ -49,6 +55,12 @@ from govor_domain import (
     get_scenario,
 )
 from govor_provider_interfaces import LessonResult, TeacherTurn, UtteranceAudio
+from govor_scene_planner import (
+    ScenePlanner,
+    SceneSpecification,
+    TimedPhoneme,
+    build_avatar_animation,
+)
 from pydantic import BaseModel, ValidationError
 
 from .config import Settings
@@ -129,6 +141,7 @@ class ControlSession:
         self._microphone = microphone
         self._settings = settings
         self._registry = registry
+        self._scene_planner = ScenePlanner()
         self._send_lock = asyncio.Lock()
         self._machine = SessionMachine()
         self._session_id: UUID | None = None
@@ -248,7 +261,12 @@ class ControlSession:
         ):
             self._machine.apply(event, uuid4())
         self._machine.apply(SessionEvent.CONNECTED, correlation_id)
-        await self._renderer_command("session_started", correlation_id)
+        scene = self._scene_planner.plan(payload.scenario_id)
+        await self._renderer_command(
+            "session_started",
+            correlation_id,
+            scene=_scene_specification_payload(scene),
+        )
         await self._send_state(correlation_id)
         self._start_work(self._prepare_initial_turn(correlation_id))
 
@@ -432,6 +450,7 @@ class ControlSession:
             "teacher_speaking",
             correlation_id,
             duration_us=turn.duration_us,
+            avatar_animation=_avatar_animation_payload(turn),
         )
         event = SessionEvent.RESPONSE_READY if response else SessionEvent.TEACHER_PLAYBACK_STARTED
         self._machine.apply(event, uuid4())
@@ -501,7 +520,11 @@ class ControlSession:
         self._cancel_deadline()
         self._cancel_work()
         self._machine.apply(SessionEvent.RETRY, correlation_id)
-        await self._renderer_command("session_started", correlation_id)
+        await self._renderer_command(
+            "session_started",
+            correlation_id,
+            scene=_scene_specification_payload(self._scene_planner.plan(self._scenario_id)),
+        )
         await self._send_state(correlation_id)
         self._start_work(self._prepare_initial_turn(correlation_id))
 
@@ -526,6 +549,8 @@ class ControlSession:
         correlation_id: UUID,
         *,
         duration_us: int | None = None,
+        scene: SceneSpecificationPayload | None = None,
+        avatar_animation: AvatarAnimationPayload | None = None,
     ) -> None:
         session_id = self._require_active_session()
         try:
@@ -536,6 +561,8 @@ class ControlSession:
                     action=cast(RendererAction, action),
                     media_start_us=0,
                     duration_us=duration_us,
+                    scene=scene,
+                    avatar_animation=avatar_animation,
                 ),
                 correlation_id,
             )
@@ -725,4 +752,66 @@ def _lesson_progress_payload(progress: LessonProgress) -> LessonProgressPayload:
             if progress.difficulty_change_reason is not None
             else None
         ),
+    )
+
+
+def _scene_specification_payload(scene: SceneSpecification) -> SceneSpecificationPayload:
+    return SceneSpecificationPayload(
+        scene_id=scene.scene_id,
+        environment_id=scene.environment_id,
+        camera_preset=scene.camera_preset,
+        lighting_preset=scene.lighting_preset,
+        transition=scene.transition,
+        avatar_position=Vector3Payload(
+            x=scene.avatar_position[0],
+            y=scene.avatar_position[1],
+            z=scene.avatar_position[2],
+        ),
+        avatar_yaw_degrees=scene.avatar_yaw_degrees,
+        objects=[
+            SceneObjectPayload(
+                instance_id=item.instance_id,
+                asset_id=item.asset_id,
+                position=Vector3Payload(
+                    x=item.position[0],
+                    y=item.position[1],
+                    z=item.position[2],
+                ),
+                yaw_degrees=item.yaw_degrees,
+                scale=item.scale,
+            )
+            for item in scene.objects
+        ],
+    )
+
+
+def _avatar_animation_payload(turn: TeacherTurn) -> AvatarAnimationPayload:
+    animation = build_avatar_animation(
+        turn.audio_wav,
+        turn.duration_us,
+        (
+            TimedPhoneme(item.symbol, item.start_us, item.end_us)
+            for item in turn.phoneme_alignment or ()
+        ),
+    )
+    return AvatarAnimationPayload(
+        duration_us=animation.duration_us,
+        gesture=animation.gesture,
+        expression=animation.expression,
+        viseme_source=animation.viseme_source,
+        speech_energy=[
+            SpeechEnergySamplePayload(
+                media_time_us=item.media_time_us,
+                level_milli=item.level_milli,
+            )
+            for item in animation.speech_energy
+        ],
+        visemes=[
+            VisemeCuePayload(
+                viseme=item.viseme,
+                start_us=item.start_us,
+                end_us=item.end_us,
+            )
+            for item in animation.visemes
+        ],
     )

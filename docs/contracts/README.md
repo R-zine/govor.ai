@@ -43,5 +43,12 @@ counts, difficulty, completion status, resume state, and an optional closed diff
 reason. It contains no learner utterance or audio. Python, Kotlin, C#, JSON Schema, and the shared
 teacher-turn fixture understand the same shape.
 
+Milestone 6 adds optional `scene` and `avatar_animation` fields to `renderer.command`. A scene is
+valid only on `session_started`; it uses closed environment/camera/lighting/transition/asset IDs
+and bounded numeric transforms. Avatar animation is valid only on `teacher_speaking`; it carries
+duration, a bounded PCM-derived energy envelope, a closed gesture/expression, and either real
+provider-aligned viseme cues or an empty list with source `none`. A negative shared fixture proves
+that an arbitrary relative asset path is rejected.
+
 Breaking changes require a new protocol version and an ADR. Adding an optional field is allowed
 only after all consumers ignore or understand it predictably.

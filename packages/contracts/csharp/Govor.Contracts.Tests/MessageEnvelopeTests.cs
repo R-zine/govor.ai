@@ -45,6 +45,8 @@ public sealed class MessageEnvelopeTests
         payload.Validate();
         Assert.Equal("teacher_speaking", payload.Action);
         Assert.Equal(150_000, payload.DurationUs);
+        Assert.Equal("provider_phoneme_alignment", payload.AvatarAnimation?.VisemeSource);
+        Assert.Equal("closed", payload.AvatarAnimation?.Visemes[0].Viseme);
     }
 
     [Fact]
@@ -111,5 +113,28 @@ public sealed class MessageEnvelopeTests
             null);
 
         Assert.Throws<InvalidDataException>(payload.Validate);
+    }
+
+    [Fact]
+    public void NonAllowListedSceneAssetIsRejected()
+    {
+        var scene = new SceneSpecificationPayload(
+            "unsafe-scene",
+            "cafe",
+            "counter",
+            "warm",
+            "fade",
+            new Vector3Payload(0, 0, 0),
+            0,
+            [
+                new SceneObjectPayload(
+                    "unsafe-object",
+                    "../../arbitrary.glb",
+                    new Vector3Payload(0, 0, 0),
+                    0,
+                    1),
+            ]);
+
+        Assert.Throws<InvalidDataException>(scene.Validate);
     }
 }

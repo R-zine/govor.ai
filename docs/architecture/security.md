@@ -50,6 +50,14 @@ listener. It accepts a closed action set, validates UUIDs and integer-microsecon
 acknowledges commands. This loopback connection relies on the trusted desktop-user boundary and is
 not a LAN authentication mechanism.
 
+Milestone 6 scene commands add only closed environment, camera, lighting, transition, and asset
+IDs with bounded transforms. The host derives the specification from a committed scenario
+allow-list; neither dialogue output nor learner text supplies an asset. Godot's procedural catalog
+does not accept paths, URLs, resource names, scripts, or downloads. Unknown wire IDs are rejected,
+and the predictable internal fallback is reachable only when an allow-listed catalog entry is
+missing from the renderer implementation. Avatar commands contain bounded PCM energy summaries
+and actual-or-empty viseme cues, not the audio or transcript.
+
 ## Required controls
 
 - Pair using a short-lived code/QR bootstrap and generate a cryptographically random device key.

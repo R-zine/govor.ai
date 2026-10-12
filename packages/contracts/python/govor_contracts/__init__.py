@@ -2,6 +2,7 @@
 
 from .models import (
     AudioChunk,
+    AvatarAnimationPayload,
     ErrorPayload,
     LearnerTranscriptPayload,
     LessonProgressPayload,
@@ -16,6 +17,8 @@ from .models import (
     RendererAction,
     RendererCommandPayload,
     RendererReadyPayload,
+    SceneObjectPayload,
+    SceneSpecificationPayload,
     SessionCancelPayload,
     SessionEndedPayload,
     SessionErrorPayload,
@@ -23,15 +26,19 @@ from .models import (
     SessionStartPayload,
     SessionState,
     SessionStatePayload,
+    SpeechEnergySamplePayload,
     TeacherPlaybackCompletedPayload,
     TeacherTurnPayload,
     TeacherWordAudioPayload,
     TeacherWordReplayRequestPayload,
+    Vector3Payload,
+    VisemeCuePayload,
     WordAlignmentPayload,
 )
 
 __all__ = [
     "AudioChunk",
+    "AvatarAnimationPayload",
     "ErrorPayload",
     "LearnerTranscriptPayload",
     "LessonProgressPayload",
@@ -46,6 +53,8 @@ __all__ = [
     "RendererAction",
     "RendererCommandPayload",
     "RendererReadyPayload",
+    "SceneObjectPayload",
+    "SceneSpecificationPayload",
     "SessionCancelPayload",
     "SessionEndedPayload",
     "SessionErrorPayload",
@@ -57,5 +66,8 @@ __all__ = [
     "TeacherTurnPayload",
     "TeacherWordAudioPayload",
     "TeacherWordReplayRequestPayload",
+    "SpeechEnergySamplePayload",
+    "Vector3Payload",
+    "VisemeCuePayload",
     "WordAlignmentPayload",
 ]

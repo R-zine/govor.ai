@@ -17,8 +17,10 @@
 | `./scripts/build.ps1` | Build Android debug and C# development artifacts |
 | `./scripts/build.ps1 -Target renderer` | Export the local Godot Windows renderer |
 | `./scripts/renderer-smoke.ps1` | Run a muted, bounded Godot frame/PCM/cleanup smoke check |
+| `./scripts/renderer-scene-smoke.ps1` | Capture and measure all four validated scenes plus avatar/software encoding |
 | `./scripts/emulator-renderer-smoke.ps1` | Development-only Godot/aiortc/native-emulator media and microphone check |
 | `./scripts/benchmark.ps1 -Profile inventory` | Write environment inventory, not performance results |
+| `./scripts/benchmark.ps1 -Profile renderer` | Measure scene/avatar/render/software-encode work concurrently with Qwen3 4B |
 | `./scripts/progress.ps1 -Action View` | View local structured learner progress/settings as JSON |
 | `./scripts/progress.ps1 -Action Export -OutputPath <path>` | Export structured progress; never audio/transcripts |
 | `./scripts/progress.ps1 -Action Delete -ConfirmDelete` | Delete progress history while preserving settings |

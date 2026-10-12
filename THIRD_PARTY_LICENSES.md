@@ -32,8 +32,11 @@ files.
 | phonemizer | 3.4.0 | github.com/bootphon/phonemizer | GPL-3.0-or-later | Used locally for IPA; bundling requires GPL source/notice compliance review |
 | espeakng-loader / bundled eSpeak NG | 0.2.4 / 1.52.0 library | pypi.org/project/espeakng-loader, github.com/espeak-ng/espeak-ng | Loader wheel metadata does not declare a wrapper license; bundled eSpeak NG is GPL-3.0-or-later | Treat the combined wheel as GPL pending a packaging review; process isolation is technical containment, not a license exception |
 
-Model weights, voices, avatars, environment assets, and eSpeak/phonemizer components are not
-distributed by this source repository. Development weights are downloaded to ignored local tooling
-storage; their redistributability must be reviewed again before packaging. The selected Piper,
-Phonemizer, and eSpeak stack is GPL-3.0-or-later. Milestone 8 must either satisfy the corresponding
-source, notice, and combined-work obligations or replace those components before distribution.
+Model weights, voices, and eSpeak/phonemizer components are not distributed by this source
+repository. The Milestone 6 avatar and environment visuals are original procedural source assets,
+not third-party downloads; the visual design/recipes are dedicated to CC0 in
+`apps/renderer/Assets/Teacher/README.md`. Development weights are downloaded to ignored local
+tooling storage; their redistributability must be reviewed again before packaging. The selected
+Piper, Phonemizer, and eSpeak stack is GPL-3.0-or-later. Milestone 8 must either satisfy the
+corresponding source, notice, and combined-work obligations or replace those components before
+distribution.

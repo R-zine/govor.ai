@@ -29,6 +29,12 @@ selects the committed correction or next prompt and applies an explainable bound
 change when appropriate. Every `teacher.turn` carries the resulting progress snapshot. After a
 completed lesson's final audio finishes, the host ends the session with reason `completed`.
 
+The host also asks the pure scene planner for the selected scenario's deterministic scene
+specification and includes it only with `session_started`. Godot validates the closed IDs and
+bounded transforms, builds the scene from cached procedural resources, fades from the previous
+environment, and queues the replaced node tree for cleanup. No generated `.tscn`, model file, or
+other 3D file is written at runtime.
+
 The local dialogue adapter sends the recognized utterance, lesson context, deterministic intent
 hint, and at most the configured number of recent turns to llama.cpp. Closed structured output is
 parsed, then the domain policy can reject unsafe locale/progress choices and use a deterministic
@@ -37,6 +43,13 @@ uses Kokoro for explicit `en-GB`/`en-US`, Piper for `bg-BG`, and deterministic e
 neural provider fails. The turn also carries exact word/IPA character ranges and nullable model
 timing. Android plays the WAV with `AudioTrack`; playback-head frames define media time for
 subtitle highlighting. Missing alignment disables highlighting without blocking playback.
+
+For each synthesized teacher turn, the scene planner samples the actual mono PCM16 WAV into a
+bounded 40 ms energy envelope. If the provider returned phoneme spans, it maps their real
+microsecond offsets to a closed viseme sequence; otherwise `viseme_source` is `none` and the
+sequence is empty. The `teacher_speaking` renderer command carries only duration, energy, and
+optional visemes. Android receives the original audio independently, so renderer animation cannot
+alter playout or lesson completion.
 
 After the host enters `awaiting_learner`, Android may replay the cached full turn locally without
 emitting another lesson-completion event. Selecting an annotated word sends
@@ -77,4 +90,5 @@ history while preserving explicit settings.
 
 `media_time_us` is a signed 64-bit integer measured from media-item start. Word, phoneme, viseme,
 and playback events reference the same item and time base. Missing alignment is represented as
-absent/null data; consumers fall back from phonemes to words and then to untimed playback.
+absent/null data. Android falls back from phonemes to words and then untimed playback; Godot uses
+the PCM energy envelope without inventing a viseme timeline.

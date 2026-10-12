@@ -168,3 +168,22 @@ surface active; the teacher voice itself came from Kokoro over the bounded contr
 This proves native-emulator decoding, scheduling, interaction, and cleanup. It does not prove a
 physical speaker, phone, acoustics, Wi-Fi, hardware codec, target performance, or speech
 naturalness. All such target-hardware rows remain not executed in Milestone 9.
+
+## 2026-10-12 Milestone 6 scene/avatar emulator run
+
+`./scripts/emulator-speech-smoke.ps1` launched the exported Godot renderer alongside real Kokoro
+and the API 34 emulator. The host selected the café scene from lesson context; Godot acknowledged
+the validated scene and logged 51 PCM energy samples plus 23 real provider-aligned viseme cues for
+the 2,038,666 µs teacher utterance. Android completed the synchronized speech interactions. The
+script force-stopped the app, renderer, servers, and reverse mappings afterward.
+
+`./scripts/emulator-renderer-smoke.ps1` separately required the lesson-context café marker and a
+fake-provider animation containing nonempty PCM energy but zero visemes/source `none`. It preserved
+the existing Godot-to-aiortc video, Android render, microphone-return, and reconnect checks. This
+proves the missing-alignment fallback does not invent timing or block animation.
+
+The four-environment scene tour and concurrent Qwen performance run happened on the Windows
+development PC, not on the Android emulator; details are in
+`docs/benchmarks/2026-10-12-avatar-scenes-and-renderer-performance.md`. No physical-device row
+changes status. Hardware encode/decode, intended Wi-Fi, acoustics, target performance, lifecycle,
+thermals, monitor-off, and soak remain not executed for Milestone 9.

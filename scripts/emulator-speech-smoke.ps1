@@ -59,8 +59,10 @@ if ($emulators.Count -ne 1) {
 $script:EmulatorSerial = $emulators[0]
 
 $apk = Join-Path $script:RepositoryRoot 'apps\android\app\build\outputs\apk\debug\app-debug.apk'
+$renderer = Join-Path $script:RepositoryRoot 'apps\renderer\Builds\Windows\GovorRenderer.exe'
 foreach ($required in @(
     $apk,
+    $renderer,
     (Join-Path $script:ToolsRoot 'models\speech\kokoro-v1.0.onnx'),
     (Join-Path $script:ToolsRoot 'models\speech\voices-v1.0.bin'),
     (Join-Path $script:ToolsRoot 'models\speech\bg_BG-dimitar-medium.onnx'),
@@ -75,11 +77,14 @@ $mediaStderr = Join-Path $script:CacheRoot 'speech-emulator-media.stderr.log'
 $controlStdout = Join-Path $script:CacheRoot 'speech-emulator-control.stdout.log'
 $controlStderr = Join-Path $script:CacheRoot 'speech-emulator-control.stderr.log'
 $androidLog = Join-Path $script:CacheRoot 'speech-emulator-android.log'
+$rendererStdout = Join-Path $script:CacheRoot 'speech-emulator-renderer.stdout.log'
+$rendererStderr = Join-Path $script:CacheRoot 'speech-emulator-renderer.stderr.log'
+$rendererRuntimeLog = Join-Path $script:CacheRoot 'speech-emulator-renderer.runtime.log'
 $uiDump = Join-Path $script:CacheRoot 'speech-emulator-window.xml'
 $lessonUiDump = Join-Path $script:CacheRoot 'speech-emulator-lesson.xml'
 foreach ($artifact in @(
     $mediaStdout, $mediaStderr, $controlStdout, $controlStderr, $androidLog, $uiDump,
-    $lessonUiDump
+    $lessonUiDump, $rendererStdout, $rendererStderr, $rendererRuntimeLog
 )) {
     if (Test-Path -LiteralPath $artifact) { Remove-Item -LiteralPath $artifact -Force }
 }
@@ -87,7 +92,7 @@ foreach ($artifact in @(
 $env:GOVOR_DEV_PAIRING_TOKEN = $token
 $env:GOVOR_MEDIA_SOURCE = 'diagnostic'
 $env:GOVOR_MODE = 'local'
-$env:GOVOR_RENDERER_REQUIRED = 'false'
+$env:GOVOR_RENDERER_REQUIRED = 'true'
 $env:GOVOR_PROVIDER_TIMEOUT_SECONDS = '60'
 $env:GOVOR_KOKORO_MODEL = Join-Path $script:ToolsRoot 'models\speech\kokoro-v1.0.onnx'
 $env:GOVOR_KOKORO_VOICES = Join-Path $script:ToolsRoot 'models\speech\voices-v1.0.bin'
@@ -103,6 +108,7 @@ $env:PYTHONPATH = @(
     (Join-Path $script:RepositoryRoot 'packages\domain\src'),
     (Join-Path $script:RepositoryRoot 'packages\provider_interfaces\src'),
     (Join-Path $script:RepositoryRoot 'packages\progress\src'),
+    (Join-Path $script:RepositoryRoot 'packages\scene_planner\src'),
     (Join-Path $script:RepositoryRoot 'packages\contracts\python'),
     (Join-Path $script:RepositoryRoot 'services\local_ai\src'),
     (Join-Path $script:RepositoryRoot 'services\speech\src'),
@@ -111,6 +117,7 @@ $env:PYTHONPATH = @(
 
 $mediaProcess = $null
 $controlProcess = $null
+$rendererProcess = $null
 $occupiedPorts = @(Get-NetTCPConnection -State Listen -LocalPort 8765,8766 `
     -ErrorAction SilentlyContinue)
 if ($occupiedPorts.Count -gt 0) {
@@ -138,6 +145,24 @@ try {
     ) -WindowStyle Hidden -PassThru -RedirectStandardOutput $controlStdout `
         -RedirectStandardError $controlStderr
     Wait-LocalPort -Port 8765 -Description 'Speech smoke control server'
+
+    $rendererProcess = Start-Process -FilePath $renderer -ArgumentList @(
+        '--log-file', $rendererRuntimeLog, '--', '--mute-local-audio', '--no-startup-tone',
+        '--control-url=ws://127.0.0.1:8765/v1/renderer/control'
+    ) -WindowStyle Hidden -PassThru -RedirectStandardOutput $rendererStdout `
+        -RedirectStandardError $rendererStderr
+    $rendererReady = $false
+    for ($attempt = 0; $attempt -lt 100; $attempt++) {
+        try {
+            $health = Invoke-RestMethod -Uri 'http://127.0.0.1:8765/health' -TimeoutSec 1
+            if ($health.renderer_connected) { $rendererReady = $true; break }
+        }
+        catch { }
+        Start-Sleep -Milliseconds 100
+    }
+    if (-not $rendererReady) {
+        throw "Godot did not establish renderer control. See $rendererStderr."
+    }
 
     & $adb -s $script:EmulatorSerial shell am force-stop ai.govor.app
     & $adb -s $script:EmulatorSerial shell am start -n ai.govor.app/.MainActivity | Out-Null
@@ -223,14 +248,31 @@ try {
             throw "Android speech evidence is missing: $requiredMarker"
         }
     }
+    $rendererControlLog =
+        (Get-Content -LiteralPath $rendererStdout -Raw -ErrorAction SilentlyContinue) +
+        (Get-Content -LiteralPath $rendererRuntimeLog -Raw -ErrorAction SilentlyContinue)
+    if ($rendererControlLog -notmatch 'GOVOR_SCENE_APPLIED:cafe-ordering-v1:') {
+        throw "Godot did not apply the real lesson's cafe scene. See $rendererStdout."
+    }
+    if ($rendererControlLog -notmatch
+        'GOVOR_AVATAR_SPEECH_STARTED:source=provider_phoneme_alignment:energy=[1-9]\d*:visemes=[1-9]\d*:') {
+        throw "Real provider phoneme timing did not reach the Godot avatar. See $rendererStdout."
+    }
+    $rendererErrors = @(
+        Select-String -Path $rendererStderr, $rendererRuntimeLog -Pattern '^ERROR:' |
+            Where-Object { $_.Line -ne 'ERROR: Failed to read the root certificate store.' }
+    )
+    if ($rendererErrors.Count -gt 0) {
+        throw "Godot wrote runtime errors during real speech playback. See $rendererRuntimeLog."
+    }
     [IO.File]::WriteAllText($androidLog, $speechLog + "`n", [Text.UTF8Encoding]::new($false))
     (Get-EmulatorUiDocument).Save($uiDump)
-    Write-Output 'Real Kokoro audio, model timing highlights, isolated-word playback, and 0.75x replay passed on the Android emulator.'
+    Write-Output 'Real Kokoro audio, model timing highlights, Godot visemes, isolated-word playback, and 0.75x replay passed on the Android emulator.'
     Write-Output "Android speech log: $androidLog"
 }
 finally {
     & $adb -s $script:EmulatorSerial shell am force-stop ai.govor.app 2>$null
-    foreach ($process in @($controlProcess, $mediaProcess)) {
+    foreach ($process in @($rendererProcess, $controlProcess, $mediaProcess)) {
         if ($null -ne $process) {
             $process.Refresh()
             if (-not $process.HasExited) {

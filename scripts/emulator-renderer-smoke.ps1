@@ -106,6 +106,8 @@ try {
     $env:PYTHONPATH = @(
         (Join-Path $script:RepositoryRoot 'apps\host\src'),
         (Join-Path $script:RepositoryRoot 'packages\domain\src'),
+        (Join-Path $script:RepositoryRoot 'packages\provider_interfaces\src'),
+        (Join-Path $script:RepositoryRoot 'packages\scene_planner\src'),
         (Join-Path $script:RepositoryRoot 'packages\contracts\python')
     ) -join [IO.Path]::PathSeparator
     $controlServer = Start-Process -FilePath $python -ArgumentList @(
@@ -384,6 +386,13 @@ try {
         if ($rendererControlLog -notmatch "GOVOR_RENDERER_COMMAND_APPLIED:$action") {
             throw "Godot did not acknowledge the '$action' session action. See $rendererStdout."
         }
+    }
+    if ($rendererControlLog -notmatch 'GOVOR_SCENE_APPLIED:cafe-ordering-v1:') {
+        throw "Godot did not apply the lesson-context cafe scene. See $rendererStdout."
+    }
+    if ($rendererControlLog -notmatch
+        'GOVOR_AVATAR_SPEECH_STARTED:source=none:energy=[1-9]\d*:visemes=0:') {
+        throw "Godot did not apply the fake provider's PCM-energy avatar animation. See $rendererStdout."
     }
 
     $rendererErrors = @(

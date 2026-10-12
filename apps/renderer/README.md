@@ -1,44 +1,53 @@
 # Windows renderer
 
-`apps/renderer` is the active Godot 4.7.2 .NET renderer. Unity is not part of the current stack.
-The previous Unity proof was removed after its license requirement blocked runtime verification.
+`apps/renderer` is the active Godot 4.7.2 .NET renderer. Unity is not part of the stack.
 
-The Milestone 1 scene contains an animated teacher placeholder, a dedicated 1280x720 `SubViewport`
-at 30 frames per second, and a two-second application-owned 48 kHz mono tone. The tone stops
-automatically. Pass `--mute-local-audio` after Godot's `--` argument separator when audible local
-playback is not wanted.
+The runtime owns a 1280x720, 30 fps `SubViewport`, a repository-owned CC0 stylized teacher, and
+four deterministic procedural environments: café, supermarket, airport, and home. The avatar has
+idle, speaking, listening, and thinking behavior, simple expressions, PCM-energy mouth motion, and
+six viseme shapes. Scene specifications and animation timelines arrive through the validated
+loopback renderer-control contract; no command can name a path, URL, download, or script.
 
-Godot publishes RGBA frames and bounded PCM blocks through the same renderer-neutral Windows named
-memory mappings already consumed by the aiortc peer. The mappings open no network listener. Video
-uses a latest-frame slot; audio uses a bounded 64-block ring of 20 ms blocks. aiortc remains the
-only network-facing media implementation.
+The scene catalog caches reusable primitive meshes/materials and assembles each environment
+entirely in memory. Replaced scene trees are queued for cleanup. Unknown wire assets are rejected;
+an internal missing implementation has a deterministic magenta fallback. See
+`Assets/Teacher/README.md` and ADR-0009 for the asset/license and boundary decisions.
 
-For Milestone 2, `RendererSessionController` optionally connects outward to the host's
-loopback-only `/v1/renderer/control` WebSocket. It validates the shared C# contract, applies only
-allow-listed session/avatar actions, and acknowledges each command. Pass
-`--control-url=ws://127.0.0.1:8765/v1/renderer/control` after Godot's `--` separator. Pass
-`--no-startup-tone` for ordinary development; the two-second tone remains only in bounded media
-smokes.
+Godot publishes top-to-bottom RGBA frames and bounded PCM blocks through renderer-neutral Windows
+named memory mappings. Video uses a latest-frame slot; audio uses a bounded 64-block ring of 20 ms
+blocks. The mappings open no network listener, while aiortc remains the only network-facing media
+implementation.
 
-Install the pinned editor and export templates, verify the project, and export the Windows player:
+`RendererSessionController` connects outward to the host's loopback-only
+`/v1/renderer/control` WebSocket. It validates the shared C# contract, applies only closed session,
+scene, and avatar data, and acknowledges each command. The host derives mouth energy from the
+actual speech WAV and sends visemes only when the provider supplied phoneme timing.
+
+Install the pinned editor/export templates, validate, export, and run the bounded checks:
 
 ```powershell
 ./scripts/bootstrap.ps1 -IncludeMedia -IncludeRenderer
 ./scripts/test.ps1 -Scope godot
 ./scripts/build.ps1 -Target renderer
 ./scripts/renderer-smoke.ps1
+./scripts/renderer-scene-smoke.ps1
+./scripts/benchmark.ps1 -Profile renderer
 ./scripts/emulator-renderer-smoke.ps1
+./scripts/emulator-speech-smoke.ps1
 ```
 
-The smoke command is muted by default and verifies multiple changing frames, non-silent bridge PCM,
-non-black RGB content, the bounded tone window, clean process exit, and an empty runtime error log.
-Pass `-Audible` only for a supervised two-second PC speaker check.
+`renderer-smoke.ps1` verifies changing non-black frames and the bounded application-owned PCM
+tone; it is muted by default. Pass `-Audible` only for a supervised two-second PC speaker check.
+The scene smoke captures all four environments, requires four distinct hashes, checks cache/video-
+memory stability on revisit, measures frame/build/transition/avatar/software-encoding costs, and
+exits without leaving audio or a player running. The renderer benchmark repeats the scene tour
+while Qwen3 4B handles real requests and proves their measurement windows overlap.
 
-Run the editor/player briefly with `--exit-after-tone` during visual checks and confirm it exits.
-Then start the media peer with `-Source Renderer`; use `adb reverse tcp:8766 tcp:8766` for emulator
-development. Stop both processes immediately after audio verification.
+Pass `--control-url=ws://127.0.0.1:8765/v1/renderer/control` after Godot's `--` separator for
+ordinary development and `--no-startup-tone --mute-local-audio` when the bounded media tone is not
+needed. `--scene-tour-output=<directory>` is a trusted local benchmark option, not a wire field.
 
-Godot import/build/self-test success does not prove GPU readback cadence, audible output, Android
-delivery, hardware codecs, physical Wi-Fi, latency, or soak behavior. Record each runtime result
-separately, and never report emulator evidence as physical-device acceptance. Those physical and
-target-environment checks are deferred to the mandatory Milestone 9 release gate.
+Godot import/build/self-test success does not prove physical-device delivery, hardware codecs,
+Wi-Fi, acoustics, target-machine performance, monitor-off behavior, or soak stability. Emulator
+results are development evidence only. Those physical and target-environment checks remain the
+mandatory Milestone 9 release gate.

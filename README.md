@@ -14,7 +14,9 @@ validated session skeleton, Milestone 3 integrated local bilingual recognition/d
 Milestone 4 completed Kokoro/Piper/eSpeak speech, accent-aware IPA, real alignment, synchronized
 subtitles, speed control, and word replay. Milestone 5 adds four guided scenarios, deterministic
 gentle correction and explainable difficulty adaptation, Android scenario/progress controls, and
-local SQLite resume/history without retaining recordings or complete transcripts. Physical-phone,
+local SQLite resume/history without retaining recordings or complete transcripts. Milestone 6
+adds the animated procedural teacher, PCM/real-phoneme lip synchronization, and validated dynamic
+café, supermarket, airport, and home environments. Physical-phone,
 Wi-Fi, hardware-codec, performance, and soak acceptance remains mandatory in the final release
 milestone.
 
@@ -23,6 +25,7 @@ milestone.
 ```powershell
 ./scripts/bootstrap.ps1 -IncludeMedia -IncludeRenderer -IncludeLocalAi
 ./scripts/test.ps1 -Scope all
+./scripts/renderer-scene-smoke.ps1
 ./scripts/dev.ps1 -Mode mock
 ./scripts/dev.ps1 -Mode local -PairingToken '<at-least-32-random-characters>'
 ./scripts/progress.ps1 -Action View
@@ -44,5 +47,7 @@ and exact resume commands.
 - The Milestone 1 media peer is real WebRTC with generated diagnostic media, not a provider mock;
   its cleartext trusted-LAN signaling and debug APK are not production-safe.
 - No hardware acceptance claim is made without a physical Android device test record.
+- Renderer scene data is restricted to deterministic catalog IDs; model output cannot choose
+  paths, downloads, scripts, or arbitrary resources.
 
 The authoritative product brief is `docs/MASTER_SPEC.md`.

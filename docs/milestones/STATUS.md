@@ -39,6 +39,13 @@ vocabulary review state, difficulty reasons, completion, and interrupted-session
 local SQLite without raw audio or full transcript storage. Android exposes all four scenarios,
 GB/US accent, optional spaced review, and progress. Local view/export/delete tooling is available.
 
+Milestone 6 is complete. Godot now renders a repository-owned CC0 stylized teacher in validated
+procedural café, supermarket, airport, and home environments. The host maps lesson context to a
+closed scene specification and maps actual speech PCM plus real-or-unavailable provider timing to
+bounded avatar animation. Four-scene runtime, cache/video-memory revisit, software-encoding,
+concurrent Qwen3 4B, real Kokoro lip-sync, and native-emulator media paths passed. This is
+development evidence; all target-hardware acceptance remains Milestone 9.
+
 ADR-0003 now selects Godot 4.7.2 .NET as the only renderer. The earlier proof from the proprietary
 engine was removed completely, including source, project metadata, build scripts, and dependencies.
 Godot import, C# compilation, self-test, Windows export, local runtime, non-black shared-memory
@@ -49,8 +56,17 @@ measurements fail.
 
 ## Current implementation
 
-- `apps/renderer` is a Godot 4.7.2 .NET project with an animated cyan placeholder, lit 3D scene,
-  dedicated 1280x720 `SubViewport`, and a two-second 48 kHz mono application tone.
+- `apps/renderer` is a Godot 4.7.2 .NET project with a stylized adult teacher, four dynamic
+  procedural environments, a dedicated 1280x720 `SubViewport`, and the bounded media-test tone.
+- `packages/scene_planner` owns deterministic scene recipes and actual-PCM/provider-timing avatar
+  plans without depending on Godot, FastAPI, Android, or provider implementations.
+- The version 1 renderer contract accepts only closed asset/environment/camera/lighting/transition
+  IDs and bounded transforms. It rejects arbitrary paths, URLs, scripts, and unknown fields.
+- Godot caches 68 mesh/material resources, queues replaced scene trees for cleanup, supplies a
+  predictable internal missing-asset fallback, and writes no generated 3D files at runtime.
+- The teacher blinks/breathes when idle, gestures while speaking, listens/records, thinks during
+  processing, and applies encouraging brows/expressions. PCM energy drives mouth opening; six
+  viseme shapes are used only when real provider phoneme timing exists.
 - The tone stops automatically. Runtime smokes are muted by default; the single supervised
   audible check also stopped after two seconds.
 - Godot publishes top-to-bottom RGBA into a latest-frame Windows named mapping and PCM into a
@@ -133,23 +149,25 @@ measurements fail.
 | Command or check | Result | Evidence and limits |
 | --- | --- | --- |
 | `./scripts/bootstrap.ps1 -IncludeMedia -IncludeRenderer -NoDownload` | verified passing | Pinned local Python/.NET/Godot assets and locked dependencies restored without a download |
-| `./scripts/test.ps1 -Scope all` | verified passing | 2026-10-12 final Milestone 5 run; Python, contracts, Kotlin, C#, media, Godot, and Android APK build |
-| Python gate | verified passing | Ruff check/format, strict mypy, 111 tests, 85.69% branch coverage |
-| Contract schema gate | verified passing | 18 schema/fixture tests include additive lesson progress, scenario/settings start fields, word replay, and renderer messages |
+| `./scripts/test.ps1 -Scope all` | verified passing | 2026-10-12 final Milestone 6 run; Python, contracts, Kotlin, C#, media, Godot, and Android APK build |
+| Python gate | verified passing | Ruff check/format, strict mypy, 121 tests, 85.56% branch coverage |
+| Contract schema gate | verified passing | 22 schema/model/fixture tests include closed scene/avatar payloads and arbitrary-asset rejection |
 | Kotlin gate | verified passing | 13 JVM contract/state-machine/timeline tests, including lesson-progress invariants and shared fixtures |
-| Pure C# gate | verified passing | 7 .NET contract/allow-list tests, including both shared word-replay fixtures |
+| Pure C# gate | verified passing | 8 .NET contract/allow-list tests, including scene/avatar validation and arbitrary-asset rejection |
 | Media gate | verified passing | Strict mypy and 15 tests, including real aiortc loopback, flushed 48-to-16 kHz microphone resampling, renderer-buffer validation, and clean remote-track teardown |
 | Godot gate | verified passing | Headless import, successful C# build, and self-test marker; offline NuGet vulnerability lookup and Windows certificate-store warnings are recorded below |
-| `./scripts/build.ps1 -Target renderer` | verified passing | 109,372,928-byte Windows export; SHA-256 `65d86d986f0f5508a2dede1bce653bfb21fc6fd8cf06aed43872c0806e679175` |
+| `./scripts/build.ps1 -Target renderer` | verified passing | 109,372,928-byte executable SHA-256 `65d86d986f0f5508a2dede1bce653bfb21fc6fd8cf06aed43872c0806e679175`; 91,648-byte renderer DLL SHA-256 `31dd5c9355cc81d4df51c0168dc7e0f3c60dc8d5016560537c13244210884c39` |
+| `./scripts/renderer-scene-smoke.ps1` | verified passing | Four distinct 1280x720 café/supermarket/airport/home captures; zero fallbacks, cache growth, or video-memory growth on revisit; software VP8 measured |
+| `./scripts/benchmark.ps1 -Profile renderer` | verified passing with limits | Scene tour overlapped two real Qwen3 4B requests; frame p95 33.459 ms, scene build max 1.210 ms, transition max 376.994 ms, avatar 27.826 µs/frame, software VP8 p95 6.640 ms |
 | `./scripts/renderer-smoke.ps1` | verified passing | Final run: 5 complete/changing frames, RGB maximum 255, 7 PCM blocks, peak 2621; proof PNG and clean bounded exit |
 | Supervised audible renderer smoke | verified passing | Brief PC check only; tone completion marker at two seconds and process stopped |
-| `./scripts/emulator-renderer-smoke.ps1` | verified passing with limits | Complete fake turn and recovery path; aiortc received non-black 1280x720 Godot RGBA (`rgb_max=255`) and 48 kHz PCM (`peak=2621`); Android reported 120 received/rendered frames, zero drops, over 4.002 seconds (30.0 fps); video and 48 kHz/960-sample microphone return passed again after reconnect |
+| `./scripts/emulator-renderer-smoke.ps1` | verified passing with limits | Complete fake turn, café scene, PCM-energy/no-viseme fallback, and recovery; final Android interval was 120/120 frames, zero drops, 4.001 seconds (30.0 fps); video and microphone return passed after reconnect |
 | `./scripts/bootstrap.ps1 -IncludeMedia -IncludeRenderer -IncludeLocalAi` | verified passing | Pinned/checksummed runtimes, two Qwen candidates, Whisper model, and human-speech fixtures available; comparison model downloaded from the pinned official revision |
 | `./scripts/benchmark.ps1 -Profile local-ai` | verified passing | 2026-10-12 regression: Qwen3 4B and 1.7B each passed 7/7 bilingual structured cases; two real STT fixtures and two-turn host integration used real Piper/Kokoro audio, retained no recordings, leaked no sessions, and stopped all local servers |
 | `./scripts/test.ps1 -Scope speech` | verified passing | Strict speech/provider mypy and 11 tests covering both neural adapter shapes, real eSpeak subprocess output, fallback routing, accent IPA, timing/null fallback, WAV bounds, and factory wiring |
 | `./scripts/benchmark.ps1 -Profile speech` | verified passing | Real Kokoro GB/US, Piper Bulgarian, and eSpeak fallback generated non-silent WAV; neural timing present, fallback timing null, speed duration ordered, IPA regression passed |
 | Speech benchmark latency | verified with limits | Final 1× examples: Kokoro GB 403.7 ms, Piper BG 784.9 ms, eSpeak fallback 276.5 ms; cold/accent cases recorded separately; development CPU only |
-| `./scripts/emulator-speech-smoke.ps1` | verified passing with limits | API 34 emulator completed real Kokoro `AudioTrack` playout, seven word highlights, 0.75× replay, IPA word selection, isolated-word synthesis/playback, and clean shutdown |
+| `./scripts/emulator-speech-smoke.ps1` | verified passing with limits | API 34 emulator completed real Kokoro playout/highlighting/replay/word audio; Godot applied the café scene plus 51 PCM energy samples and 23 provider-aligned visemes; clean shutdown |
 | Generated speech listening path | verified passing | GB English, US English, Bulgarian, and fallback WAVs each completed one synchronous PC playback and closed; the user confirmed the GB-English and Bulgarian samples sounded good on 2026-10-12 |
 | Four guided scenarios | verified passing | Parameterized pure-domain tests completed café, supermarket, airport, and home; each has three exercises and full committed guidance metadata |
 | Adaptation/help policy | verified passing | Repeated difficulty lowers one level, two first-try successes raise one, closed reasons are exposed, and Bulgarian/mixed/help/no-speech turns cannot advance |
@@ -169,13 +187,14 @@ measurements fail.
 | `uv run --frozen pip-audit --cache-dir .cache/pip-audit-m3-final` | verified passing | Final Milestone 3 audit: no known vulnerabilities found; sandbox network denial was repeated with approved network access |
 | `uv run --frozen --extra media --extra speech pip-audit --cache-dir .cache/pip-audit-m4-final` | verified passing | Final Milestone 4 audit, including media and speech extras: no known vulnerabilities found; sandbox network denial was repeated with approved network access |
 | `uv run --frozen --extra media --extra speech pip-audit --cache-dir .cache/pip-audit-m5-final` | verified passing | Final Milestone 5 audit: no known vulnerabilities found; the sandbox-denied query passed with approved network access |
-| Pre-commit across all tracked/untracked sources | verified passing | Final Milestone 5 run passed JSON/YAML, line endings/whitespace, secret/size checks, Ruff, and contract tests; the sandbox could not fetch the isolated pinned hook environments, and the approved-context rerun passed |
+| `uv run --frozen --extra media --extra speech pip-audit --cache-dir .cache/pip-audit-m6-final` | verified passing | Final Milestone 6 audit: no known vulnerabilities found; the sandbox-denied query passed with approved network access |
+| Pre-commit across all tracked/untracked sources | verified passing | Final Milestone 6 run passed JSON/YAML, line endings/whitespace, secret/size checks, Ruff, and contract tests; workspace-local caches handled managed permissions and the approved-context rerun fetched pinned hooks |
 | `./scripts/hardware-test.ps1` | Milestone 9 not executed | Ignores the active emulator and exits 2 because no physical phone is connected; this does not reopen Milestone 1 |
 | Physical Android/Wi-Fi/media/soak bundle | Milestone 9 not executed | No suitable physical phone; mandatory before release, not a prerequisite for Milestones 2-8 |
 | Remote GitHub Actions | not executed | Workflow includes the Godot renderer job, but the current milestone snapshot has not run remotely |
 
-The final `./scripts/test.ps1 -Scope all` run passed on 2026-10-12: 111 Python tests at 85.69%
-branch coverage, 18 contract tests, 13 Kotlin tests, 7 pure C# tests, 15 media tests, Godot
+The final `./scripts/test.ps1 -Scope all` run passed on 2026-10-12: 121 Python tests at 85.56%
+branch coverage, 22 dedicated contract tests, 13 Kotlin tests, 8 pure C# tests, 15 media tests, Godot
 import/build/self-test, and the Android debug APK build. Pytest emitted the existing Starlette
 `httpx` deprecation warning. Godot could not read the Windows root-certificate store and Android
 analytics could not write outside the workspace; both are previously recorded managed-environment
@@ -243,11 +262,37 @@ The API 34 UI check is emulator development evidence only. No live human lesson 
 Wi-Fi, codec, acoustic, target-load, thermal, or soak acceptance ran. Those do not block Milestone
 5 and remain mandatory Milestone 9 work. This handoff is the required focused Milestone 5 commit.
 
+## Milestone 6 acceptance and handoff
+
+| Acceptance criterion | Status | Direct evidence |
+| --- | --- | --- |
+| Teacher visible in streamed 3D environment | verified passing with emulator limit | Four local 1280x720 captures visibly contain the stylized teacher; renderer-originated non-black video reached native Android at 30 fps with no drops in the final short interval. |
+| Speaking animation corresponds to teacher audio | verified passing | The host extracts energy from actual PCM sample positions. Real Kokoro delivered 51 energy samples and 23 provider-timed visemes to Godot for a 2,038,666 µs utterance. |
+| At least four environments assemble | verified passing | Exported Godot captured distinct café, supermarket, airport, and home frames with zero fallbacks. |
+| Environment responds to lesson context | verified passing | Host integration maps selected scenario to its deterministic scene; the emulator smokes required the café scene marker, and planner tests cover every scenario. |
+| Invalid scene specifications rejected | verified passing | Python/JSON Schema/C# validation rejects unknown IDs, bounds, extra fields, and an explicit `../../downloaded-model.glb` fixture. |
+| Missing assets have predictable fallbacks | verified passing | Godot self-test invokes an internal unknown catalog item and verifies the named magenta fallback; untrusted unknown wire IDs are rejected earlier. |
+| Scene changes do not leak significant GPU memory | verified passing with bounded scope | After all four scenes, a cached café revisit added zero cached resources and zero Godot-reported video-memory bytes. This short run is not a soak claim. |
+| Runtime scene data stays in memory | verified passing | Procedural scene nodes/resources are created in memory; the tour writes proof PNGs only in explicit benchmark mode, not generated 3D scene files. |
+| Rendering usable beside local inference | verified passing on development PC | Renderer tour/encoding overlapped two Qwen3 4B requests; frame p95 was 33.459 ms at the 30 fps target. |
+| Required performance measurements | verified passing with limits | Scene builds 0.243–1.210 ms; transitions 370.550–376.994 ms; cached revisit 0.436 ms; avatar 27.826 µs/frame; software VP8 p95 6.640 ms; memory figures recorded in the dated benchmark. |
+
+Implementation and boundary decisions are recorded in ADR-0009. Exact commands, transient
+failures, artifacts, metrics, and limits are in
+`docs/benchmarks/2026-10-12-avatar-scenes-and-renderer-performance.md`. No new third-party
+dependency or downloaded renderer asset was added.
+
+The real-alignment emulator run proves the control/timing path, not physical display quality or
+acoustics. The cache/video-memory revisit is a bounded regression check, not a 30-minute leak test.
+Hardware encode/decode, physical phone/Wi-Fi/audio, target-machine resource behavior, lifecycle,
+monitor-off, thermals, and soak remain mandatory Milestone 9 work. This handoff is the required
+focused Milestone 6 commit.
+
 ## Renderer evidence and limitations
 
-The local proof image visibly contains the cyan animated placeholder, ground, lighting, and
-background. The live bridge probe observed multiple changing frames and explicitly rejected an
-all-black stream. In the emulator run, the aiortc peer logged `rgb_min=0 rgb_max=255`, Android
+The current local proof images visibly contain the stylized teacher in four distinct procedural
+environments. The live bridge probe observed multiple changing frames and explicitly rejected an
+all-black stream. In the emulator run, the aiortc peer logged non-black input, Android
 libwebrtc logged `Reporting first rendered frame` and a 1280x720 resolution change, application
 PCM reached the first peer, and microphone frames returned to Windows before and after reconnect.
 After the two-second tone ended, the second peer correctly received silence rather than a retained
@@ -264,7 +309,9 @@ encoder/decoder, monitor-off, background/foreground, physical audio, or 30-minut
 exists. The emulator used the virtual `c2.goldfish.vp8.decoder`, which is not hardware-decoder
 evidence. Every one of these checks remains mandatory in Milestone 9.
 
-Detailed migration evidence is in `docs/benchmarks/2026-10-09-godot-renderer-migration.md`.
+Initial migration evidence is in `docs/benchmarks/2026-10-09-godot-renderer-migration.md`; current
+avatar/scene evidence is in
+`docs/benchmarks/2026-10-12-avatar-scenes-and-renderer-performance.md`.
 
 ## Environment and artifacts
 
@@ -280,13 +327,10 @@ Detailed migration evidence is in `docs/benchmarks/2026-10-09-godot-renderer-mig
 
 ## Next steps
 
-Milestone 5 is complete. The next implementation milestone is Milestone 6: replace the renderer
-placeholder with a suitably licensed avatar, connect teacher audio/timing to bounded lip and body
-animation, and implement deterministic validated scene specifications for at least four
-environments. Asset IDs must remain allow-listed; lesson/model output must never select paths,
-downloads, or executable content. Record scene-transition latency, frame time, memory, asset-load,
-avatar, inference-coexistence, and encoding evidence without treating emulator results as target
-hardware measurements.
+Milestone 6 is complete. The next implementation milestone is Milestone 7: add independently
+configurable, explicit opt-in cloud provider adapters and privacy controls without weakening the
+offline default. Provider credentials must use OS secret storage, cloud use must be visible, and
+offline/local operation must continue to pass without credentials or unintended network calls.
 
 Deferred mandatory Milestone 9 work:
 
@@ -315,6 +359,8 @@ git -c safe.directory='C:/Users/PC/Documents/GitHub/govor.ai' status --short --b
 ./scripts/benchmark.ps1 -Profile local-ai
 ./scripts/build.ps1 -Target renderer
 ./scripts/renderer-smoke.ps1
+./scripts/renderer-scene-smoke.ps1
+./scripts/benchmark.ps1 -Profile renderer
 ./scripts/emulator-renderer-smoke.ps1
 ./scripts/dev.ps1 -Mode mock
 ./scripts/dev.ps1 -Mode local -PairingToken '<at-least-32-random-characters>'

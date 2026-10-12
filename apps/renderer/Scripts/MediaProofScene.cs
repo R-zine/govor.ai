@@ -8,6 +8,8 @@ namespace Govor.Renderer;
 public partial class MediaProofScene : Node
 {
     private SubViewport? _captureViewport;
+    private DynamicSceneDirector? _sceneDirector;
+    private StylizedTeacherAvatar? _teacher;
     private string? _proofImagePath;
     private ulong _runtimeStartedAtUs;
     private bool _proofImageSaved;
@@ -25,7 +27,12 @@ public partial class MediaProofScene : Node
         Engine.MaxFps = RendererBridgeProtocol.TargetFrameRate;
         bool muteLocalAudio = arguments.Contains("--mute-local-audio", StringComparer.Ordinal);
         bool exitAfterTone = arguments.Contains("--exit-after-tone", StringComparer.Ordinal);
-        bool noStartupTone = arguments.Contains("--no-startup-tone", StringComparer.Ordinal);
+        const string sceneTourPrefix = "--scene-tour-output=";
+        string? sceneTourOutput = arguments
+            .FirstOrDefault(argument => argument.StartsWith(sceneTourPrefix, StringComparison.Ordinal))?
+            [sceneTourPrefix.Length..];
+        bool noStartupTone = arguments.Contains("--no-startup-tone", StringComparer.Ordinal) ||
+            !string.IsNullOrWhiteSpace(sceneTourOutput);
         const string controlUrlPrefix = "--control-url=";
         string? controlUrl = arguments
             .FirstOrDefault(argument => argument.StartsWith(controlUrlPrefix, StringComparison.Ordinal))?
@@ -38,6 +45,7 @@ public partial class MediaProofScene : Node
 
         _captureViewport = CreateCaptureViewport();
         AddChild(_captureViewport);
+        _sceneDirector?.ApplyScene(DynamicSceneDirector.DefaultCafeScene());
         AddChild(CreateDisplay(_captureViewport));
 
         var videoPublisher = new SharedMemoryVideoPublisher
@@ -59,6 +67,19 @@ public partial class MediaProofScene : Node
             {
                 Name = "RendererSessionController",
                 ControlUrl = controlUrl,
+            });
+        }
+
+        if (!string.IsNullOrWhiteSpace(sceneTourOutput) && _sceneDirector is not null &&
+            _captureViewport is not null && _teacher is not null)
+        {
+            AddChild(new SceneTourRunner
+            {
+                Name = "SceneTourRunner",
+                Director = _sceneDirector,
+                CaptureViewport = _captureViewport,
+                Teacher = _teacher,
+                OutputDirectory = sceneTourOutput,
             });
         }
 
@@ -102,7 +123,7 @@ public partial class MediaProofScene : Node
         }
     }
 
-    private static SubViewport CreateCaptureViewport()
+    private SubViewport CreateCaptureViewport()
     {
         var viewport = new SubViewport
         {
@@ -118,23 +139,11 @@ public partial class MediaProofScene : Node
         var world = new Node3D { Name = "World" };
         viewport.AddChild(world);
 
-        world.AddChild(new AnimatedTeacherPlaceholder
+        _teacher = new StylizedTeacherAvatar
         {
-            Name = "AnimatedTeacherPlaceholder",
-            Position = new Vector3(0.0f, 1.25f, 0.0f),
-        });
-
-        var ground = new MeshInstance3D
-        {
-            Name = "Ground",
-            Mesh = new PlaneMesh { Size = new Vector2(12.0f, 12.0f) },
-            MaterialOverride = new StandardMaterial3D
-            {
-                AlbedoColor = new Color(0.11f, 0.14f, 0.19f),
-                Roughness = 0.9f,
-            },
+            Name = "StylizedTeacherAvatar",
         };
-        world.AddChild(ground);
+        world.AddChild(_teacher);
 
         var light = new DirectionalLight3D
         {
@@ -169,6 +178,31 @@ public partial class MediaProofScene : Node
             new Vector3(0.0f, 1.15f, 0.0f),
             Vector3.Up);
         world.AddChild(camera);
+
+        var transitionLayer = new CanvasLayer { Name = "SceneTransitionLayer", Layer = 10 };
+        var transitionOverlay = new ColorRect
+        {
+            Name = "SceneTransitionOverlay",
+            Position = Vector2.Zero,
+            Size = new Vector2(
+                RendererBridgeProtocol.CaptureWidth,
+                RendererBridgeProtocol.CaptureHeight),
+            Color = new Color(0, 0, 0, 0),
+            MouseFilter = Control.MouseFilterEnum.Ignore,
+        };
+        transitionLayer.AddChild(transitionOverlay);
+        viewport.AddChild(transitionLayer);
+
+        _sceneDirector = new DynamicSceneDirector
+        {
+            Name = "DynamicSceneDirector",
+            CaptureCamera = camera,
+            KeyLight = light,
+            WorldEnvironment = environment,
+            TransitionOverlay = transitionOverlay,
+            Teacher = _teacher,
+        };
+        world.AddChild(_sceneDirector);
 
         return viewport;
     }

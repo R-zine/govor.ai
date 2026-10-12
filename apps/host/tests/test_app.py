@@ -225,7 +225,8 @@ def test_complete_fake_lesson_turn_cycle(caplog: pytest.LogCaptureFixture) -> No
 
 
 def test_selected_scenario_is_reported_in_teacher_progress() -> None:
-    app = create_app(Settings(), renderer=FakeRendererControl())
+    renderer = FakeRendererControl()
+    app = create_app(Settings(), renderer=renderer)
     with TestClient(app).websocket_connect("/v1/control") as socket:
         socket.send_json(
             envelope(
@@ -247,6 +248,15 @@ def test_selected_scenario_is_reported_in_teacher_progress() -> None:
     assert progress["difficulty"] == "intermediate"
     assert turn["payload"]["locale"] == "en-US"
     assert "milk" in turn["payload"]["text"].lower()
+    assert renderer.commands[0].scene is not None
+    assert renderer.commands[0].scene.environment_id == "supermarket"
+    assert {item.asset_id for item in renderer.commands[0].scene.objects} == {
+        "market-basket",
+        "market-crate",
+        "market-shelf",
+    }
+    assert renderer.commands[1].avatar_animation is not None
+    assert renderer.commands[1].avatar_animation.speech_energy
 
 
 def test_completed_lesson_ends_after_final_teacher_playback() -> None:

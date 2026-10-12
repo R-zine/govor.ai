@@ -11,7 +11,7 @@ criterion has direct evidence).
 | 3. Local AI/bilingual | complete | M2 contracts/orchestration | Local LLM/STT, English/Bulgarian/mixed intents, valid structured output, human-speech transcription, measured latency/memory |
 | 4. Speech/phonemes | complete | M3 providers | Local English/Bulgarian speech, deterministic fallback, actual-or-null timing, IPA, Android highlighting/replay/rates, and human listening confirmation pass |
 | 5. Teaching/progress | complete | M3-4 | Four complete guided scenarios, adaptive explainable teaching, questions do not break lessons, SQLite persistence/resume |
-| 6. Avatar/scenes | not started | M1 media decision, M4 timing | Avatar and four validated dynamic environments, lip sync/fallback, memory/performance evidence |
+| 6. Avatar/scenes | complete | M1 media decision, M4 timing | Avatar and four validated dynamic environments, lip sync/fallback, memory/performance evidence |
 | 7. Optional cloud/privacy | not started | Stable provider interfaces | Independent opt-in providers, offline default, OS secret storage, no unintended cloud/secret logging |
 | 8. Packaging/distribution | not started | M1-7 | Clean Windows install/launcher, signed stable APK/update, integrity-checked models, no dev tools, clean shutdown |
 | 9. Release acceptance and target hardware | not started | M8 | Physical phone/Wi-Fi/audio/codecs/lifecycle/performance/monitor-off/soak bundle, full automated/manual/security suite, and complete local-first cafe scenario |
@@ -117,7 +117,7 @@ Verified software evidence:
 Godot migration work:
 
 - ADR-0003 selects MIT-licensed Godot 4.7.2 .NET; Unity is no longer part of the repository stack.
-- `apps/renderer` contains the active Godot project, animated placeholder, 1280x720 `SubViewport`,
+- `apps/renderer` contains the active Godot project, stylized teacher, 1280x720 `SubViewport`,
   two-second application-owned tone, and shared-memory video/audio publishers.
 - Checksum-pinned bootstrap, headless import, C# build, renderer self-test, and Windows export pass.
 - The bounded local runtime probe passes with changing non-black frames and non-silent PCM; the
@@ -138,7 +138,7 @@ Deferred release acceptance (Milestone 9, not a Milestone 1 blocker):
 - Production pairing/WSS and release network security; the development token and cleartext
   signaling remain development-only.
 
-Milestones 1–5 are complete on their verified software/native-emulator and stated human-listening
+Milestones 1–6 are complete on their verified software/native-emulator and stated human-listening
 criteria. The deferred hardware bundle must remain visible and must pass before Milestone 9 can
 complete.
 
@@ -165,7 +165,30 @@ Verified software/native-emulator evidence:
 
 Milestone 5 is complete. This evidence establishes deterministic guided progression and local
 structured persistence, not broad pedagogical effectiveness or live-human recognition quality.
-Milestone 6 may begin; all target-hardware acceptance remains Milestone 9.
+Milestone 6 is complete; all target-hardware acceptance remains Milestone 9.
+
+## Milestone 6 acceptance tracking
+
+Verified software/native-emulator evidence:
+
+- The repository-owned CC0 procedural teacher has idle/blink, speaking gesture, listening,
+  thinking, encouraging-expression, PCM-energy mouth motion, and six closed viseme shapes.
+- A framework-independent planner produces deterministic validated café, supermarket, airport,
+  and home specifications from lesson context. The renderer accepts only closed catalog IDs and
+  builds all runtime scene data in memory.
+- The exported Godot runtime captured four distinct environment frames, transitioned among them,
+  reused 68 cached resources, and showed zero cache or reported video-memory growth on a café
+  revisit. Unknown wire paths are rejected; the internal missing-asset fallback is deterministic.
+- Real Kokoro playback delivered 51 PCM energy samples and 23 provider-timed viseme cues to Godot.
+  The no-alignment test path delivered an empty viseme sequence and remained audio-driven.
+- The renderer scene tour overlapped two real Qwen3 4B requests. Scene build/transition/frame,
+  renderer memory, avatar overhead, and software VP8 encoding were measured and recorded in the
+  dated benchmark.
+- Godot-originated video still reached native Android while microphone frames returned to Windows;
+  this remains API 34 emulator evidence, not physical-hardware acceptance.
+
+Milestone 6 is complete. Hardware encoding, physical phone/Wi-Fi/audio, target-machine resource
+behavior, monitor-off, thermals, and soak remain mandatory Milestone 9 work. Milestone 7 may begin.
 
 ## Milestone 9 target-hardware acceptance tracking
 

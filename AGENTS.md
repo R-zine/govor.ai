@@ -58,6 +58,7 @@ Milestone handoff.
 ./scripts/test.ps1 -Scope speech
 ./scripts/test.ps1 -Scope godot
 ./scripts/test.ps1 -Scope all
+./scripts/renderer-scene-smoke.ps1
 ./scripts/dev.ps1 -Mode mock
 ./scripts/dev.ps1 -Mode local -PairingToken '<at-least-32-random-characters>'
 ./scripts/media-dev.ps1 -PairingToken '<at-least-32-random-characters>' -AllowInsecureDevLan
@@ -73,6 +74,7 @@ Hardware tests are separate:
 ./scripts/benchmark.ps1 -Profile media-poc
 ./scripts/benchmark.ps1 -Profile local-ai
 ./scripts/benchmark.ps1 -Profile speech
+./scripts/benchmark.ps1 -Profile renderer
 ```
 
 Record the machine, device, network, exact command, timestamp, result, and artifacts in

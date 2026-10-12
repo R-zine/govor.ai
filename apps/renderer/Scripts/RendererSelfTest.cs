@@ -37,6 +37,29 @@ internal static class RendererSelfTest
             ControlContractCodec.DecodePayload<RendererCommandPayload>(envelope);
         command.Validate();
 
+        IReadOnlyList<SceneSpecificationPayload> scenes = DynamicSceneDirector.TourScenes();
+        if (scenes.Count != 4 || scenes.Select(scene => scene.EnvironmentId).Distinct().Count() != 4)
+        {
+            throw new InvalidOperationException("The four deterministic environment recipes are unavailable.");
+        }
+        foreach (SceneSpecificationPayload scene in scenes)
+        {
+            scene.Validate();
+        }
+
+        Node3D fallback = ProceduralSceneAssetCatalog.Create("missing-self-test", out bool usedFallback);
+        try
+        {
+            if (!usedFallback || fallback.Name != "VisualFallback")
+            {
+                throw new InvalidOperationException("The missing-asset fallback is not deterministic.");
+            }
+        }
+        finally
+        {
+            fallback.Free();
+        }
+
         GD.Print(SuccessMarker);
     }
 }

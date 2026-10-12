@@ -386,6 +386,131 @@
             { "type": "null" },
             { "type": "integer", "minimum": 1, "maximum": 30000000 }
           ]
+        },
+        "scene": {
+          "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/sceneSpecification" }]
+        },
+        "avatar_animation": {
+          "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/avatarAnimation" }]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": ["scene"],
+            "properties": { "scene": { "type": "object" } }
+          },
+          "then": { "properties": { "action": { "const": "session_started" } } }
+        },
+        {
+          "if": {
+            "required": ["avatar_animation"],
+            "properties": { "avatar_animation": { "type": "object" } }
+          },
+          "then": { "properties": { "action": { "const": "teacher_speaking" } } }
+        }
+      ]
+    },
+    "vector3": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["x", "y", "z"],
+      "properties": {
+        "x": { "type": "number", "minimum": -20, "maximum": 20 },
+        "y": { "type": "number", "minimum": -20, "maximum": 20 },
+        "z": { "type": "number", "minimum": -20, "maximum": 20 }
+      }
+    },
+    "sceneObject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["instance_id", "asset_id", "position", "yaw_degrees", "scale"],
+      "properties": {
+        "instance_id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]{1,63}$",
+          "maxLength": 64
+        },
+        "asset_id": {
+          "enum": [
+            "airport-bench", "airport-counter", "airport-sign", "airport-suitcase",
+            "cafe-chair", "cafe-counter", "cafe-cup", "cafe-table",
+            "home-bookshelf", "home-lamp", "home-sofa", "home-table",
+            "market-basket", "market-crate", "market-shelf"
+          ]
+        },
+        "position": { "$ref": "#/$defs/vector3" },
+        "yaw_degrees": { "type": "number", "minimum": -360, "maximum": 360 },
+        "scale": { "type": "number", "minimum": 0.1, "maximum": 5 }
+      }
+    },
+    "sceneSpecification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "scene_id", "environment_id", "camera_preset", "lighting_preset", "transition",
+        "avatar_position", "avatar_yaw_degrees", "objects"
+      ],
+      "properties": {
+        "scene_id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]{2,63}$",
+          "maxLength": 64
+        },
+        "environment_id": { "enum": ["cafe", "supermarket", "airport", "home"] },
+        "camera_preset": { "enum": ["counter", "conversation", "wide"] },
+        "lighting_preset": { "enum": ["warm", "daylight", "terminal", "home"] },
+        "transition": { "enum": ["fade", "cut"] },
+        "avatar_position": { "$ref": "#/$defs/vector3" },
+        "avatar_yaw_degrees": { "type": "number", "minimum": -360, "maximum": 360 },
+        "objects": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 32,
+          "items": { "$ref": "#/$defs/sceneObject" }
+        }
+      }
+    },
+    "speechEnergySample": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["media_time_us", "level_milli"],
+      "properties": {
+        "media_time_us": { "type": "integer", "minimum": 0, "maximum": 30000000 },
+        "level_milli": { "type": "integer", "minimum": 0, "maximum": 1000 }
+      }
+    },
+    "visemeCue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["viseme", "start_us", "end_us"],
+      "properties": {
+        "viseme": { "enum": ["silence", "closed", "open", "wide", "round", "teeth"] },
+        "start_us": { "type": "integer", "minimum": 0, "maximum": 30000000 },
+        "end_us": { "type": "integer", "minimum": 1, "maximum": 30000000 }
+      }
+    },
+    "avatarAnimation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "duration_us", "gesture", "expression", "viseme_source", "speech_energy", "visemes"
+      ],
+      "properties": {
+        "duration_us": { "type": "integer", "minimum": 1, "maximum": 30000000 },
+        "gesture": { "const": "speaking" },
+        "expression": { "const": "encouraging" },
+        "viseme_source": { "enum": ["provider_phoneme_alignment", "none"] },
+        "speech_energy": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 768,
+          "items": { "$ref": "#/$defs/speechEnergySample" }
+        },
+        "visemes": {
+          "type": "array",
+          "maxItems": 2048,
+          "items": { "$ref": "#/$defs/visemeCue" }
         }
       }
     },

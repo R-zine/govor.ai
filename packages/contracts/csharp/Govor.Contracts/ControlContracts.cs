@@ -8,12 +8,159 @@ public sealed record RendererReadyPayload(
     [property: JsonPropertyName("renderer_kind")] string RendererKind,
     [property: JsonPropertyName("protocol_version")] string ProtocolVersion);
 
+public sealed record Vector3Payload(
+    [property: JsonPropertyName("x")] double X,
+    [property: JsonPropertyName("y")] double Y,
+    [property: JsonPropertyName("z")] double Z)
+{
+    public void Validate()
+    {
+        if (!double.IsFinite(X) || !double.IsFinite(Y) || !double.IsFinite(Z) ||
+            Math.Abs(X) > 20 || Math.Abs(Y) > 20 || Math.Abs(Z) > 20)
+        {
+            throw new InvalidDataException("Scene position is outside the accepted range.");
+        }
+    }
+}
+
+public sealed record SceneObjectPayload(
+    [property: JsonPropertyName("instance_id")] string InstanceId,
+    [property: JsonPropertyName("asset_id")] string AssetId,
+    [property: JsonPropertyName("position")] Vector3Payload Position,
+    [property: JsonPropertyName("yaw_degrees")] double YawDegrees,
+    [property: JsonPropertyName("scale")] double Scale)
+{
+    private static readonly HashSet<string> AllowedAssets =
+    [
+        "airport-bench", "airport-counter", "airport-sign", "airport-suitcase",
+        "cafe-chair", "cafe-counter", "cafe-cup", "cafe-table",
+        "home-bookshelf", "home-lamp", "home-sofa", "home-table",
+        "market-basket", "market-crate", "market-shelf",
+    ];
+
+    public void Validate()
+    {
+        if (string.IsNullOrWhiteSpace(InstanceId) || InstanceId.Length > 64 ||
+            !AllowedAssets.Contains(AssetId))
+        {
+            throw new InvalidDataException("Scene object identifiers are invalid or not allow-listed.");
+        }
+        Position.Validate();
+        if (!double.IsFinite(YawDegrees) || Math.Abs(YawDegrees) > 360 ||
+            !double.IsFinite(Scale) || Scale is < 0.1 or > 5.0)
+        {
+            throw new InvalidDataException("Scene object transform is outside the accepted range.");
+        }
+    }
+}
+
+public sealed record SceneSpecificationPayload(
+    [property: JsonPropertyName("scene_id")] string SceneId,
+    [property: JsonPropertyName("environment_id")] string EnvironmentId,
+    [property: JsonPropertyName("camera_preset")] string CameraPreset,
+    [property: JsonPropertyName("lighting_preset")] string LightingPreset,
+    [property: JsonPropertyName("transition")] string Transition,
+    [property: JsonPropertyName("avatar_position")] Vector3Payload AvatarPosition,
+    [property: JsonPropertyName("avatar_yaw_degrees")] double AvatarYawDegrees,
+    [property: JsonPropertyName("objects")] IReadOnlyList<SceneObjectPayload> Objects)
+{
+    private static readonly HashSet<string> Environments = ["cafe", "supermarket", "airport", "home"];
+    private static readonly HashSet<string> Cameras = ["counter", "conversation", "wide"];
+    private static readonly HashSet<string> Lighting = ["warm", "daylight", "terminal", "home"];
+    private static readonly HashSet<string> Transitions = ["fade", "cut"];
+
+    public void Validate()
+    {
+        if (string.IsNullOrWhiteSpace(SceneId) || SceneId.Length > 64 ||
+            !Environments.Contains(EnvironmentId) || !Cameras.Contains(CameraPreset) ||
+            !Lighting.Contains(LightingPreset) || !Transitions.Contains(Transition))
+        {
+            throw new InvalidDataException("Scene specification identifiers are invalid.");
+        }
+        AvatarPosition.Validate();
+        if (!double.IsFinite(AvatarYawDegrees) || Math.Abs(AvatarYawDegrees) > 360 ||
+            Objects is null || Objects.Count is < 1 or > 32)
+        {
+            throw new InvalidDataException("Scene specification bounds are invalid.");
+        }
+        var instanceIds = new HashSet<string>(StringComparer.Ordinal);
+        foreach (SceneObjectPayload item in Objects)
+        {
+            item.Validate();
+            if (!instanceIds.Add(item.InstanceId))
+            {
+                throw new InvalidDataException("Scene object instance IDs must be unique.");
+            }
+        }
+    }
+}
+
+public sealed record SpeechEnergySamplePayload(
+    [property: JsonPropertyName("media_time_us")] long MediaTimeUs,
+    [property: JsonPropertyName("level_milli")] int LevelMilli);
+
+public sealed record VisemeCuePayload(
+    [property: JsonPropertyName("viseme")] string Viseme,
+    [property: JsonPropertyName("start_us")] long StartUs,
+    [property: JsonPropertyName("end_us")] long EndUs);
+
+public sealed record AvatarAnimationPayload(
+    [property: JsonPropertyName("duration_us")] long DurationUs,
+    [property: JsonPropertyName("gesture")] string Gesture,
+    [property: JsonPropertyName("expression")] string Expression,
+    [property: JsonPropertyName("viseme_source")] string VisemeSource,
+    [property: JsonPropertyName("speech_energy")] IReadOnlyList<SpeechEnergySamplePayload> SpeechEnergy,
+    [property: JsonPropertyName("visemes")] IReadOnlyList<VisemeCuePayload> Visemes)
+{
+    private static readonly HashSet<string> AllowedVisemes =
+        ["silence", "closed", "open", "wide", "round", "teeth"];
+
+    public void Validate()
+    {
+        if (DurationUs is <= 0 or > 30_000_000 || Gesture != "speaking" ||
+            Expression != "encouraging" || VisemeSource is not ("provider_phoneme_alignment" or "none") ||
+            SpeechEnergy is null || SpeechEnergy.Count is < 1 or > 768 ||
+            Visemes is null || Visemes.Count > 2_048)
+        {
+            throw new InvalidDataException("Avatar animation metadata is invalid.");
+        }
+
+        long previousEnergyTime = -1;
+        foreach (SpeechEnergySamplePayload sample in SpeechEnergy)
+        {
+            if (sample.MediaTimeUs <= previousEnergyTime || sample.MediaTimeUs > DurationUs ||
+                sample.LevelMilli is < 0 or > 1_000)
+            {
+                throw new InvalidDataException("Speech energy timeline is invalid.");
+            }
+            previousEnergyTime = sample.MediaTimeUs;
+        }
+
+        long previousEnd = 0;
+        foreach (VisemeCuePayload cue in Visemes)
+        {
+            if (!AllowedVisemes.Contains(cue.Viseme) || cue.StartUs < previousEnd ||
+                cue.EndUs <= cue.StartUs || cue.EndUs > DurationUs)
+            {
+                throw new InvalidDataException("Viseme timeline is invalid.");
+            }
+            previousEnd = cue.EndUs;
+        }
+        if (VisemeSource == "none" && Visemes.Count > 0)
+        {
+            throw new InvalidDataException("Visemes require provider phoneme alignment.");
+        }
+    }
+}
+
 public sealed record RendererCommandPayload(
     [property: JsonPropertyName("session_id")] Guid SessionId,
     [property: JsonPropertyName("command_id")] Guid CommandId,
     [property: JsonPropertyName("action")] string Action,
     [property: JsonPropertyName("media_start_us")] long MediaStartUs,
-    [property: JsonPropertyName("duration_us")] long? DurationUs)
+    [property: JsonPropertyName("duration_us")] long? DurationUs,
+    [property: JsonPropertyName("scene")] SceneSpecificationPayload? Scene = null,
+    [property: JsonPropertyName("avatar_animation")] AvatarAnimationPayload? AvatarAnimation = null)
 {
     private static readonly HashSet<string> AllowedActions =
     [
@@ -40,6 +187,22 @@ public sealed record RendererCommandPayload(
         if (MediaStartUs < 0 || DurationUs is <= 0 or > 30_000_000)
         {
             throw new InvalidDataException("Renderer media timing is outside the accepted range.");
+        }
+        if (Scene is not null)
+        {
+            if (Action != "session_started")
+            {
+                throw new InvalidDataException("Scene specifications are accepted only at session start.");
+            }
+            Scene.Validate();
+        }
+        if (AvatarAnimation is not null)
+        {
+            if (Action != "teacher_speaking" || DurationUs != AvatarAnimation.DurationUs)
+            {
+                throw new InvalidDataException("Avatar animation does not match the renderer command.");
+            }
+            AvatarAnimation.Validate();
         }
     }
 }

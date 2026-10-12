@@ -232,6 +232,99 @@ class RendererReadyPayload(StrictModel):
     protocol_version: Literal["1.0"] = "1.0"
 
 
+SceneAssetId = Literal[
+    "airport-bench",
+    "airport-counter",
+    "airport-sign",
+    "airport-suitcase",
+    "cafe-chair",
+    "cafe-counter",
+    "cafe-cup",
+    "cafe-table",
+    "home-bookshelf",
+    "home-lamp",
+    "home-sofa",
+    "home-table",
+    "market-basket",
+    "market-crate",
+    "market-shelf",
+]
+
+
+class Vector3Payload(StrictModel):
+    x: float = Field(ge=-20.0, le=20.0)
+    y: float = Field(ge=-20.0, le=20.0)
+    z: float = Field(ge=-20.0, le=20.0)
+
+
+class SceneObjectPayload(StrictModel):
+    instance_id: str = Field(pattern=r"^[a-z][a-z0-9-]{1,63}$", max_length=64)
+    asset_id: SceneAssetId
+    position: Vector3Payload
+    yaw_degrees: float = Field(ge=-360.0, le=360.0)
+    scale: float = Field(ge=0.1, le=5.0)
+
+
+class SceneSpecificationPayload(StrictModel):
+    scene_id: str = Field(pattern=r"^[a-z][a-z0-9-]{2,63}$", max_length=64)
+    environment_id: Literal["cafe", "supermarket", "airport", "home"]
+    camera_preset: Literal["counter", "conversation", "wide"]
+    lighting_preset: Literal["warm", "daylight", "terminal", "home"]
+    transition: Literal["fade", "cut"]
+    avatar_position: Vector3Payload
+    avatar_yaw_degrees: float = Field(ge=-360.0, le=360.0)
+    objects: list[SceneObjectPayload] = Field(min_length=1, max_length=32)
+
+    @model_validator(mode="after")
+    def validate_unique_instances(self) -> SceneSpecificationPayload:
+        instance_ids = [item.instance_id for item in self.objects]
+        if len(instance_ids) != len(set(instance_ids)):
+            raise ValueError("scene object instance IDs must be unique")
+        return self
+
+
+class SpeechEnergySamplePayload(StrictModel):
+    media_time_us: int = Field(ge=0, le=30_000_000)
+    level_milli: int = Field(ge=0, le=1_000)
+
+
+class VisemeCuePayload(StrictModel):
+    viseme: Literal["silence", "closed", "open", "wide", "round", "teeth"]
+    start_us: int = Field(ge=0, le=30_000_000)
+    end_us: int = Field(ge=1, le=30_000_000)
+
+    @model_validator(mode="after")
+    def validate_range(self) -> VisemeCuePayload:
+        if self.end_us <= self.start_us:
+            raise ValueError("viseme range is invalid")
+        return self
+
+
+class AvatarAnimationPayload(StrictModel):
+    duration_us: int = Field(ge=1, le=30_000_000)
+    gesture: Literal["speaking"]
+    expression: Literal["encouraging"]
+    viseme_source: Literal["provider_phoneme_alignment", "none"]
+    speech_energy: list[SpeechEnergySamplePayload] = Field(min_length=1, max_length=768)
+    visemes: list[VisemeCuePayload] = Field(max_length=2_048)
+
+    @model_validator(mode="after")
+    def validate_timeline(self) -> AvatarAnimationPayload:
+        energy_times = [sample.media_time_us for sample in self.speech_energy]
+        if energy_times != sorted(energy_times) or len(energy_times) != len(set(energy_times)):
+            raise ValueError("speech energy times must be ordered and unique")
+        if energy_times[-1] > self.duration_us:
+            raise ValueError("speech energy exceeds animation duration")
+        previous_end = 0
+        for cue in self.visemes:
+            if cue.start_us < previous_end or cue.end_us > self.duration_us:
+                raise ValueError("viseme timeline is overlapping or outside animation duration")
+            previous_end = cue.end_us
+        if self.viseme_source == "none" and self.visemes:
+            raise ValueError("visemes require provider phoneme alignment")
+        return self
+
+
 RendererAction = Literal[
     "session_started",
     "teacher_speaking",
@@ -247,6 +340,19 @@ class RendererCommandPayload(SessionScopedPayload):
     action: RendererAction
     media_start_us: int = Field(ge=0)
     duration_us: int | None = Field(default=None, ge=1, le=30_000_000)
+    scene: SceneSpecificationPayload | None = None
+    avatar_animation: AvatarAnimationPayload | None = None
+
+    @model_validator(mode="after")
+    def validate_visual_payloads(self) -> RendererCommandPayload:
+        if self.scene is not None and self.action != "session_started":
+            raise ValueError("scene specifications are accepted only when a session starts")
+        if self.avatar_animation is not None:
+            if self.action != "teacher_speaking":
+                raise ValueError("avatar speech animation requires teacher_speaking")
+            if self.duration_us != self.avatar_animation.duration_us:
+                raise ValueError("avatar animation duration must match renderer command duration")
+        return self
 
 
 class RendererAckPayload(StrictModel):

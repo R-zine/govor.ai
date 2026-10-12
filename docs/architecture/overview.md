@@ -10,6 +10,7 @@ simple controls, and session connectivity; it performs no AI inference or 3D ren
 | --- | --- | --- |
 | `packages/domain` | Framework-independent session and teaching rules | FastAPI, Android, Godot, provider SDKs |
 | `packages/contracts` | Versioned schemas and language bindings | Business decisions or provider behavior |
+| `packages/scene_planner` | Deterministic validated scene and avatar-animation plans | Godot nodes, paths, downloads, lesson policy |
 | `apps/host` | Windows orchestration and authenticated gateway | Model-specific logic in route handlers |
 | `services/*` | Replaceable provider and media adapters | Lesson policy |
 | `apps/renderer` | Render scenes and expose frames/audio | Dialogue or progress logic |
@@ -54,6 +55,21 @@ eSpeak NG. The host emits bounded PCM16 WAV, exact pronunciation character range
 model-derived word/phoneme alignment. Android owns `AudioTrack` playout, media-time highlighting,
 0.75×/1×/1.25× speed, full replay, word selection, IPA/explanation display, and isolated-word
 playback. Godot and the domain do not depend on a speech SDK. See ADR-0007.
+
+## Scene and avatar boundary
+
+`packages/scene_planner` maps the four committed lesson scenario IDs to deterministic scene
+specifications. The shared renderer contract permits only closed environment, camera, lighting,
+transition, and asset identifiers plus bounded transforms. Godot assembles those specifications
+entirely in memory from a procedural catalog, reuses cached mesh/material resources, and releases
+the prior scene tree. Unknown wire asset IDs are rejected; an internal missing catalog
+implementation produces a predictable magenta fallback.
+
+The active teacher is a repository-owned CC0 stylized procedural avatar. It animates idle,
+speaking, listening, thinking, gestures, and basic expressions. The host derives a bounded energy
+envelope from the actual synthesized PCM. Real provider phoneme timing is converted to visemes;
+when that timing is unavailable the viseme list stays empty and only PCM energy drives a generic
+mouth opening. The model cannot select scenes or avatar actions. See ADR-0009.
 
 ## Local AI boundary
 

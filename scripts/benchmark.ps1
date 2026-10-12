@@ -1,11 +1,148 @@
 [CmdletBinding()]
 param(
-    [ValidateSet('inventory', 'media-poc', 'local-ai', 'speech')]
+    [ValidateSet('inventory', 'media-poc', 'local-ai', 'speech', 'renderer')]
     [string]$Profile = 'inventory'
 )
 
 . (Join-Path $PSScriptRoot 'common.ps1')
 Initialize-GovorEnvironment
+
+if ($Profile -eq 'renderer') {
+    $server = Get-GovorLlamaServer
+    $model = Get-GovorLlamaModel
+    $serverStdout = Join-Path $script:CacheRoot 'llama-renderer-concurrency.stdout.log'
+    $serverStderr = Join-Path $script:CacheRoot 'llama-renderer-concurrency.stderr.log'
+    $smokeStdout = Join-Path $script:CacheRoot 'renderer-concurrency-smoke.stdout.log'
+    $smokeStderr = Join-Path $script:CacheRoot 'renderer-concurrency-smoke.stderr.log'
+    $tourReport = Join-Path $script:CacheRoot 'renderer-scene-tour\renderer-scene-tour.json'
+    $output = Join-Path $script:CacheRoot 'renderer-concurrent.json'
+    foreach ($path in @($serverStdout, $serverStderr, $smokeStdout, $smokeStderr, $output)) {
+        if (Test-Path -LiteralPath $path) {
+            Remove-Item -LiteralPath $path -Force
+        }
+    }
+
+    $serverProcess = Start-Process -FilePath $server -ArgumentList @(
+        '-m', $model,
+        '--host', '127.0.0.1', '--port', '8767',
+        '-ngl', '99', '-c', '4096', '--jinja', '--no-webui', '--log-disable'
+    ) -PassThru -WindowStyle Hidden -RedirectStandardOutput $serverStdout `
+        -RedirectStandardError $serverStderr
+    $smokeProcess = $null
+    try {
+        $ready = $false
+        for ($attempt = 0; $attempt -lt 240; $attempt++) {
+            if ($serverProcess.HasExited) {
+                throw "llama.cpp exited before renderer concurrency readiness. See $serverStderr"
+            }
+            try {
+                $health = Invoke-RestMethod -Uri 'http://127.0.0.1:8767/health' -TimeoutSec 1
+                if ($health.status -eq 'ok') {
+                    $ready = $true
+                    break
+                }
+            }
+            catch { }
+            Start-Sleep -Milliseconds 250
+        }
+        if (-not $ready) {
+            throw 'llama.cpp did not become ready within 60 seconds.'
+        }
+
+        $gpuUsedBefore = $null
+        if (Get-Command nvidia-smi -ErrorAction SilentlyContinue) {
+            $gpuUsedBefore = (& nvidia-smi --query-gpu=memory.used `
+                --format=csv,noheader,nounits 2>$null | Select-Object -First 1)
+        }
+        $shell = (Get-Process -Id $PID).Path
+        $smokeProcess = Start-Process -FilePath $shell -ArgumentList @(
+            '-NoProfile', '-ExecutionPolicy', 'Bypass',
+            '-File', (Join-Path $PSScriptRoot 'renderer-scene-smoke.ps1')
+        ) -WorkingDirectory $script:RepositoryRoot -PassThru -WindowStyle Hidden `
+            -RedirectStandardOutput $smokeStdout -RedirectStandardError $smokeStderr
+        Start-Sleep -Milliseconds 500
+        if ($smokeProcess.HasExited) {
+            throw "The renderer concurrency smoke exited early. See $smokeStderr"
+        }
+
+        $requestBody = @{
+            model = 'local-model'
+            messages = @(
+                @{
+                    role = 'system'
+                    content = 'Reply with one short English greeting. Do not explain your answer.'
+                },
+                @{ role = 'user'; content = 'Greet the learner.' }
+            )
+            temperature = 0
+            max_tokens = 32
+            stream = $false
+        } | ConvertTo-Json -Depth 6
+        $inferenceStartedAt = [DateTime]::UtcNow
+        $latenciesMs = @()
+        for ($requestIndex = 0; $requestIndex -lt 2; $requestIndex++) {
+            $stopwatch = [Diagnostics.Stopwatch]::StartNew()
+            $response = Invoke-RestMethod -Uri 'http://127.0.0.1:8767/v1/chat/completions' `
+                -Method Post -ContentType 'application/json' -Body $requestBody -TimeoutSec 30
+            $stopwatch.Stop()
+            if ($null -eq $response.choices -or $response.choices.Count -lt 1) {
+                throw 'The concurrent local inference response had no choices.'
+            }
+            $latenciesMs += $stopwatch.Elapsed.TotalMilliseconds
+        }
+        $inferenceFinishedAt = [DateTime]::UtcNow
+
+        if (-not $smokeProcess.WaitForExit(30000)) {
+            throw 'The concurrent renderer smoke did not finish within 30 seconds.'
+        }
+        $smokeProcess.WaitForExit()
+        if (-not (Test-Path -LiteralPath $tourReport)) {
+            throw 'The concurrent renderer smoke did not produce its report.'
+        }
+        $tour = Get-Content -LiteralPath $tourReport -Raw | ConvertFrom-Json
+        $tourStartedAt = [DateTime]::Parse($tour.measured_at_utc).ToUniversalTime()
+        $tourFinishedAt = [DateTime]::Parse($tour.measured_finished_at_utc).ToUniversalTime()
+        $overlapped = $inferenceStartedAt -lt $tourFinishedAt -and `
+            $inferenceFinishedAt -gt $tourStartedAt
+        if (-not $overlapped) {
+            throw 'Local inference and renderer measurement windows did not overlap.'
+        }
+
+        $serverProcess.Refresh()
+        $gpuUsedAfter = $null
+        if (Get-Command nvidia-smi -ErrorAction SilentlyContinue) {
+            $gpuUsedAfter = (& nvidia-smi --query-gpu=memory.used `
+                --format=csv,noheader,nounits 2>$null | Select-Object -First 1)
+        }
+        $result = [ordered]@{
+            schema_version = '1.0'
+            result_kind = 'renderer_with_local_inference'
+            measured_at_utc = [DateTime]::UtcNow.ToString('o')
+            overlap_verified = $overlapped
+            inference_request_count = $latenciesMs.Count
+            inference_latency_ms = $latenciesMs
+            renderer = $tour
+            hardware = [ordered]@{
+                llama_process_working_set_bytes = $serverProcess.WorkingSet64
+                llama_process_peak_working_set_bytes = $serverProcess.PeakWorkingSet64
+                gpu_memory_used_before_mib = $gpuUsedBefore
+                gpu_memory_used_after_mib = $gpuUsedAfter
+                hardware_video_encoding = $false
+            }
+        }
+        $result | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath $output -Encoding utf8
+        Write-Output "Concurrent renderer/local-inference benchmark passed. Results: $output"
+    }
+    finally {
+        if ($null -ne $smokeProcess -and -not $smokeProcess.HasExited) {
+            Stop-Process -Id $smokeProcess.Id -Force
+        }
+        if (-not $serverProcess.HasExited) {
+            Stop-Process -Id $serverProcess.Id -Force
+        }
+    }
+    exit 0
+}
 
 if ($Profile -eq 'media-poc') {
     throw 'The media hardware benchmark is not yet implemented. No simulated performance result was generated.'
@@ -16,6 +153,7 @@ if ($Profile -eq 'speech') {
         (Join-Path $script:RepositoryRoot 'packages\domain\src'),
         (Join-Path $script:RepositoryRoot 'packages\provider_interfaces\src'),
         (Join-Path $script:RepositoryRoot 'packages\progress\src'),
+        (Join-Path $script:RepositoryRoot 'packages\scene_planner\src'),
         (Join-Path $script:RepositoryRoot 'packages\contracts\python'),
         (Join-Path $script:RepositoryRoot 'services\speech\src')
     ) -join [IO.Path]::PathSeparator
@@ -59,6 +197,7 @@ if ($Profile -eq 'local-ai') {
         (Join-Path $script:RepositoryRoot 'packages\domain\src'),
         (Join-Path $script:RepositoryRoot 'packages\provider_interfaces\src'),
         (Join-Path $script:RepositoryRoot 'packages\progress\src'),
+        (Join-Path $script:RepositoryRoot 'packages\scene_planner\src'),
         (Join-Path $script:RepositoryRoot 'packages\contracts\python'),
         (Join-Path $script:RepositoryRoot 'services\local_ai\src'),
         (Join-Path $script:RepositoryRoot 'services\speech\src'),

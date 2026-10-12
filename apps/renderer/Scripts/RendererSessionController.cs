@@ -12,7 +12,8 @@ public partial class RendererSessionController : Node
 {
     private readonly Guid _rendererId = Guid.NewGuid();
     private WebSocketPeer? _socket;
-    private AnimatedTeacherPlaceholder? _teacher;
+    private StylizedTeacherAvatar? _teacher;
+    private DynamicSceneDirector? _sceneDirector;
     private bool _readySent;
     private ulong _nextConnectAtUs;
 
@@ -20,8 +21,10 @@ public partial class RendererSessionController : Node
 
     public override void _Ready()
     {
-        _teacher = GetNode<AnimatedTeacherPlaceholder>(
-            "../CaptureViewport1280x720/World/AnimatedTeacherPlaceholder");
+        _teacher = GetNode<StylizedTeacherAvatar>(
+            "../CaptureViewport1280x720/World/StylizedTeacherAvatar");
+        _sceneDirector = GetNode<DynamicSceneDirector>(
+            "../CaptureViewport1280x720/World/DynamicSceneDirector");
         ConnectIfDue();
     }
 
@@ -138,7 +141,11 @@ public partial class RendererSessionController : Node
                 ControlContractCodec.DecodePayload<RendererCommandPayload>(envelope);
             commandId = command.CommandId;
             command.Validate();
-            _teacher?.ApplySessionAction(command.Action);
+            if (command.Scene is not null)
+            {
+                _sceneDirector?.ApplyScene(command.Scene);
+            }
+            _teacher?.ApplySessionAction(command.Action, command.AvatarAnimation);
             applied = true;
             GD.Print(
                 $"GOVOR_RENDERER_COMMAND_APPLIED:{command.Action}:" +
