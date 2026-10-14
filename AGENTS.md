@@ -65,6 +65,8 @@ Milestone handoff.
 ./scripts/progress.ps1 -Action View
 ./scripts/progress.ps1 -Action Export -OutputPath '<path>'
 ./scripts/progress.ps1 -Action Delete -ConfirmDelete
+./scripts/progress.ps1 -Action DeleteAll -ConfirmDelete
+./scripts/provider-credentials.ps1 -Action Status -Target '<credential-target>'
 ```
 
 Hardware tests are separate:

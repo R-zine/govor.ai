@@ -267,6 +267,31 @@ class SQLiteProgressRepository:
             connection.execute("DELETE FROM exercise_history")
             connection.execute("DELETE FROM scenario_progress")
 
+    def delete_all_learner_data(self) -> None:
+        """Delete history and restore all learner settings to product defaults."""
+
+        defaults = LearnerSettings()
+        with self._connect() as connection:
+            connection.execute("PRAGMA secure_delete = ON")
+            connection.execute("DELETE FROM difficulty_history")
+            connection.execute("DELETE FROM vocabulary_history")
+            connection.execute("DELETE FROM exercise_history")
+            connection.execute("DELETE FROM scenario_progress")
+            connection.execute(
+                """
+                UPDATE learner_settings
+                SET english_locale = ?, starting_difficulty = ?, spaced_review_enabled = ?
+                WHERE settings_id = 1
+                """,
+                (
+                    defaults.english_locale,
+                    defaults.starting_difficulty.value,
+                    int(defaults.spaced_review_enabled),
+                ),
+            )
+        with self._connect() as connection:
+            connection.execute("VACUUM")
+
     def _record_vocabulary(
         self,
         connection: sqlite3.Connection,

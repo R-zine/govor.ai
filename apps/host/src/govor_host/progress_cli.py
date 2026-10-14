@@ -15,7 +15,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "action",
-        choices=("view", "export", "delete"),
+        choices=("view", "export", "delete", "delete-all"),
         help="Operation to perform on the local structured history.",
     )
     parser.add_argument(
@@ -42,9 +42,13 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Exported structured learner history to {arguments.output}")
         return 0
     if not arguments.confirm_delete:
-        parser.error("delete requires --confirm-delete")
-    repository.delete_history()
-    print("Deleted structured learner history; learner settings were preserved.")
+        parser.error(f"{arguments.action} requires --confirm-delete")
+    if arguments.action == "delete-all":
+        repository.delete_all_learner_data()
+        print("Deleted all learner history and restored learner settings to defaults.")
+    else:
+        repository.delete_history()
+        print("Deleted structured learner history; learner settings were preserved.")
     return 0
 
 

@@ -29,7 +29,10 @@ media item. Wall-clock timestamps are UTC ISO 8601 and are never used for media 
   English speech, Piper Bulgarian speech, and eSpeak NG fallback. The selected dialogue model is
   Qwen3 4B Q4_K_M; deterministic policy owns teaching invariants and bounded session memory.
   Provider-reported alignment is optional and never estimated.
-- `cloud`: optional future adapters, independently configured, opt-in, and disabled by default.
+- `cloud`: OpenAI-compatible dialogue, transcription, and WAV speech adapters. Each subsystem is
+  selected independently. Cloud use requires disabling the offline-only gate; microphone upload
+  requires a second explicit consent. Credentials are current-user Windows credentials and are
+  resolved only when a request is made.
 
 The host should remain useful in deterministic scripted lesson mode if local model inference
 fails. That fallback is a real product behavior distinct from development fakes.
@@ -75,6 +78,9 @@ mouth opening. The model cannot select scenes or avatar actions. See ADR-0009.
 
 `packages/provider_interfaces` defines framework-neutral recognition, dialogue, speech, and lesson
 types. `services/local_ai` adapts the pinned local runtimes; it does not own session transport.
+`services/provider_router` composes independent local/cloud choices and owns the outbound cloud
+gate plus Windows credential boundary. Generic structured dialogue encoding is shared at the
+provider-interface boundary so local and compatible cloud output receives identical validation.
 `packages/domain` owns conservative script-level language detection, explicit help-intent
 classification, the bilingual policy, lesson context, and a configurable bounded history window.
 

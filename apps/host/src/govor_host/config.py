@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from functools import lru_cache
 from typing import Literal
+from urllib.parse import urlparse
 
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -11,6 +12,11 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="GOVOR_", extra="ignore")
 
     mode: Literal["fake", "local"] = "fake"
+    offline_only: bool = True
+    recognition_provider: Literal["local", "cloud"] = "local"
+    dialogue_provider: Literal["local", "cloud"] = "local"
+    speech_provider: Literal["local", "cloud"] = "local"
+    allow_cloud_microphone_upload: bool = False
     bind_host: str = "127.0.0.1"
     port: int = Field(default=8765, ge=1024, le=65535)
     max_control_message_bytes: int = Field(default=1_048_576, ge=1024, le=4_194_304)
@@ -37,6 +43,53 @@ class Settings(BaseSettings):
     piper_bg_model: str = ".tools/models/speech/bg_BG-dimitar-medium.onnx"
     piper_bg_config: str = ".tools/models/speech/bg_BG-dimitar-medium.onnx.json"
     progress_database: str = "data/progress.sqlite3"
+    cloud_dialogue_base_url: str = "https://api.openai.com/v1"
+    cloud_dialogue_model: str = "gpt-4.1-mini"
+    cloud_dialogue_credential_target: str = Field(
+        default="openai-dialogue", pattern=r"^[a-z][a-z0-9._-]{1,63}$"
+    )
+    cloud_recognition_base_url: str = "https://api.openai.com/v1"
+    cloud_recognition_model: str = "gpt-4o-mini-transcribe"
+    cloud_recognition_credential_target: str = Field(
+        default="openai-recognition", pattern=r"^[a-z][a-z0-9._-]{1,63}$"
+    )
+    cloud_speech_base_url: str = "https://api.openai.com/v1"
+    cloud_speech_model: str = "gpt-4o-mini-tts"
+    cloud_speech_voice: str = "coral"
+    cloud_speech_credential_target: str = Field(
+        default="openai-speech", pattern=r"^[a-z][a-z0-9._-]{1,63}$"
+    )
+
+    @model_validator(mode="after")
+    def validate_cloud_opt_in(self) -> Settings:
+        selected = {
+            self.recognition_provider,
+            self.dialogue_provider,
+            self.speech_provider,
+        }
+        if "cloud" in selected and self.offline_only:
+            raise ValueError("cloud providers require offline_only=false")
+        if self.recognition_provider == "cloud" and not self.allow_cloud_microphone_upload:
+            raise ValueError("cloud recognition requires explicit microphone-upload consent")
+        endpoints = []
+        if self.dialogue_provider == "cloud":
+            endpoints.append(self.cloud_dialogue_base_url)
+        if self.recognition_provider == "cloud":
+            endpoints.append(self.cloud_recognition_base_url)
+        if self.speech_provider == "cloud":
+            endpoints.append(self.cloud_speech_base_url)
+        for endpoint in endpoints:
+            parsed = urlparse(endpoint)
+            if (
+                parsed.scheme != "https"
+                or not parsed.hostname
+                or parsed.username
+                or parsed.password
+                or parsed.query
+                or parsed.fragment
+            ):
+                raise ValueError("cloud provider endpoints must be credential-free HTTPS URLs")
+        return self
 
 
 @lru_cache

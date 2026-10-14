@@ -112,3 +112,22 @@ def test_settings_due_review_export_and_delete(tmp_path) -> None:  # type: ignor
     assert progress.history()["scenarios"] == []
     assert progress.history()["vocabulary"] == []
     assert progress.get_settings().english_locale == "en-US"
+
+
+def test_delete_all_learner_data_restores_default_settings(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    progress = repository(tmp_path)
+    progress.update_settings(
+        LearnerSettings(
+            english_locale="en-US",
+            starting_difficulty=Difficulty.BEGINNER,
+            spaced_review_enabled=True,
+        )
+    )
+    progress.load_or_start("airport-travel")
+
+    progress.delete_all_learner_data()
+
+    assert progress.history()["scenarios"] == []
+    assert progress.history()["vocabulary"] == []
+    assert progress.get_settings() == LearnerSettings()
+    assert b"airport-travel" not in progress.path.read_bytes()

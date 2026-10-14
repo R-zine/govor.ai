@@ -13,6 +13,11 @@ from govor_host.app import create_app
 from govor_host.config import Settings
 from govor_host.fake_lesson import FakeLessonService
 from govor_provider_interfaces import LessonResult, Pronunciation, TeacherTurn, UtteranceAudio
+from govor_provider_router import (
+    CloudAccessPolicy,
+    InMemoryCredentialStore,
+    OpenAiCompatibleSpeechProvider,
+)
 from starlette.websockets import WebSocketDisconnect
 
 
@@ -127,6 +132,7 @@ def test_health_identifies_fake_mode() -> None:
     assert response.json() == {
         "status": "ok",
         "provider_mode": "fake",
+        "offline_only": True,
         "production_ready": False,
         "network_scope": "loopback",
         "renderer_connected": True,
@@ -376,6 +382,30 @@ def test_provider_failure_becomes_recoverable_error() -> None:
     assert failure["message_type"] == "error"
     assert failure["payload"]["code"] == "provider_failed"
     assert failure["payload"]["retryable"] is True
+    assert app.state.session_registry.active_count == 0
+
+
+def test_invalid_cloud_credential_is_recoverable_and_does_not_crash() -> None:
+    cloud_speech = OpenAiCompatibleSpeechProvider(
+        "https://provider.example/v1",
+        "test-tts",
+        "test-voice",
+        "missing-target",
+        InMemoryCredentialStore(),
+        CloudAccessPolicy(offline_only=False),
+    )
+    lesson = FakeLessonService()
+    lesson.speech = cloud_speech  # type: ignore[assignment]
+    app = create_app(Settings(), renderer=FakeRendererControl(), lesson=lesson)
+
+    with TestClient(app).websocket_connect("/v1/control") as socket:
+        socket.send_json(envelope("session.start", {"client_id": str(uuid4())}))
+        assert socket.receive_json()["payload"]["state"] == "ready"
+        assert socket.receive_json()["payload"]["state"] == "recoverable_error"
+        failure = socket.receive_json()
+
+    assert failure["message_type"] == "error"
+    assert failure["payload"]["code"] == "provider_failed"
     assert app.state.session_registry.active_count == 0
 
 

@@ -45,6 +45,20 @@ column. Automated local-AI and emulator smokes use an isolated cache database an
 cannot alter the learner's development history. History deletion requires an explicit CLI
 confirmation flag. Release packaging still needs an OS-appropriate protected per-user data path.
 
+Milestone 7 keeps `offline_only=true` and all three provider selectors local by default. Cloud
+adapter construction is rejected while that switch is set, and every adapter rechecks an outbound
+policy immediately before credential access or HTTP. Recognition has a separate microphone-upload
+consent gate. Compatible endpoints must use credential-free HTTPS URLs. API credentials are
+stored as current-user generic credentials in Windows Credential Manager; settings contain only a
+bounded target name. Secrets never enter Android contracts, command lines, environment variables,
+health metadata, exception text, or normal logs. Authentication, rate-limit, transport, and
+malformed-response failures become typed provider failures rather than process crashes. No cloud
+call was used as acceptance evidence; deterministic tests use an in-process mock transport.
+Complete learner-data deletion resets settings and uses SQLite secure deletion plus compaction so
+deleted structured rows are not retained in database free pages.
+Successful cloud responses are streamed through explicit 64 KiB JSON or 1.5 MiB WAV ceilings
+before parsing, so an untrusted endpoint cannot bypass payload bounds with a large response.
+
 Godot's Milestone 2 control client also opens an outbound loopback WebSocket; the renderer opens no
 listener. It accepts a closed action set, validates UUIDs and integer-microsecond bounds, and
 acknowledges commands. This loopback connection relies on the trusted desktop-user boundary and is

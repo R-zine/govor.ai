@@ -24,6 +24,10 @@ class ProviderUnavailable(ProviderError):
     pass
 
 
+class ProviderAuthenticationError(ProviderError):
+    """A configured provider rejected or could not obtain its credential."""
+
+
 class ProviderMalformedOutput(ProviderError):
     pass
 

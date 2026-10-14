@@ -1,6 +1,6 @@
 # Current verified status
 
-Last updated: 2026-10-12
+Last updated: 2026-10-14
 
 ## Outcome
 
@@ -45,6 +45,13 @@ closed scene specification and maps actual speech PCM plus real-or-unavailable p
 bounded avatar animation. Four-scene runtime, cache/video-memory revisit, software-encoding,
 concurrent Qwen3 4B, real Kokoro lip-sync, and native-emulator media paths passed. This is
 development evidence; all target-hardware acceptance remains Milestone 9.
+
+Milestone 7 is complete. Independent OpenAI-compatible dialogue, recognition, and speech
+adapters, a double-enforced offline-only gate, separate microphone-upload consent, Windows
+Credential Manager storage, privacy disclosure, and complete local learner-data deletion are
+implemented and verified. Focused tests, the full cross-language suite, the real credential-store
+smoke, the deletion CLI smoke, dependency audit, and pre-commit hooks pass. No real cloud service,
+paid account, learner recording, or learner transcript was used.
 
 ADR-0003 now selects Godot 4.7.2 .NET as the only renderer. The earlier proof from the proprietary
 engine was removed completely, including source, project metadata, build scripts, and dependencies.
@@ -137,7 +144,14 @@ measurements fail.
   history only. An active lesson resumes after process restart; a completed scenario begins a new
   attempt while retaining history.
 - `scripts/progress.ps1` views and exports the structured JSON history and requires
-  `-ConfirmDelete` before deleting history. Deletion preserves explicit learner settings.
+  `-ConfirmDelete` before deleting history. Deletion preserves explicit learner settings;
+  `DeleteAll` also restores those settings to defaults.
+- `services/provider_router` independently composes local/cloud recognition, dialogue, and speech.
+  Cloud requests require `offline_only=false`; microphone upload requires separate consent.
+- OpenAI-compatible adapters accept only credential-free HTTPS base URLs, expose privacy-relevant
+  capabilities, categorize provider failures, and retain actual-or-null timing semantics.
+- Provider keys are retrieved on demand from the current user's Windows Credential Manager.
+  Interactive tooling sends a new key over standard input and never displays it.
 - `session.start` accepts a scenario, English accent, and review preference. Each host-generated
   `teacher.turn` includes an additive progress snapshot. The host sends completed session teardown
   only after the final audio playback acknowledgement.
@@ -172,6 +186,12 @@ measurements fail.
 | Four guided scenarios | verified passing | Parameterized pure-domain tests completed café, supermarket, airport, and home; each has three exercises and full committed guidance metadata |
 | Adaptation/help policy | verified passing | Repeated difficulty lowers one level, two first-try successes raise one, closed reasons are exposed, and Bulgarian/mixed/help/no-speech turns cannot advance |
 | SQLite progress/resume/privacy | verified passing | Closed/reopened database resumed the next exercise; history/settings/vocabulary/review/export/delete passed; a sentinel transcript and audio fields were absent |
+| Offline/cloud configuration gate | verified passing | Defaults are fully local with `offline_only=true`; every cloud selector is rejected under that default, and cloud STT requires separate microphone-upload consent |
+| Independent provider composition | verified passing | Tests built fully cloud and mixed local/cloud pipelines and observed expected recognition/dialogue/speech locality without an outbound request |
+| Cloud adapter contract/error handling | verified passing with mock limit | In-process transports covered strict JSON dialogue, bounded WAV upload, streamed response ceilings, WAV speech/null timing, missing/rejected credentials, typed failures, and privacy-safe logs; no vendor compatibility claim is made |
+| Offline runtime network block | verified passing | A constructed cloud adapter under the offline policy accessed neither the credential store nor its mock HTTP handler |
+| Windows protected credential storage | verified passing | A generated throwaway value completed actual current-user Credential Manager set/status/delete; it was stdin-only, undisplayed, and deleted in a `finally` path |
+| Complete learner-data deletion | verified passing | Unit and CLI smokes removed all structured history, restored defaults, enabled SQLite secure deletion, compacted the database, and retained no deleted scenario identifier bytes |
 | Host lesson completion | verified passing | Local-service integration completed café and persisted it; host waited for final playback before `session.ended: completed` |
 | Android Milestone 5 UI | verified passing with emulator limit | API 34 final UI hierarchy showed Café, Supermarket, Airport, Home, GB/US, and optional review; app was force-stopped and no media/audio server was started |
 | Qwen3 4B dialogue | verified passing with limits | 999.3 ms median, 2,784.6 ms max; 1 policy correction; 2,706,419,712-byte working set and 3,207,090,176-byte peak on this machine |
@@ -188,12 +208,13 @@ measurements fail.
 | `uv run --frozen --extra media --extra speech pip-audit --cache-dir .cache/pip-audit-m4-final` | verified passing | Final Milestone 4 audit, including media and speech extras: no known vulnerabilities found; sandbox network denial was repeated with approved network access |
 | `uv run --frozen --extra media --extra speech pip-audit --cache-dir .cache/pip-audit-m5-final` | verified passing | Final Milestone 5 audit: no known vulnerabilities found; the sandbox-denied query passed with approved network access |
 | `uv run --frozen --extra media --extra speech pip-audit --cache-dir .cache/pip-audit-m6-final` | verified passing | Final Milestone 6 audit: no known vulnerabilities found; the sandbox-denied query passed with approved network access |
-| Pre-commit across all tracked/untracked sources | verified passing | Final Milestone 6 run passed JSON/YAML, line endings/whitespace, secret/size checks, Ruff, and contract tests; workspace-local caches handled managed permissions and the approved-context rerun fetched pinned hooks |
+| `uv run --frozen --extra media --extra speech pip-audit --cache-dir .cache/pip-audit-m7-final` | verified passing | No known vulnerabilities found |
+| Pre-commit across all tracked/untracked sources | verified passing | Final Milestone 7 run passed JSON/YAML, line endings/whitespace, secret/size checks, Ruff, formatting, and contract tests |
 | `./scripts/hardware-test.ps1` | Milestone 9 not executed | Ignores the active emulator and exits 2 because no physical phone is connected; this does not reopen Milestone 1 |
 | Physical Android/Wi-Fi/media/soak bundle | Milestone 9 not executed | No suitable physical phone; mandatory before release, not a prerequisite for Milestones 2-8 |
 | Remote GitHub Actions | not executed | Workflow includes the Godot renderer job, but the current milestone snapshot has not run remotely |
 
-The final `./scripts/test.ps1 -Scope all` run passed on 2026-10-12: 121 Python tests at 85.56%
+The final `./scripts/test.ps1 -Scope all` run passed on 2026-10-14: 140 Python tests at 86.18%
 branch coverage, 22 dedicated contract tests, 13 Kotlin tests, 8 pure C# tests, 15 media tests, Godot
 import/build/self-test, and the Android debug APK build. Pytest emitted the existing Starlette
 `httpx` deprecation warning. Godot could not read the Windows root-certificate store and Android
@@ -288,6 +309,28 @@ Hardware encode/decode, physical phone/Wi-Fi/audio, target-machine resource beha
 monitor-off, thermals, and soak remain mandatory Milestone 9 work. This handoff is the required
 focused Milestone 6 commit.
 
+## Milestone 7 acceptance and handoff
+
+| Acceptance criterion | Status | Direct evidence |
+| --- | --- | --- |
+| Local-only is the default | verified passing | Settings default to three local selectors plus `offline_only=true`; health exposes the offline state |
+| Each subsystem can switch independently | verified passing | Composition tests build all-cloud and local-STT/cloud-dialogue/local-TTS pipelines with expected capability order/locality |
+| Provider errors are graceful | verified passing | Typed authentication/resource/transport/malformed failures reach existing deterministic dialogue fallback or recoverable host handling |
+| Invalid credentials do not crash the app | verified passing | Missing and HTTP 401 credentials raise redacted `ProviderAuthenticationError`; host failure tests retain zero active sessions |
+| Cloud cannot occur in offline mode | verified passing | Configuration rejects the combination and the per-request gate prevents credential lookup and mock HTTP after construction |
+| Privacy-sensitive data is absent from normal logs | verified passing | Captured logs contain none of the sentinel key, transcript, response body, or audio payload |
+| Cloud network calls are disabled by default | verified passing | Default app/settings remain fake/local and offline; the explicit offline adapter test records zero handler calls |
+| Credentials use OS-protected storage | verified passing on Windows | Actual current-user Credential Manager set/status/delete succeeded with a throwaway secret removed immediately |
+| Stored learner data can be completely removed | verified passing | `DeleteAll` securely deletes history, resets settings, compacts SQLite, and is confirmation-gated |
+
+ADR-0010 records the opt-in, independent-selection, and secret-storage decision. Exact test scope,
+limits, and privacy evidence are in `docs/benchmarks/2026-10-14-cloud-privacy-controls.md`; learner-
+facing disclosure is in `docs/privacy/cloud-providers.md`. No dependency was added. The first full
+Python run passed all 134 then-current tests but failed the coverage gate at 83.22%; isolating the
+externally exercised Win32 FFI and adding CLI/store tests produced a passing gate. The final
+invalid-credential and streamed-response regressions brought the result to 140 tests at 86.18%
+coverage. Provider-specific functionality, quality, retention, and latency remain not executed.
+
 ## Renderer evidence and limitations
 
 The current local proof images visibly contain the stylized teacher in four distinct procedural
@@ -327,10 +370,10 @@ avatar/scene evidence is in
 
 ## Next steps
 
-Milestone 6 is complete. The next implementation milestone is Milestone 7: add independently
-configurable, explicit opt-in cloud provider adapters and privacy controls without weakening the
-offline default. Provider credentials must use OS secret storage, cloud use must be visible, and
-offline/local operation must continue to pass without credentials or unintended network calls.
+Milestone 7 is complete. The next implementation milestone is Milestone 8: package the Windows
+host/renderer/local runtimes and Android app for reproducible installation, resolve all third-party
+distribution obligations, add integrity-checked model delivery/update behavior, and verify clean
+startup/shutdown without development tools.
 
 Deferred mandatory Milestone 9 work:
 
@@ -353,6 +396,8 @@ git -c safe.directory='C:/Users/PC/Documents/GitHub/govor.ai' status --short --b
 ./scripts/test.ps1 -Scope all
 ./scripts/progress.ps1 -Action View
 ./scripts/progress.ps1 -Action Export -OutputPath '.cache/progress-export.json'
+./scripts/progress.ps1 -Action DeleteAll -ConfirmDelete
+./scripts/provider-credentials.ps1 -Action Status -Target '<credential-target>'
 ./scripts/test.ps1 -Scope speech
 ./scripts/benchmark.ps1 -Profile speech
 ./scripts/emulator-speech-smoke.ps1

@@ -12,6 +12,14 @@ param(
     [int]$GpuLayers = 99,
     [string]$LlamaModelPath = '',
     [string]$DialogueProviderId = 'llama.cpp-qwen3-4b-q4_k_m',
+    [ValidateSet('local', 'cloud')]
+    [string]$RecognitionProvider = 'local',
+    [ValidateSet('local', 'cloud')]
+    [string]$DialogueProvider = 'local',
+    [ValidateSet('local', 'cloud')]
+    [string]$SpeechProvider = 'local',
+    [switch]$AllowCloud,
+    [switch]$AllowCloudMicrophoneUpload,
     [string]$PairingToken = ''
 )
 
@@ -23,6 +31,13 @@ if ($BindHost -notin @('127.0.0.1', '::1')) {
 }
 if ($Mode -eq 'local' -and $PairingToken.Length -lt 32) {
     throw 'Local mode requires a development PairingToken containing at least 32 characters.'
+}
+$cloudSelections = @($RecognitionProvider, $DialogueProvider, $SpeechProvider) -contains 'cloud'
+if ($cloudSelections -and -not $AllowCloud) {
+    throw 'Cloud provider selection requires the explicit -AllowCloud switch.'
+}
+if ($RecognitionProvider -eq 'cloud' -and -not $AllowCloudMicrophoneUpload) {
+    throw 'Cloud recognition requires the explicit -AllowCloudMicrophoneUpload switch.'
 }
 
 $renderer = Join-Path $script:RepositoryRoot 'apps\renderer\Builds\Windows\GovorRenderer.exe'
@@ -41,6 +56,7 @@ $env:PYTHONPATH = @(
     (Join-Path $script:RepositoryRoot 'packages\scene_planner\src'),
     (Join-Path $script:RepositoryRoot 'packages\contracts\python'),
     (Join-Path $script:RepositoryRoot 'services\local_ai\src'),
+    (Join-Path $script:RepositoryRoot 'services\provider_router\src'),
     (Join-Path $script:RepositoryRoot 'services\speech\src'),
     (Join-Path $script:RepositoryRoot 'services\media\src')
 ) -join [IO.Path]::PathSeparator
@@ -48,19 +64,28 @@ $env:PYTHONPATH = @(
 $managedProcesses = [System.Collections.Generic.List[System.Diagnostics.Process]]::new()
 try {
     if ($Mode -eq 'local') {
-        $llamaServer = Get-GovorLlamaServer
-        $llamaModel = if ($LlamaModelPath) {
-            (Resolve-Path -LiteralPath $LlamaModelPath -ErrorAction Stop).Path
+        if ($DialogueProvider -eq 'local') {
+            $llamaServer = Get-GovorLlamaServer
+            $llamaModel = if ($LlamaModelPath) {
+                (Resolve-Path -LiteralPath $LlamaModelPath -ErrorAction Stop).Path
+            }
+            else {
+                Get-GovorLlamaModel
+            }
         }
-        else {
-            Get-GovorLlamaModel
+        if ($RecognitionProvider -eq 'local') {
+            $whisperCli = Get-GovorWhisperCli
+            $whisperModel = Get-GovorWhisperModel
+            $env:GOVOR_WHISPER_EXECUTABLE = $whisperCli
+            $env:GOVOR_WHISPER_MODEL = $whisperModel
         }
-        $whisperCli = Get-GovorWhisperCli
-        $whisperModel = Get-GovorWhisperModel
         $env:GOVOR_LLAMA_BASE_URL = "http://127.0.0.1:$LlamaPort"
         $env:GOVOR_DIALOGUE_PROVIDER_ID = $DialogueProviderId
-        $env:GOVOR_WHISPER_EXECUTABLE = $whisperCli
-        $env:GOVOR_WHISPER_MODEL = $whisperModel
+        $env:GOVOR_RECOGNITION_PROVIDER = $RecognitionProvider
+        $env:GOVOR_DIALOGUE_PROVIDER = $DialogueProvider
+        $env:GOVOR_SPEECH_PROVIDER = $SpeechProvider
+        $env:GOVOR_OFFLINE_ONLY = (-not $AllowCloud).ToString().ToLowerInvariant()
+        $env:GOVOR_ALLOW_CLOUD_MICROPHONE_UPLOAD = $AllowCloudMicrophoneUpload.ToString().ToLowerInvariant()
         $env:GOVOR_KOKORO_MODEL = Join-Path $script:ToolsRoot 'models\speech\kokoro-v1.0.onnx'
         $env:GOVOR_KOKORO_VOICES = Join-Path $script:ToolsRoot 'models\speech\voices-v1.0.bin'
         $env:GOVOR_PIPER_BG_MODEL = Join-Path $script:ToolsRoot 'models\speech\bg_BG-dimitar-medium.onnx'
@@ -78,13 +103,15 @@ try {
             if (Test-Path -LiteralPath $log) { Remove-Item -LiteralPath $log -Force }
         }
 
-        $llamaProcess = Start-Process -FilePath $llamaServer -ArgumentList @(
-            '-m', $llamaModel,
-            '--host', '127.0.0.1', '--port', $LlamaPort.ToString(),
-            '-ngl', $GpuLayers.ToString(), '-c', $ContextSize.ToString(),
-            '--jinja', '--no-webui', '--log-disable'
-        ) -PassThru -WindowStyle Hidden -RedirectStandardOutput $llamaStdout -RedirectStandardError $llamaStderr
-        $managedProcesses.Add($llamaProcess)
+        if ($DialogueProvider -eq 'local') {
+            $llamaProcess = Start-Process -FilePath $llamaServer -ArgumentList @(
+                '-m', $llamaModel,
+                '--host', '127.0.0.1', '--port', $LlamaPort.ToString(),
+                '-ngl', $GpuLayers.ToString(), '-c', $ContextSize.ToString(),
+                '--jinja', '--no-webui', '--log-disable'
+            ) -PassThru -WindowStyle Hidden -RedirectStandardOutput $llamaStdout -RedirectStandardError $llamaStderr
+            $managedProcesses.Add($llamaProcess)
+        }
 
         $uv = (Get-Command uv -ErrorAction Stop).Source
         $mediaProcess = Start-Process -FilePath $uv -ArgumentList @(
@@ -94,10 +121,11 @@ try {
         ) -PassThru -WindowStyle Hidden -RedirectStandardOutput $mediaStdout -RedirectStandardError $mediaStderr
         $managedProcesses.Add($mediaProcess)
 
-        foreach ($endpoint in @(
-            "http://127.0.0.1:$LlamaPort/health",
-            "http://127.0.0.1:$MediaPort/health"
-        )) {
+        $healthEndpoints = @("http://127.0.0.1:$MediaPort/health")
+        if ($DialogueProvider -eq 'local') {
+            $healthEndpoints += "http://127.0.0.1:$LlamaPort/health"
+        }
+        foreach ($endpoint in $healthEndpoints) {
             $ready = $false
             for ($attempt = 0; $attempt -lt 240; $attempt++) {
                 try {
@@ -135,4 +163,8 @@ finally {
     }
     Remove-Item Env:GOVOR_DEV_PAIRING_TOKEN -ErrorAction SilentlyContinue
     Remove-Item Env:GOVOR_MEDIA_SOURCE -ErrorAction SilentlyContinue
+    @(
+        'GOVOR_RECOGNITION_PROVIDER', 'GOVOR_DIALOGUE_PROVIDER', 'GOVOR_SPEECH_PROVIDER',
+        'GOVOR_OFFLINE_ONLY', 'GOVOR_ALLOW_CLOUD_MICROPHONE_UPLOAD'
+    ) | ForEach-Object { Remove-Item "Env:$_" -ErrorAction SilentlyContinue }
 }

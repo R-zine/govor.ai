@@ -200,6 +200,7 @@ if ($Profile -eq 'local-ai') {
         (Join-Path $script:RepositoryRoot 'packages\scene_planner\src'),
         (Join-Path $script:RepositoryRoot 'packages\contracts\python'),
         (Join-Path $script:RepositoryRoot 'services\local_ai\src'),
+        (Join-Path $script:RepositoryRoot 'services\provider_router\src'),
         (Join-Path $script:RepositoryRoot 'services\speech\src'),
         (Join-Path $script:RepositoryRoot 'apps\host\src')
     ) -join [IO.Path]::PathSeparator

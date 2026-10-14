@@ -44,6 +44,14 @@ neural provider fails. The turn also carries exact word/IPA character ranges and
 timing. Android plays the WAV with `AudioTrack`; playback-head frames define media time for
 subtitle highlighting. Missing alignment disables highlighting without blocking playback.
 
+When explicitly enabled, the provider router may instead send the bounded transcript, lesson
+context, and recent history to the selected cloud dialogue endpoint; the bounded utterance WAV to
+the selected cloud recognizer; and teacher response text to the selected cloud speech endpoint.
+These choices are independent. No cloud request is possible while `offline_only` is true, and
+microphone audio additionally requires explicit upload consent. Credentials are fetched from
+Windows Credential Manager for the request and never enter a wire envelope. Cloud speech alignment
+is null unless a future adapter can prove provider-originated timing.
+
 For each synthesized teacher turn, the scene planner samples the actual mono PCM16 WAV into a
 bounded 40 ms energy envelope. If the provider returned phoneme spans, it maps their real
 microsecond offsets to a closed viseme sequence; otherwise `viseme_source` is `none` and the
@@ -84,7 +92,9 @@ credentials, or full transcripts. The transcript is sent to the active Android s
 written to normal logs. Conversation memory is session-local, bounded, and cleared with its lesson
 service. Progress is stored locally in SQLite as settings and structured counters; raw audio and
 complete transcript text are not persisted. A local CLI can view/export those counters or delete
-history while preserving explicit settings.
+history while preserving explicit settings. `DeleteAll` removes history and restores settings to
+defaults. Optional cloud processing means the selected third party receives only the categories
+listed above; its retention and deletion terms are external and must be reviewed before opt-in.
 
 ## Timing
 

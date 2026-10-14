@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true)]
-    [ValidateSet('View', 'Export', 'Delete')]
+    [ValidateSet('View', 'Export', 'Delete', 'DeleteAll')]
     [string]$Action,
     [string]$Database = 'data/progress.sqlite3',
     [string]$OutputPath,
@@ -26,11 +26,14 @@ if ($Action -eq 'Export') {
     }
     $arguments += @('--output', $OutputPath)
 }
-if ($Action -eq 'Delete') {
+if ($Action -in @('Delete', 'DeleteAll')) {
     if (-not $ConfirmDelete) {
         throw 'Delete requires -ConfirmDelete.'
     }
     $arguments += '--confirm-delete'
+    if ($Action -eq 'DeleteAll') {
+        $arguments[5] = 'delete-all'
+    }
 }
 
 & uv @arguments

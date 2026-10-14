@@ -46,6 +46,7 @@ testpaths = [
   "packages/progress/tests",
   "packages/scene_planner/tests",
   "services/local_ai/tests",
+  "services/provider_router/tests",
   "services/speech/tests",
   "tests/contracts",
   "tests/integration",
@@ -58,6 +59,7 @@ pythonpath = [
   "packages/scene_planner/src",
   "packages/contracts/python",
   "services/local_ai/src",
+  "services/provider_router/src",
   "services/speech/src",
   "services/media/src",
 ]
@@ -92,6 +94,7 @@ files = [
   "packages/scene_planner/src",
   "packages/contracts/python",
   "services/local_ai/src",
+  "services/provider_router/src",
   "services/speech/src",
 ]
 plugins = ["pydantic.mypy"]
@@ -101,6 +104,8 @@ branch = true
 omit = [
   # Executed only in a child process; the parent integration test verifies its WAV result.
   "services/speech/src/govor_speech/espeak_worker.py",
+  # Thin Win32 FFI is verified by the Milestone 7 real Credential Manager smoke.
+  "services/provider_router/src/govor_provider_router/windows_credentials.py",
 ]
 source = [
   "apps/host/src",
@@ -110,6 +115,7 @@ source = [
   "packages/scene_planner/src",
   "packages/contracts/python",
   "services/local_ai/src",
+  "services/provider_router/src",
   "services/speech/src",
 ]
 

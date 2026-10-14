@@ -12,7 +12,7 @@ criterion has direct evidence).
 | 4. Speech/phonemes | complete | M3 providers | Local English/Bulgarian speech, deterministic fallback, actual-or-null timing, IPA, Android highlighting/replay/rates, and human listening confirmation pass |
 | 5. Teaching/progress | complete | M3-4 | Four complete guided scenarios, adaptive explainable teaching, questions do not break lessons, SQLite persistence/resume |
 | 6. Avatar/scenes | complete | M1 media decision, M4 timing | Avatar and four validated dynamic environments, lip sync/fallback, memory/performance evidence |
-| 7. Optional cloud/privacy | not started | Stable provider interfaces | Independent opt-in providers, offline default, OS secret storage, no unintended cloud/secret logging |
+| 7. Optional cloud/privacy | complete | Stable provider interfaces | Independent opt-in providers, offline default, OS secret storage, no unintended cloud/secret logging |
 | 8. Packaging/distribution | not started | M1-7 | Clean Windows install/launcher, signed stable APK/update, integrity-checked models, no dev tools, clean shutdown |
 | 9. Release acceptance and target hardware | not started | M8 | Physical phone/Wi-Fi/audio/codecs/lifecycle/performance/monitor-off/soak bundle, full automated/manual/security suite, and complete local-first cafe scenario |
 
@@ -138,7 +138,7 @@ Deferred release acceptance (Milestone 9, not a Milestone 1 blocker):
 - Production pairing/WSS and release network security; the development token and cleartext
   signaling remain development-only.
 
-Milestones 1–6 are complete on their verified software/native-emulator and stated human-listening
+Milestones 1–7 are complete on their verified software/native-emulator and stated human-listening
 criteria. The deferred hardware bundle must remain visible and must pass before Milestone 9 can
 complete.
 
@@ -188,7 +188,31 @@ Verified software/native-emulator evidence:
   this remains API 34 emulator evidence, not physical-hardware acceptance.
 
 Milestone 6 is complete. Hardware encoding, physical phone/Wi-Fi/audio, target-machine resource
-behavior, monitor-off, thermals, and soak remain mandatory Milestone 9 work. Milestone 7 may begin.
+behavior, monitor-off, thermals, and soak remain mandatory Milestone 9 work.
+
+## Milestone 7 acceptance tracking
+
+Verified software and current-user Windows evidence:
+
+- Recognition, dialogue, and speech each select local or OpenAI-compatible cloud adapters without
+  coupling the other selections. Fully local remains the default.
+- Cloud configuration is rejected while `offline_only` is true. Each cloud adapter checks the
+  policy again before credential access and HTTP; a mock transport proves zero network calls.
+- Cloud recognition requires a second explicit microphone-upload consent. Privacy documentation
+  states exactly which bounded text/audio leaves the PC and that provider retention is external.
+- Provider keys use the current user's Windows Credential Manager. A generated throwaway key
+  completed real set/status/delete without display, command argument, environment variable, log,
+  or retained credential.
+- Typed authentication, rate-limit, timeout, transport, and malformed-output failures follow the
+  existing recoverable host path. Sentinels for credentials, transcripts, and untrusted response
+  bodies are absent from captured logs.
+- Complete local deletion securely removes structured history, restores default settings, and
+  compacts the database. Existing history-only deletion continues to preserve explicit settings.
+- The final full repository suite, dependency audit, and pre-commit hooks pass. No real cloud
+  provider, paid account, or learner data was used for acceptance.
+
+Milestone 7 is complete. Provider-specific compatibility, quality, latency, pricing, and external
+retention were not tested and are never inferred from mock transports. Milestone 8 may begin.
 
 ## Milestone 9 target-hardware acceptance tracking
 

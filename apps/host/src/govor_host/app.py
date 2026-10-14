@@ -23,9 +23,9 @@ def create_app(
     app = FastAPI(title="govor.ai host", version="0.2.0")
     lesson_factory: Callable[[], LessonService]
     if lesson is None and runtime.mode == "local":
-        from govor_local_ai import build_local_lesson_service
+        from govor_provider_router.factory import build_configured_lesson_service
 
-        lesson_factory = lambda: build_local_lesson_service(runtime)  # noqa: E731
+        lesson_factory = lambda: build_configured_lesson_service(runtime)  # noqa: E731
     elif lesson is None:
         lesson_factory = FakeLessonService
     else:
@@ -48,6 +48,7 @@ def create_app(
         return {
             "status": "ok",
             "provider_mode": runtime.mode,
+            "offline_only": runtime.offline_only,
             "production_ready": False,
             "network_scope": "loopback" if runtime.bind_host in {"127.0.0.1", "::1"} else "lan",
             "renderer_connected": renderer_gateway.connected,

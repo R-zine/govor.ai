@@ -1,5 +1,6 @@
 """Provider-neutral types used by host orchestration and local adapters."""
 
+from .dialogue_codec import DIALOGUE_JSON_SCHEMA, dialogue_messages, parse_dialogue_content
 from .models import (
     DialogueProvider,
     DialogueRequest,
@@ -7,6 +8,7 @@ from .models import (
     NoSpeechRecognized,
     PhonemeAlignment,
     Pronunciation,
+    ProviderAuthenticationError,
     ProviderError,
     ProviderMalformedOutput,
     ProviderResourceExhausted,
@@ -26,6 +28,7 @@ __all__ = [
     "NoSpeechRecognized",
     "PhonemeAlignment",
     "Pronunciation",
+    "ProviderAuthenticationError",
     "ProviderError",
     "ProviderMalformedOutput",
     "ProviderResourceExhausted",
@@ -36,4 +39,7 @@ __all__ = [
     "Transcript",
     "UtteranceAudio",
     "WordAlignment",
+    "DIALOGUE_JSON_SCHEMA",
+    "dialogue_messages",
+    "parse_dialogue_content",
 ]
