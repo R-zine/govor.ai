@@ -6,9 +6,15 @@ from contextlib import suppress
 from dataclasses import dataclass
 from typing import Literal
 
-from aiortc import MediaStreamError, MediaStreamTrack, RTCPeerConnection, RTCSessionDescription
+from aiortc import (
+    MediaStreamError,
+    MediaStreamTrack,
+    RTCPeerConnection,
+    RTCSessionDescription,
+)
 from av import AudioFrame
 
+from .fixture_ice import ForwardedIceConfiguration, install_forwarded_ice
 from .microphone_capture import MicrophoneCapture
 from .renderer_bridge import RendererBridgeSource
 from .tracks import ApplicationAudioTrack, DiagnosticVideoTrack
@@ -31,9 +37,11 @@ class MediaPeer:
         *,
         media_source: Literal["diagnostic", "renderer"] = "diagnostic",
         microphone_capture: MicrophoneCapture | None = None,
+        forwarded_ice: ForwardedIceConfiguration | None = None,
     ) -> None:
         self.connection = RTCPeerConnection()
         self._renderer_bridge: RendererBridgeSource | None = None
+        self._forwarded_ice = forwarded_ice
         self.video: MediaStreamTrack
         self.audio: MediaStreamTrack
         if media_source == "renderer":
@@ -57,11 +65,17 @@ class MediaPeer:
                 self._tasks.add(task)
                 task.add_done_callback(self._tasks.discard)
 
+        @self.connection.on("connectionstatechange")
+        def on_connection_state_change() -> None:
+            LOGGER.info("WebRTC connection state changed: %s", self.connection.connectionState)
+
     async def accept_offer(self, sdp: str) -> str:
         if not sdp or len(sdp.encode("utf-8")) > 1_048_576:
             raise ValueError("SDP offer is empty or too large")
         await self.connection.setRemoteDescription(RTCSessionDescription(sdp=sdp, type="offer"))
         answer = await self.connection.createAnswer()
+        if self._forwarded_ice is not None:
+            await install_forwarded_ice(self.connection, self._forwarded_ice)
         await self.connection.setLocalDescription(answer)
         local = self.connection.localDescription
         if local is None:

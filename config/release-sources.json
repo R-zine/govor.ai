@@ -1,0 +1,33 @@
+{
+  "manifest_version": 1,
+  "sources": [
+    {
+      "name": "piper-tts-1.8.0-source.tar.gz",
+      "uri": "https://codeload.github.com/OHF-Voice/piper1-gpl/tar.gz/refs/tags/v1.8.0",
+      "sha256": "0a22987a6157f14e2fb7cf4aa702b547467fd0448bea9f233abd503c3ff4a0e1",
+      "size": 24738865,
+      "license": "GPL-3.0-or-later"
+    },
+    {
+      "name": "phonemizer-3.4.0-source.tar.gz",
+      "uri": "https://codeload.github.com/bootphon/phonemizer/tar.gz/refs/tags/v3.4.0",
+      "sha256": "ba33cab8644b016260df62d55a1d40bcf4239efad92f25f223e6ef054ffd00c5",
+      "size": 241701,
+      "license": "GPL-3.0-or-later"
+    },
+    {
+      "name": "espeak-ng-1.52.0-source.tar.gz",
+      "uri": "https://codeload.github.com/espeak-ng/espeak-ng/tar.gz/refs/tags/1.52.0",
+      "sha256": "bb4338102ff3b49a81423da8a1a158b420124b055b60fa76cfb4b18677130a23",
+      "size": 17739803,
+      "license": "GPL-3.0-or-later"
+    },
+    {
+      "name": "espeakng-loader-0ddc87ad-source.tar.gz",
+      "uri": "https://codeload.github.com/thewh1teagle/espeakng-loader/tar.gz/0ddc87adf77e5850d7eeb542ac8a87d421b64daa",
+      "sha256": "c52fde6a08f790dc9f150b68205a35d3ce0aa95dbd5fa8be7b22989b26d1ba09",
+      "size": 4595,
+      "license": "wrapper metadata undeclared; bundled eSpeak NG is GPL-3.0-or-later"
+    }
+  ]
+}

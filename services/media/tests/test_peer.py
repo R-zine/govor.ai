@@ -9,6 +9,7 @@ pytest.importorskip("aiortc")
 
 from aiortc import MediaStreamError, MediaStreamTrack, RTCPeerConnection, RTCSessionDescription
 from govor_media import ApplicationAudioTrack, MediaPeer
+from govor_media.fixture_ice import ForwardedIceConfiguration
 
 
 class EndedAudioTrack(MediaStreamTrack):
@@ -63,6 +64,44 @@ async def test_bidirectional_audio_and_video_loopback() -> None:
         assert audio_frame.sample_rate == 48_000
         assert server.microphone.frames_received > 0
         assert server.microphone.samples_received > 0
+    finally:
+        with suppress(Exception):
+            await client.close()
+        await server.close()
+
+
+@pytest.mark.asyncio
+async def test_forwarded_ice_is_installed_after_remote_bundle_negotiation(
+    unused_udp_port: int,
+) -> None:
+    client = RTCPeerConnection()
+    connected = asyncio.Event()
+    server = MediaPeer(
+        forwarded_ice=ForwardedIceConfiguration(
+            advertise_host="127.0.0.1",
+            bind_port=unused_udp_port,
+        )
+    )
+    microphone = ApplicationAudioTrack(frequency_hz=330.0)
+    client.addTrack(microphone)
+    client.addTransceiver("video", direction="recvonly")
+
+    @client.on("connectionstatechange")
+    def on_connection_state_change() -> None:
+        if client.connectionState == "connected":
+            connected.set()
+
+    try:
+        offer = await client.createOffer()
+        await client.setLocalDescription(offer)
+        local_offer = client.localDescription
+        assert local_offer is not None
+        answer_sdp = await server.accept_offer(local_offer.sdp)
+
+        assert f" 127.0.0.1 {unused_udp_port} typ host" in answer_sdp
+        await client.setRemoteDescription(RTCSessionDescription(sdp=answer_sdp, type="answer"))
+        await asyncio.wait_for(connected.wait(), timeout=10)
+        await asyncio.wait_for(server.microphone_frame_received.wait(), timeout=10)
     finally:
         with suppress(Exception):
             await client.close()

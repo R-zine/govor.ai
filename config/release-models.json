@@ -1,0 +1,65 @@
+{
+  "manifest_version": 1,
+  "models": [
+    {
+      "id": "qwen3-4b-q4-k-m",
+      "display_name": "Qwen3 4B dialogue model",
+      "relative_path": "qwen/Qwen3-4B-Q4_K_M.gguf",
+      "uri": "https://huggingface.co/Qwen/Qwen3-4B-GGUF/resolve/bc640142c66e1fdd12af0bd68f40445458f3869b/Qwen3-4B-Q4_K_M.gguf?download=true",
+      "sha256": "7485fe6f11af29433bc51cab58009521f205840f5b4ae3a32fa7f92e8534fdf5",
+      "size": 2497280256,
+      "license": "Apache-2.0",
+      "source_revision": "bc640142c66e1fdd12af0bd68f40445458f3869b"
+    },
+    {
+      "id": "whisper-small-multilingual",
+      "display_name": "Whisper multilingual small recognition model",
+      "relative_path": "whisper/ggml-small.bin",
+      "uri": "https://huggingface.co/ggerganov/whisper.cpp/resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-small.bin?download=true",
+      "sha256": "1be3a9b2063867b937e64e2ec7483364a79917e157fa98c5d94b5c1fffea987b",
+      "size": 487601967,
+      "license": "MIT",
+      "source_revision": "5359861c739e955e79d9a303bcbc70fb988958b1"
+    },
+    {
+      "id": "kokoro-v1-onnx",
+      "display_name": "Kokoro v1.0 English speech model",
+      "relative_path": "speech/kokoro-v1.0.onnx",
+      "uri": "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.1/kokoro-v1.0.onnx",
+      "sha256": "beb0d1848dee9a49da392cc3df26958d46cfa35d321edf434f52949153f0df3a",
+      "size": 325505369,
+      "license": "Apache-2.0",
+      "source_revision": "model-files-v1.1"
+    },
+    {
+      "id": "kokoro-v1-voices",
+      "display_name": "Kokoro v1.0 voice bundle",
+      "relative_path": "speech/voices-v1.0.bin",
+      "uri": "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.1/voices-v1.0.bin",
+      "sha256": "bca610b8308e8d99f32e6fe4197e7ec01679264efed0cac9140fe9c29f1fbf7d",
+      "size": 28214398,
+      "license": "Apache-2.0",
+      "source_revision": "model-files-v1.1"
+    },
+    {
+      "id": "piper-bg-dimitar-medium",
+      "display_name": "Piper Bulgarian Dimitar medium voice",
+      "relative_path": "speech/bg_BG-dimitar-medium.onnx",
+      "uri": "https://huggingface.co/rhasspy/piper-voices/resolve/7c89b592e94392a56c789bd35a860fec66a6583f/bg/bg_BG/dimitar/medium/bg_BG-dimitar-medium.onnx?download=true",
+      "sha256": "4972fe764468e8501416407ad81662de94cc6c9cdc680fcf807daef04e319f13",
+      "size": 63221984,
+      "license": "CC0-1.0",
+      "source_revision": "7c89b592e94392a56c789bd35a860fec66a6583f"
+    },
+    {
+      "id": "piper-bg-dimitar-medium-config",
+      "display_name": "Piper Bulgarian Dimitar voice configuration",
+      "relative_path": "speech/bg_BG-dimitar-medium.onnx.json",
+      "uri": "https://huggingface.co/rhasspy/piper-voices/resolve/7c89b592e94392a56c789bd35a860fec66a6583f/bg/bg_BG/dimitar/medium/bg_BG-dimitar-medium.onnx.json?download=true",
+      "sha256": "ec9a9abdd17384d3db225e83085b2f68b790b112f058417c3a8a2ac58b79e7f0",
+      "size": 5123,
+      "license": "CC0-1.0",
+      "source_revision": "7c89b592e94392a56c789bd35a860fec66a6583f"
+    }
+  ]
+}

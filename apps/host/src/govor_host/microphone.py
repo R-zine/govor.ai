@@ -38,14 +38,29 @@ class ReferenceOnlyMicrophoneSource:
 class MediaMicrophoneSource:
     """Loopback-only client for the bounded media-service capture buffer."""
 
-    def __init__(self, base_url: str, *, timeout_seconds: float = 2.0) -> None:
+    def __init__(
+        self,
+        base_url: str,
+        *,
+        timeout_seconds: float = 2.0,
+        tls_ca_file: str | None = None,
+    ) -> None:
         parsed = urlparse(base_url)
-        if parsed.scheme != "http" or parsed.hostname not in {"127.0.0.1", "::1", "localhost"}:
-            raise ValueError("microphone capture service must use loopback HTTP")
+        if parsed.scheme not in {"http", "https"} or parsed.hostname not in {
+            "127.0.0.1",
+            "::1",
+            "localhost",
+        }:
+            raise ValueError("microphone capture service must use loopback HTTP or HTTPS")
+        if parsed.scheme == "https" and not tls_ca_file:
+            raise ValueError("loopback HTTPS requires an explicit trusted CA file")
+        if parsed.scheme == "http" and tls_ca_file:
+            raise ValueError("a trusted CA file is valid only for loopback HTTPS")
         if parsed.username or parsed.password or parsed.query or parsed.fragment:
             raise ValueError("microphone capture URL must not contain credentials or parameters")
         self._base_url = base_url.rstrip("/")
         self._timeout = timeout_seconds
+        self._verify: bool | str = tls_ca_file or True
 
     async def begin(self, utterance_id: UUID) -> None:
         await self._post("start", utterance_id)
@@ -62,14 +77,14 @@ class MediaMicrophoneSource:
     async def cancel(self, utterance_id: UUID | None = None) -> None:
         payload = {"utterance_id": str(utterance_id)} if utterance_id is not None else {}
         try:
-            async with httpx.AsyncClient(timeout=self._timeout) as client:
+            async with httpx.AsyncClient(timeout=self._timeout, verify=self._verify) as client:
                 await client.post(f"{self._base_url}/v1/internal/microphone/cancel", json=payload)
         except httpx.HTTPError:
             return
 
     async def _post(self, action: str, utterance_id: UUID) -> httpx.Response:
         try:
-            async with httpx.AsyncClient(timeout=self._timeout) as client:
+            async with httpx.AsyncClient(timeout=self._timeout, verify=self._verify) as client:
                 response = await client.post(
                     f"{self._base_url}/v1/internal/microphone/{action}",
                     json={"utterance_id": str(utterance_id)},

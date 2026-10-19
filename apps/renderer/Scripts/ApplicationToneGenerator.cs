@@ -18,18 +18,27 @@ public partial class ApplicationToneGenerator : Node
     private SharedMemoryAudioPublisher? _publisher;
     private AudioStreamPlayer? _player;
     private short[] _toneSamples = Array.Empty<short>();
+    private ulong _readyAtUs;
     private ulong _startedAtUs;
     private int _publishedBlocks;
+    private bool _started;
     private bool _completed;
 
     public bool PlayLocally { get; set; } = true;
     public bool ExitWhenComplete { get; set; }
+    public double StartDelaySeconds { get; set; }
 
     public override void _Ready()
     {
         _publisher = GetNode<SharedMemoryAudioPublisher>("../SharedMemoryAudioPublisher");
         _toneSamples = GenerateTonePcm();
-        _startedAtUs = Time.GetTicksUsec();
+        _readyAtUs = Time.GetTicksUsec();
+        if (StartDelaySeconds is < 0.0 or > 300.0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(StartDelaySeconds),
+                "The bounded tone delay must be between zero and 300 seconds.");
+        }
 
         if (PlayLocally)
         {
@@ -44,7 +53,6 @@ public partial class ApplicationToneGenerator : Node
                 Stereo = false,
                 Data = data,
             };
-            _player.Play();
         }
     }
 
@@ -56,7 +64,21 @@ public partial class ApplicationToneGenerator : Node
             return;
         }
 
-        ulong elapsedUs = Time.GetTicksUsec() - _startedAtUs;
+        ulong nowUs = Time.GetTicksUsec();
+        if (!_started)
+        {
+            ulong delayUs = (ulong)(StartDelaySeconds * 1_000_000.0);
+            if (nowUs - _readyAtUs < delayUs)
+            {
+                return;
+            }
+
+            _started = true;
+            _startedAtUs = nowUs;
+            _player?.Play();
+        }
+
+        ulong elapsedUs = nowUs - _startedAtUs;
         ulong blockDurationUs = 1_000_000UL * RendererBridgeProtocol.AudioSamplesPerBlock /
             RendererBridgeProtocol.AudioSampleRate;
         int dueBlocks = Math.Min(TotalBlocks, (int)(elapsedUs / blockDurationUs) + 1);

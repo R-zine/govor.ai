@@ -3,10 +3,13 @@
 from .models import (
     AudioChunk,
     AvatarAnimationPayload,
+    DeviceAuthPayload,
     ErrorPayload,
     LearnerTranscriptPayload,
     LessonProgressPayload,
     MessageEnvelope,
+    PairingOkPayload,
+    PairingRequestPayload,
     PhonemeAlignmentPayload,
     PronunciationPayload,
     ProviderCapabilities,
@@ -37,12 +40,15 @@ from .models import (
 )
 
 __all__ = [
+    "DeviceAuthPayload",
     "AudioChunk",
     "AvatarAnimationPayload",
     "ErrorPayload",
     "LearnerTranscriptPayload",
     "LessonProgressPayload",
     "MessageEnvelope",
+    "PairingOkPayload",
+    "PairingRequestPayload",
     "ProviderCapabilities",
     "ProviderHealth",
     "PhonemeAlignmentPayload",

@@ -67,6 +67,7 @@ private fun GovorApp(model: MediaSessionViewModel = viewModel()) {
     val mediaError by model.session.error.collectAsStateWithLifecycle()
     val lessonState by model.lesson.state.collectAsStateWithLifecycle()
     val lessonError by model.lesson.error.collectAsStateWithLifecycle()
+    val pairingError by model.pairingError.collectAsStateWithLifecycle()
     val teacherText by model.lesson.teacherText.collectAsStateWithLifecycle()
     val pronunciations by model.lesson.pronunciations.collectAsStateWithLifecycle()
     val highlightedWordIndex by model.lesson.highlightedWordIndex.collectAsStateWithLifecycle()
@@ -75,9 +76,10 @@ private fun GovorApp(model: MediaSessionViewModel = viewModel()) {
     val transcript by model.lesson.transcript.collectAsStateWithLifecycle()
     val lessonProgress by model.lesson.lessonProgress.collectAsStateWithLifecycle()
     // Debug emulator defaults use adb reverse for control 8765 and media 8766.
-    var mediaHost by remember { mutableStateOf("127.0.0.1:8766") }
-    var controlHost by remember { mutableStateOf("127.0.0.1:8765") }
+    var mediaHost by remember { mutableStateOf(if (BuildConfig.DEBUG) "127.0.0.1:8766" else "") }
+    var controlHost by remember { mutableStateOf(if (BuildConfig.DEBUG) "127.0.0.1:8765" else "") }
     var token by remember { mutableStateOf("") }
+    var certificateFingerprint by remember { mutableStateOf("") }
     var scenarioId by remember { mutableStateOf("cafe-ordering") }
     var englishLocale by remember { mutableStateOf("en-GB") }
     var spacedReviewEnabled by remember { mutableStateOf(false) }
@@ -90,6 +92,7 @@ private fun GovorApp(model: MediaSessionViewModel = viewModel()) {
                 mediaHost,
                 controlHost,
                 token,
+                certificateFingerprint,
                 scenarioId,
                 englishLocale,
                 spacedReviewEnabled,
@@ -160,10 +163,21 @@ private fun GovorApp(model: MediaSessionViewModel = viewModel()) {
                             value = token,
                             onValueChange = { token = it },
                             singleLine = true,
-                            label = { Text("Development pairing token") },
+                            label = {
+                                Text(if (BuildConfig.DEBUG) "Development token" else "Pairing code")
+                            },
                             visualTransformation = PasswordVisualTransformation(),
                             modifier = Modifier.fillMaxWidth(),
                         )
+                        if (!BuildConfig.DEBUG) {
+                            OutlinedTextField(
+                                value = certificateFingerprint,
+                                onValueChange = { certificateFingerprint = it },
+                                singleLine = true,
+                                label = { Text("PC certificate SHA-256") },
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                        }
                         Text("Guided scenario", color = Color.White)
                         GUIDED_SCENARIOS.chunked(2).forEach { scenarioRow ->
                             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -205,6 +219,7 @@ private fun GovorApp(model: MediaSessionViewModel = viewModel()) {
                                         mediaHost,
                                         controlHost,
                                         token,
+                                        certificateFingerprint,
                                         scenarioId,
                                         englishLocale,
                                         spacedReviewEnabled,
@@ -219,6 +234,7 @@ private fun GovorApp(model: MediaSessionViewModel = viewModel()) {
                         }
                         mediaError?.let { Text(it, color = Color(0xFFFFB4AB)) }
                         lessonError?.let { Text(it, color = Color(0xFFFFB4AB)) }
+                        pairingError?.let { Text(it, color = Color(0xFFFFB4AB)) }
                     }
                 }
 

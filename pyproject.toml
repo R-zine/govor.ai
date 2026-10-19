@@ -5,6 +5,8 @@ description = "Privacy-first local English teaching host for a Bulgarian learner
 readme = "README.md"
 requires-python = ">=3.12,<3.14"
 dependencies = [
+  "certifi==2026.7.22",
+  "cryptography==50.0.2",
   "fastapi==0.142.4",
   "httpx==0.28.1",
   "jsonschema==4.25.1",
@@ -41,8 +43,10 @@ package = false
 [tool.pytest.ini_options]
 addopts = "--strict-config --strict-markers"
 testpaths = [
+  "apps/launcher/tests",
   "apps/host/tests",
   "packages/domain/tests",
+  "packages/gateway_security/tests",
   "packages/progress/tests",
   "packages/scene_planner/tests",
   "services/local_ai/tests",
@@ -52,8 +56,10 @@ testpaths = [
   "tests/integration",
 ]
 pythonpath = [
+  "apps/launcher/src",
   "apps/host/src",
   "packages/domain/src",
+  "packages/gateway_security/src",
   "packages/provider_interfaces/src",
   "packages/progress/src",
   "packages/scene_planner/src",
@@ -87,8 +93,10 @@ ignore = ["S101"]
 python_version = "3.12"
 strict = true
 files = [
+  "apps/launcher/src",
   "apps/host/src",
   "packages/domain/src",
+  "packages/gateway_security/src",
   "packages/provider_interfaces/src",
   "packages/progress/src",
   "packages/scene_planner/src",
@@ -102,14 +110,20 @@ plugins = ["pydantic.mypy"]
 [tool.coverage.run]
 branch = true
 omit = [
+  # End-user Windows process/ACL/job orchestration is exercised by the packaged-runtime smoke.
+  "apps/launcher/src/govor_launcher/cli.py",
+  "apps/launcher/src/govor_launcher/processes.py",
+  "apps/launcher/src/govor_launcher/security.py",
   # Executed only in a child process; the parent integration test verifies its WAV result.
   "services/speech/src/govor_speech/espeak_worker.py",
   # Thin Win32 FFI is verified by the Milestone 7 real Credential Manager smoke.
   "services/provider_router/src/govor_provider_router/windows_credentials.py",
 ]
 source = [
+  "apps/launcher/src",
   "apps/host/src",
   "packages/domain/src",
+  "packages/gateway_security/src",
   "packages/provider_interfaces/src",
   "packages/progress/src",
   "packages/scene_planner/src",

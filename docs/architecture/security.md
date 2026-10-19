@@ -7,8 +7,9 @@ payload limits, timeouts, rate limits, and encrypted transport.
 ## Current development posture
 
 The fake and local hosts bind to `127.0.0.1` by default. `scripts/dev.ps1` refuses a LAN control
-bind because pairing and TLS are not implemented yet. This makes development usable through
-`adb reverse` without pretending the control endpoint is safe for a phone-facing LAN.
+bind because the ordinary development path deliberately has no release pairing/TLS lifecycle.
+This makes development usable through `adb reverse` without pretending the debug control endpoint
+is safe for a phone-facing LAN.
 
 The Milestone 2 Android control check reaches that loopback listener only through debug-only
 `adb reverse`; `/v1/control` is not authenticated and must not be exposed on a LAN. It caps messages
@@ -31,6 +32,31 @@ opens no socket, is not reachable from the LAN, contains only transient rendered
 application-owned PCM ring, and disappears when the last process handle closes. It is not an
 authentication boundary: the renderer and media peer must run as the same trusted desktop user.
 
+## Release gateway posture
+
+The Milestone 8 launcher starts separate HTTPS/WSS control and media gateways on ports 8765/8766.
+It creates a persistent current-user RSA-3072 TLS identity, prints its SHA-256 fingerprint, and
+creates an eight-digit one-time code with a ten-minute lifetime. The code is stored only as a
+PBKDF2-SHA256 salted digest, is consumed on success, is limited to five failed attempts per client
+per minute, and cannot enroll more than eight devices.
+
+Android verifies the full user-entered certificate fingerprint for both HTTPS and WSS. The initial
+HTTPS pairing exchange returns a random device credential; Android encrypts the credential and its
+hosts/fingerprint with an Android Keystore AES-GCM key. The Windows store retains only a salted
+credential digest in the protected per-user data directory. Every later phone-facing WebSocket
+authenticates with the device ID and credential. Payload/message bounds and existing timeouts
+remain active after authentication. WebRTC media continues to use DTLS-SRTP.
+
+The launcher forces the three local providers and `offline_only=true`. llama.cpp, internal
+microphone capture, SQLite, and renderer control stay loopback-only. The Windows process tree is
+placed in a kill-on-close Job Object and is also stopped explicitly in reverse order. Signing keys
+and passwords live only in an ignored ACL-restricted `.secrets` directory and are not copied into
+the package or corresponding-source bundle.
+
+This release path is distinct from the debug token path. The release manifest disallows cleartext,
+and no certificate-verification bypass exists. Certificate rotation, device revocation UI, and
+public-internet exposure are out of scope; the gateway must remain on a trusted private LAN.
+
 llama.cpp and the media capture API also bind only to loopback. The host rejects non-loopback
 model/capture URLs. Model output is untrusted: generation uses a closed JSON schema, Pydantic
 forbids extra fields, and domain policy—not the model—decides whether an exercise may advance. No
@@ -43,7 +69,8 @@ schema accepts scenario/exercise identifiers, counters, settings, vocabulary ite
 content, review dates, and closed difficulty reasons only; it has no raw-audio or transcript-text
 column. Automated local-AI and emulator smokes use an isolated cache database and remove it so they
 cannot alter the learner's development history. History deletion requires an explicit CLI
-confirmation flag. Release packaging still needs an OS-appropriate protected per-user data path.
+confirmation flag. Release packaging stores it below `%LOCALAPPDATA%\govor.ai\progress`, separate
+from the replaceable versioned installation directory.
 
 Milestone 7 keeps `offline_only=true` and all three provider selectors local by default. Cloud
 adapter construction is rejected while that switch is set, and every adapter rechecks an outbound
@@ -85,8 +112,17 @@ and actual-or-empty viseme cues, not the audio or transcript.
 - Redact secrets and personal content. Do not save recordings or full transcripts by default.
 - Cloud networking remains absent/disabled unless the learner explicitly selects a provider.
 
-The current security review deliberately keeps unauthenticated control on loopback and rejects LAN
-binding. The media server's long development token authenticates only the cleartext feasibility
-path; it is not release pairing. Certificate lifecycle, abuse/rate limits, device authorization,
-and firewall rules remain unimplemented release controls. The current host is not production-ready,
-and the physical-network path must pass the Milestone 9 release-security gate.
+The unauthenticated control path remains loopback-only and the long development token remains a
+cleartext feasibility mechanism, not release pairing. Milestone 8 software/emulator evidence covers
+the implemented release certificate, pairing, stored-credential, authenticated WSS, update,
+clean-Windows launch, and shutdown paths. The physical private-network path, firewall behavior,
+phone key storage, lifecycle recovery, and abuse behavior still require the Milestone 9
+release-security gate. No public-internet deployment is authorized.
+
+The executed Milestone 8 QEMU/WHPX fixture keeps its generated SSH key, DPAPI-protected random
+guest password, disks, and logs below ACL-restricted ignored `.cache/m8-vm`. QEMU forwards SSH and
+the two release gateways on host loopback only; the host emulator reaches the latter through
+`10.0.2.2`. A single host-loopback UDP 18770 forward supports an environment-gated fixture ICE
+candidate while media remains DTLS-SRTP. The guest opens only ports 8765/8766 and fixture UDP 18770
+for the packaged Python executable on its Private profile. This path added no LAN/public exposure
+and creates no physical-network evidence.

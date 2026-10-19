@@ -1,5 +1,19 @@
 # Data flow
 
+## Release connection
+
+1. The Windows launcher reuses or creates its current-user TLS identity, creates a ten-minute
+   one-time pairing code, and prints the LAN address plus certificate SHA-256 fingerprint.
+2. Android pins the learner-entered fingerprint and sends the code/device identity to the HTTPS
+   pairing endpoint. The server consumes the code and returns a random device credential.
+3. Android encrypts the hosts, fingerprint, device ID, and credential with Android Keystore. The
+   server persists only salted hashes in the protected per-user data directory.
+4. Media signaling and lesson control each open WSS and send `gateway.authenticate` before any
+   session message. Local inference, microphone capture, progress, and renderer control remain on
+   loopback.
+5. Later starts reuse the stored credential when the same hosts and optional fingerprint match;
+   no pairing code is needed. Replacing the versioned Windows directory leaves that state intact.
+
 ## Lesson turn
 
 1. Android authenticates to the release LAN gateway and establishes signaling/control. The

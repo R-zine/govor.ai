@@ -6,6 +6,7 @@
 *.jks
 *.p12
 local.properties
+.secrets/
 
 # Python
 .venv/

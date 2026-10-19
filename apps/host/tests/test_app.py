@@ -9,6 +9,7 @@ import pytest
 from fastapi.testclient import TestClient
 from govor_contracts import RendererCommandPayload
 from govor_domain import DetectedLanguage, LearnerIntent
+from govor_gateway_security import PairingAuthority
 from govor_host.app import create_app
 from govor_host.config import Settings
 from govor_host.fake_lesson import FakeLessonService
@@ -158,6 +159,64 @@ def test_health_identifies_fake_mode() -> None:
             },
         ],
     }
+
+
+def test_release_pairing_and_control_authentication(tmp_path) -> None:
+    credential_file = tmp_path / "gateway.json"
+    authority = PairingAuthority(credential_file)
+    code, _ = authority.create_pairing_code()
+    device_id = str(uuid4())
+    app = create_app(
+        Settings(gateway_credentials_file=str(credential_file)),
+        renderer=FakeRendererControl(),
+    )
+
+    with TestClient(app) as client:
+        pairing = client.post(
+            "/v1/pairing",
+            json=envelope(
+                "pairing.request",
+                {
+                    "code": code,
+                    "device_id": device_id,
+                    "device_name": "Test phone",
+                },
+            ),
+        )
+        assert pairing.status_code == 200
+        credential = pairing.json()["payload"]["credential"]
+
+        with client.websocket_connect("/v1/control") as socket:
+            socket.send_json(
+                envelope(
+                    "auth.request",
+                    {"device_id": device_id, "credential": credential},
+                )
+            )
+            assert socket.receive_json()["message_type"] == "auth.ok"
+            socket.send_json(
+                envelope(
+                    "session.start",
+                    {
+                        "client_id": str(uuid4()),
+                        "scenario_id": "cafe-ordering",
+                        "english_locale": "en-GB",
+                        "spaced_review_enabled": False,
+                    },
+                )
+            )
+            assert socket.receive_json()["message_type"] == "session.state"
+
+
+def test_release_control_rejects_missing_device_authentication(tmp_path) -> None:
+    app = create_app(
+        Settings(gateway_credentials_file=str(tmp_path / "gateway.json")),
+        renderer=FakeRendererControl(),
+    )
+    with TestClient(app).websocket_connect("/v1/control") as socket:
+        socket.send_json(envelope("session.start", {}))
+        with pytest.raises(WebSocketDisconnect):
+            socket.receive_json()
 
 
 def test_complete_fake_lesson_turn_cycle(caplog: pytest.LogCaptureFixture) -> None:

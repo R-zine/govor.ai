@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "hypervisor": "qemu-whpx",
+  "qemu_version": "11.0.50",
+  "machine_name": "govor-m8-clean-windows",
+  "guest_user": "GovorM8",
+  "memory_mib": 8192,
+  "cpu_count": 4,
+  "disk_gib": 96,
+  "guest_ssh_port": 22,
+  "guest_control_port": 8765,
+  "guest_media_port": 8766,
+  "monitor_host_port": 55223,
+  "ssh_host_port": 55222,
+  "control_host_port": 18765,
+  "media_host_port": 18766,
+  "guest_ice_port": 18770,
+  "ice_host_port": 18770,
+  "android_host_alias": "10.0.2.2",
+  "reference_iso_page": "https://www.microsoft.com/en-us/evalcenter/evaluate-windows-11-enterprise"
+}

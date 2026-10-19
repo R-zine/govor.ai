@@ -46,7 +46,8 @@ function Test-CSharp {
 function Test-Media {
     Invoke-Checked -FilePath 'uv' -ArgumentList @(
         'run', '--frozen', '--extra', 'media', 'mypy',
-        'services/media/src', 'packages/contracts/python'
+        'services/media/src', 'packages/contracts/python',
+        'packages/gateway_security/src'
     )
     Invoke-Checked -FilePath 'uv' -ArgumentList @(
         'run', '--frozen', '--extra', 'media', 'pytest', 'services/media/tests', '-q'

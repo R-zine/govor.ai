@@ -19,7 +19,11 @@ adds the animated procedural teacher, PCM/real-phoneme lip synchronization, and 
 café, supermarket, airport, and home environments. Milestone 7 adds independently selectable,
 explicitly opt-in OpenAI-compatible providers while retaining a hard offline-only default and
 protected Windows credentials. Physical-phone, Wi-Fi, hardware-codec, performance, and soak
-acceptance remains mandatory in the final release milestone.
+acceptance remains mandatory in the final release milestone. Milestone 8 is complete: the
+portable Windows package, signed Android APK, integrity-checked model setup, HTTPS/WSS pairing,
+stable update identity, license/source bundle, clean-Windows QEMU/WHPX run, and host-emulator
+release path passed. That VM/emulator evidence is software-only and does not replace the physical
+target-hardware acceptance in Milestone 9.
 
 ## Quick start (Windows PowerShell)
 
@@ -56,3 +60,23 @@ and exact resume commands.
   paths, downloads, scripts, or arbitrary resources.
 
 The authoritative product brief is `docs/MASTER_SPEC.md`.
+
+## Release-candidate packaging
+
+Initialize the private signing state once, then give every Android update a higher version code:
+
+```powershell
+./scripts/initialize-release-signing.ps1
+./scripts/package.ps1 -Version 0.1.4 -VersionCode 5
+```
+
+The resulting ignored artifacts are written below `.cache/dist`: a signed release APK, a portable
+Windows ZIP, and a digest manifest. The Windows learner runs `Setup-Govor.cmd` once while online,
+then `Start-Govor.cmd`; normal lessons remain offline. Signing keys stay in ignored `.secrets` and
+must be backed up privately. See `docs/user-guide/windows.md`, `docs/user-guide/android.md`, and
+ADR-0011 before distributing the candidate.
+
+The completed clean-Windows procedure is in `docs/testing/m8-clean-vm.md`. The fixture requires a
+caller-supplied Windows 11 x64 ISO plus its independently recorded SHA-256 and keeps its clean base
+and mutable run layer under ignored `.cache/m8-vm`. The test image is never distributed with
+govor.ai, and evidence applies only to the exact recorded image.

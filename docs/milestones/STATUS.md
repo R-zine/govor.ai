@@ -1,6 +1,6 @@
 # Current verified status
 
-Last updated: 2026-10-14
+Last updated: 2026-10-19
 
 ## Outcome
 
@@ -52,6 +52,22 @@ Credential Manager storage, privacy disclosure, and complete local learner-data 
 implemented and verified. Focused tests, the full cross-language suite, the real credential-store
 smoke, the deletion CLI smoke, dependency audit, and pre-commit hooks pass. No real cloud service,
 paid account, learner recording, or learner transcript was used.
+
+Milestone 8 is complete. The final `0.1.4`/code-5 portable Windows package and signed Android APK
+passed packaging, clean-Windows setup/start, authenticated host-emulator control/media, bounded
+shutdown, dependency audit, and repository quality gates. The clean guest was Windows
+10.0.22000.0 AMD64 under QEMU 11.0.50/WHPX. Its exact user-supplied test ISO was recorded and
+SHA-256 verified; provenance, activation, and licensing were not independently verified, and the
+ISO is not distributed with govor.ai. Setup installed the pinned Microsoft VC++ prerequisite and
+verified all six model artifacts. The host API 34 emulator connected without `adb reverse` over
+the fixture's loopback-only forwards; the guest received non-black 1280x720 Godot video, nonzero
+48 kHz Godot PCM, and 48 kHz emulator microphone frames. A transient lesson-provider error
+recovered through **Retry lesson**, and every bounded launcher run ended with zero release
+listeners and zero owned processes.
+
+This VM/emulator result satisfies only the Milestone 8 clean-Windows software row. It does not
+satisfy any Milestone 9 physical phone, intended Wi-Fi, acoustic, hardware-codec, lifecycle,
+target-performance, monitor-off, thermal, or soak criterion.
 
 ADR-0003 now selects Godot 4.7.2 .NET as the only renderer. The earlier proof from the proprietary
 engine was removed completely, including source, project metadata, build scripts, and dependencies.
@@ -157,18 +173,42 @@ measurements fail.
   only after the final audio playback acknowledgement.
 - Android exposes two visible rows for all four scenarios, GB/US selection, a spaced-review toggle,
   progress/difficulty display, and an explanation when difficulty changes.
+- `apps/launcher` supplies `doctor`, model status/install, and release start commands. It uses an
+  embedded Python runtime, persistent `%LOCALAPPDATA%\govor.ai` data, stable TLS identity,
+  local-only providers, service health checks, and a kill-on-close Windows Job Object.
+- `packages/gateway_security` implements expiring one-time pairing, salted PBKDF2-SHA256 code and
+  device-credential storage, constant-time checks, bounded failures, and an eight-device limit.
+- Release Android verifies the displayed certificate SHA-256 fingerprint, pairs over HTTPS, stores
+  the device credential under an Android Keystore AES-GCM key, and authenticates both control and
+  media WSS. Debug cleartext/token behavior remains build-separated.
+- `scripts/initialize-release-signing.ps1` creates or retains one ignored ACL-restricted RSA-3072
+  signing identity. `scripts/package.ps1` exports Godot, builds and verifies the versioned release
+  APK, embeds runtimes/dependencies, stages notices/source, smokes the package, and emits hashes.
+- `config/release-models.json`, `release-notices.json`, and `release-sources.json` pin every external
+  release download by URI, revision where applicable, byte length, and SHA-256.
+- The release package contains learner setup/start commands, Windows/Android guides, exact runtime
+  notices, installed Python package licenses, the shipped govor.ai source, and the pinned Piper,
+  Phonemizer, eSpeak NG, and espeakng-loader source archives.
+- `Install-Prerequisites.ps1` probes the packaged llama runtime and, only when necessary, downloads
+  the pinned Microsoft-signed VC++ x64 redistributable, verifies byte length/SHA-256/Authenticode,
+  and installs it before model setup. The missing-runtime branch passed in the clean guest.
+- The QEMU/WHPX fixture forwards authenticated control/media TCP and one explicit M8-only ICE UDP
+  port on host loopback. The ICE bridge advertises only the private emulator host alias and is
+  enabled solely by fixture environment variables; ordinary LAN/release behavior is unchanged.
+- Normal release rendering starts silently. The VM fixture alone requests one locally muted,
+  90-second-delayed application tone; Godot still publishes exactly two seconds of PCM and stops.
 
 ## Verification ledger
 
 | Command or check | Result | Evidence and limits |
 | --- | --- | --- |
 | `./scripts/bootstrap.ps1 -IncludeMedia -IncludeRenderer -NoDownload` | verified passing | Pinned local Python/.NET/Godot assets and locked dependencies restored without a download |
-| `./scripts/test.ps1 -Scope all` | verified passing | 2026-10-12 final Milestone 6 run; Python, contracts, Kotlin, C#, media, Godot, and Android APK build |
-| Python gate | verified passing | Ruff check/format, strict mypy, 121 tests, 85.56% branch coverage |
-| Contract schema gate | verified passing | 22 schema/model/fixture tests include closed scene/avatar payloads and arbitrary-asset rejection |
+| `./scripts/test.ps1 -Scope all` | verified passing | 2026-10-19 final M8 run; Python, contracts, Kotlin, C#, media, Godot, and Android debug APK build all passed from the beginning after the two recorded formatting-only attempts |
+| Python gate | verified passing | Ruff check/format, strict mypy, 169 tests, 85.51% branch coverage |
+| Contract schema gate | verified passing | 26 schema/model/fixture tests include closed scene/avatar payloads, gateway authentication, and arbitrary-asset rejection |
 | Kotlin gate | verified passing | 13 JVM contract/state-machine/timeline tests, including lesson-progress invariants and shared fixtures |
 | Pure C# gate | verified passing | 8 .NET contract/allow-list tests, including scene/avatar validation and arbitrary-asset rejection |
-| Media gate | verified passing | Strict mypy and 15 tests, including real aiortc loopback, flushed 48-to-16 kHz microphone resampling, renderer-buffer validation, and clean remote-track teardown |
+| Media gate | verified passing | Strict mypy across media/contracts/gateway-security and 18 tests, including real aiortc loopback, authenticated signaling, VM ICE connection, flushed 48-to-16 kHz microphone resampling, renderer-buffer validation, and clean remote-track teardown |
 | Godot gate | verified passing | Headless import, successful C# build, and self-test marker; offline NuGet vulnerability lookup and Windows certificate-store warnings are recorded below |
 | `./scripts/build.ps1 -Target renderer` | verified passing | 109,372,928-byte executable SHA-256 `65d86d986f0f5508a2dede1bce653bfb21fc6fd8cf06aed43872c0806e679175`; 91,648-byte renderer DLL SHA-256 `31dd5c9355cc81d4df51c0168dc7e0f3c60dc8d5016560537c13244210884c39` |
 | `./scripts/renderer-scene-smoke.ps1` | verified passing | Four distinct 1280x720 café/supermarket/airport/home captures; zero fallbacks, cache growth, or video-memory growth on revisit; software VP8 measured |
@@ -203,23 +243,56 @@ measurements fail.
 | Renderer-source reconnect/teardown | verified passing on emulator | Second peer received non-black Godot video and microphone frames; no unobserved task exception and no retained tone block replay |
 | Milestone 1 development architecture gate | complete | ADR-0002/0003 confirmed on native-emulator evidence; ADR-0004 defers all physical target-environment acceptance to Milestone 9 |
 | Android APK build | verified passing | 58,726,666 bytes; SHA-256 `ee37f03b47176d30d20d902807d86f43d2bb1c039b2de5e2d1b7b8aa97ada3d8` |
+| Release signing initialization/repeat | verified passing on development Windows | RSA-3072 JKS plus properties remained ignored and ACL-restricted; second run retained the same identity; no secret was printed or packaged |
+| `./scripts/package.ps1 -Version 0.1.1 -VersionCode 2 -NoArchive -GradleUserHome 'C:\Users\PC\.gradle' -GradleOffline` | verified passing | Godot export, signed Android release build/signature, 56 hash-pinned Python distributions, runtimes/source/notices, import smoke, and launcher doctor passed |
+| `./scripts/package.ps1 -Version 0.1.1 -VersionCode 2 -GradleUserHome 'C:\Users\PC\.gradle' -GradleOffline` | verified passing | Final portable-directory, signed-APK, artifact-manifest, and ZIP production passed; ZIP 310,891,123 bytes, SHA-256 `a801b1b8...a4d`, enumerated successfully, and contains the corrected verification source |
+| Clean-system `Setup-Govor.cmd` from 0.1.1 | **verified failing** | Double-click reached argparse without a command because quoted `%~dp0` ended in `\` and consumed the following token; setup reported that no unverified model file was installed |
+| `./scripts/package.ps1 -Version 0.1.2 -VersionCode 3 -NoArchive -GradleUserHome 'C:\Users\PC\.gradle' -GradleOffline` | verified passing | Corrected candidate normalized the install root and package-time `cmd.exe` smokes exercised both learner-facing wrappers through `doctor`; each printed `Package prerequisites: ready` |
+| `./scripts/package.ps1 -Version 0.1.2 -VersionCode 3 -GradleUserHome 'C:\Users\PC\.gradle' -GradleOffline` | verified passing | Corrected ZIP 310,894,467 bytes, SHA-256 `816d503a...034f`; archive enumerated, emitted wrappers inspected, and direct/setup/start doctor paths passed |
+| Signed 0.1.2 APK | verified packaging only | 55,425,169 bytes; SHA-256 `153101ab250774249fa7048101998d2cda8ed8176a82893e083bc8d49f4fdaa5`; package code 3/name 0.1.2 with the existing RSA-3072 signer; clean-system/client retry not yet executed |
+| `./scripts/package.ps1 -Version 0.1.3 -VersionCode 4 -GradleUserHome 'C:\Users\PC\.gradle' -GradleOffline` | verified passing | The VM-testable wrapper candidate passed Godot export, signed APK verification, dependency/source staging, import smoke, direct doctor, both command-wrapper doctors, and archive creation |
+| 0.1.3 VM-testable artifacts | verified packaging only | ZIP 310,917,484 bytes/SHA-256 `4d30b7ee...86bd`; APK 55,425,169 bytes/SHA-256 `175265c7...8bc0`; existing RSA-3072 signer, version code 4/name 0.1.3 |
+| `./scripts/m8-vm.ps1 -Action Prerequisites` (2026-10-17) | historical blocked result | QEMU/qemu-img/EDK2/WHPX/OpenSSH, 31.8 GiB RAM, and 461 GiB free passed; no ISO had yet been supplied. The completed 2026-10-19 run supersedes this pre-execution result |
+| Bounded QEMU fixture probe | verified passing with boot-only scope | WHPX/q35/pflash UEFI/quoted paths/IDE qcow2 process remained alive for three seconds and was stopped; Windows/Godot did not boot and are not inferred |
+| VM fixture regression tests | verified passing | Focused tests cover wrapper forwarding, fixed TCP/UDP loopback topology, test-only delayed PCM, stdin-based SSH execution, parseable secret-free templates, required actions, pflash, and generated-key SSH setup |
+| `./scripts/package.ps1 -Version 0.1.4 -VersionCode 5 -GradleUserHome 'C:\Users\PC\.gradle' -GradleOffline` | verified passing | Godot export, signed APK verification, embedded runtime/dependency/source staging, import/doctor/wrapper smokes, VC prerequisite metadata, and final archive creation passed |
+| Final 0.1.4 artifacts | verified passing | ZIP 310,942,015 bytes/SHA-256 `74899c85222faf65681e9512eafaee5c2dc05e79daf06d338148255ae801b838`; APK 55,425,169 bytes/SHA-256 `78799b5f943fe0caba08e9cada443ba40e42c8a4e6f1424b7c081129ebd43358`; RSA-3072 signer SHA-256 `b7022cb8bbcc0a4828cf73e5ef958e1b431ccce697020577c4a502a66ec59843` |
+| Clean-VM `StageRelease` / `SetupRelease` | verified passing | Guest independently matched both artifact hashes, exact packaged `Setup-Govor.cmd` passed, Microsoft VC++ runtime reported ready, and all six pinned models reported ready |
+| Clean-VM `StartRelease` with host signed APK | verified passing with VM/emulator limits | Windows 10.0.22000.0 guest launched the actual Godot/local-AI stack; signed 0.1.4/code-5 emulator app reused its credential with no `adb reverse`; WSS/ICE connected and media logged non-black 1280x720 video, nonzero PCM peak 2621, and 48 kHz/960-sample microphone frames |
+| Clean-VM bounded shutdown | verified passing | Final `WaitRelease -SmokeSeconds 300` recorded task `Ready`, zero listeners, zero owned processes, and `clean_shutdown=true`; emulator and VM were then stopped, leaving no tone or server active |
+| Signed 0.1.1 APK | verified passing | 55,425,169 bytes; SHA-256 `7e372b5b487d47e85018b55c9aceca03c7ced6c4a7822f764b0471d5270b755a`; package code 2/name 0.1.1, min 26/target 34; RSA-3072 certificate digest recorded in the dated benchmark |
+| Signed 0.1.0-to-0.1.1 emulator update | verified passing with emulator limit | `adb install -r` preserved first-install time and existing encrypted device credential; progress DB SHA-256 remained `4add036f...e41` immediately across the update |
+| Release pairing/credential reuse | verified passing with emulator limit | First pairing used HTTPS plus a pinned displayed fingerprint; later 0.1.1 connection entered only `10.0.2.2` hosts and reused the Android Keystore credential over WSS without `adb reverse` |
+| Complete packaged release lesson | verified passing with emulator limit | Signed APK and packaged local stack completed café 3/3 and displayed `Lesson complete · progress saved`; final deterministic PCM used the emulator's loopback microphone injection, not physical acoustics |
+| Release progress after lesson | verified passing | Isolated SQLite view reports café `completed_count=1`, `exercise_index=3`, `successful_exercises=3`; 45,056 bytes, SHA-256 `0b5523f3...df84` |
+| Release shutdown | verified passing | Launcher Job Object/stop path closed children; final check found zero package-owned processes and zero listeners on ports 8765–8768; app/emulator stopped and no audio remained |
+| Release notices/corresponding source | verified passing | Hash-pinned Godot/llama.cpp/whisper.cpp/WebRTC notices, Python/.NET/LLVM notices, installed package licenses, shipped source, and four exact GPL upstream archives were staged |
+| Clean Windows package installation | verified passing with exact-image/VM limit | The historical 0.1.1 wrapper failure remains recorded. The corrected 0.1.4 package completed setup/start/host-emulator media/stop in the provisioned guest; this is clean-software evidence, not target hardware evidence |
 | `uv run --frozen pip-audit --cache-dir .cache/pip-audit-m2-final` | verified passing | Final Milestone 2 audit: no known vulnerabilities found; sandbox network denial was repeated with approved network access |
 | `uv run --frozen pip-audit --cache-dir .cache/pip-audit-m3-final` | verified passing | Final Milestone 3 audit: no known vulnerabilities found; sandbox network denial was repeated with approved network access |
 | `uv run --frozen --extra media --extra speech pip-audit --cache-dir .cache/pip-audit-m4-final` | verified passing | Final Milestone 4 audit, including media and speech extras: no known vulnerabilities found; sandbox network denial was repeated with approved network access |
 | `uv run --frozen --extra media --extra speech pip-audit --cache-dir .cache/pip-audit-m5-final` | verified passing | Final Milestone 5 audit: no known vulnerabilities found; the sandbox-denied query passed with approved network access |
 | `uv run --frozen --extra media --extra speech pip-audit --cache-dir .cache/pip-audit-m6-final` | verified passing | Final Milestone 6 audit: no known vulnerabilities found; the sandbox-denied query passed with approved network access |
 | `uv run --frozen --extra media --extra speech pip-audit --cache-dir .cache/pip-audit-m7-final` | verified passing | No known vulnerabilities found |
-| Pre-commit across all tracked/untracked sources | verified passing | Final Milestone 7 run passed JSON/YAML, line endings/whitespace, secret/size checks, Ruff, formatting, and contract tests |
+| `uv run --frozen --extra media --extra speech pip-audit --cache-dir .cache/pip-audit-m8-entrypoint-fix` | verified passing | 2026-10-17 corrected-candidate locked dependency graph: no known vulnerabilities found with approved metadata access |
+| `uv run --frozen --extra media --extra speech pip-audit --cache-dir .cache/pip-audit-m8-vm` | verified passing | 2026-10-17 VM-fixture locked dependency graph: no known vulnerabilities found after the sandbox-denied metadata request was approved |
+| `uv run --frozen --extra media --extra speech pip-audit --cache-dir .cache/pip-audit-m8-final` | verified passing | 2026-10-19 final locked dependency graph: no known vulnerabilities found |
+| Pre-commit across all tracked/untracked sources | verified passing | 2026-10-19 final `pre-commit-m8-final` run passed JSON/YAML, line endings/whitespace, secret/size checks, Ruff, formatting, and 26 contract tests using command-scoped safe-directory configuration |
 | `./scripts/hardware-test.ps1` | Milestone 9 not executed | Ignores the active emulator and exits 2 because no physical phone is connected; this does not reopen Milestone 1 |
 | Physical Android/Wi-Fi/media/soak bundle | Milestone 9 not executed | No suitable physical phone; mandatory before release, not a prerequisite for Milestones 2-8 |
 | Remote GitHub Actions | not executed | Workflow includes the Godot renderer job, but the current milestone snapshot has not run remotely |
 
-The final `./scripts/test.ps1 -Scope all` run passed on 2026-10-14: 140 Python tests at 86.18%
-branch coverage, 22 dedicated contract tests, 13 Kotlin tests, 8 pure C# tests, 15 media tests, Godot
-import/build/self-test, and the Android debug APK build. Pytest emitted the existing Starlette
-`httpx` deprecation warning. Godot could not read the Windows root-certificate store and Android
-analytics could not write outside the workspace; both are previously recorded managed-environment
-warnings and every gate completed successfully.
+The final `./scripts/test.ps1 -Scope all` run passed on 2026-10-19: 169 Python tests at 85.51%
+branch coverage, 26 dedicated contract tests, 13 Kotlin tests, 8 pure C# tests, 18 media tests,
+Godot import/build/self-test, and the Android debug APK build. The first final attempt stopped at
+one Ruff line-length error in a launcher regression test. After that mechanical wrap, the second
+stopped at format-check differences in `fixture_ice.py` and its integration test. The pinned
+formatter corrected only those two files, and the complete suite then passed from the beginning.
+Earlier M8 runs had also exposed and corrected the gateway-security mypy source root and the
+trusted static-XML test formatting; those historical attempts remain recorded in the dated files.
+Pytest emitted the existing Starlette `httpx` deprecation warning. Godot could not read the Windows
+root-certificate store and NuGet could not refresh online vulnerability metadata inside the
+sandbox; these were non-fatal environment warnings and every gate completed successfully.
 
 ## Milestone 3 acceptance and handoff
 
@@ -331,6 +404,81 @@ externally exercised Win32 FFI and adding CLI/store tests produced a passing gat
 invalid-credential and streamed-response regressions brought the result to 140 tests at 86.18%
 coverage. Provider-specific functionality, quality, retention, and latency remain not executed.
 
+## Milestone 8 acceptance and handoff
+
+| Acceptance criterion | Status | Direct evidence |
+| --- | --- | --- |
+| Clean Windows system installs/launches with the guide | verified passing with exact-image/VM limit | The final 0.1.4 ZIP was independently hashed and extracted in a provisioned Windows 10.0.22000.0 AMD64 QEMU/WHPX guest. Exact packaged setup installed/verified prerequisites and six models; exact packaged start launched the renderer/local stack. The user-supplied ISO's provenance, activation, and licensing were not independently verified |
+| Android connects without developer tools | verified passing with emulator limit | Signed 0.1.4/code-5 connected through `10.0.2.2:18765/18766` over certificate-pinned/authenticated WSS and DTLS-SRTP with an empty `adb reverse --list`; ADB installed/automated the emulator, so physical user installation is not inferred |
+| Complete lesson works on a release build | verified passing with emulator limit | Packaged local stack plus signed 0.1.1 APK completed café 3/3 and displayed saved completion; final PCM entered through the emulator's documented loopback microphone API |
+| Shutdown leaves no orphaned processes | verified passing | Final clean-VM `WaitRelease` reported zero listeners, zero owned processes, and `clean_shutdown=true`; the host emulator and VM then stopped normally |
+| Local progress survives updates | verified passing | Signed code-1 to code-2 APK update preserved first-install time, encrypted credential, and byte-identical pre-lesson progress database |
+| Signing keys remain private | verified passing on development Windows | Stable ignored RSA-3072 keystore/properties have a restricted ACL and were absent from the package/source bundle/logs; release operator still needs an off-machine private backup |
+| Required model downloads have integrity checks | verified passing | Six exact artifacts require byte size and SHA-256 before atomic promotion; clean-guest setup and model status reported every artifact ready. The conditional VC++ download also pins size/hash and verifies Microsoft Authenticode |
+| Internet is unnecessary during normal lessons | verified passing with current-machine scope | Complete packaged lesson used the already verified models and forced local/offline providers; guided first-run setup still requires internet |
+
+ADR-0011 records the portable/update/security/distribution decision. Exact package hashes, signing
+metadata, commands, transient failures, lesson evidence, source/notice sizes, and limitations are
+in `docs/benchmarks/2026-10-15-release-packaging-and-distribution.md` and
+`docs/benchmarks/2026-10-19-m8-clean-vm-acceptance.md`. Learner instructions are in the
+Windows/Android guides and the packaged troubleshooting document.
+
+ADR-0012 selects the local QEMU/WHPX clean-Windows fixture. Provisioning recorded and verified the
+user-supplied ISO at 4,693,557,248 bytes with SHA-256
+`15fecff356411d43c77df040e1847427402b0e09da069bf1db0cb754932075b9` before producing a stopped
+base and disposable run overlay. The image is not part of the application or its distribution;
+this project did not independently verify its provenance, activation, or license. Generated
+secrets/disks stayed ignored and ACL-restricted.
+
+The fixture keeps SSH, authenticated WSS, and the single UDP ICE bridge on host loopback. The host
+emulator reached the guest through `10.0.2.2`; no nested emulator or `adb reverse` was used. The
+M8-only ICE adapter advertised `10.0.2.2:18770` because QEMU user networking otherwise returned an
+unreachable guest host candidate. It preserved release WSS plus WebRTC DTLS-SRTP and is enabled
+only by fixture environment variables; normal LAN behavior is unchanged.
+
+The first package run inside the managed sandbox could not access the existing external Gradle
+cache; the approved run then exposed and fixed an optional notice-manifest property access. The
+final no-archive and archive-enabled 0.1.1 packages passed, but their direct-Python doctor smoke did
+not exercise the batch entrypoint. The first clean-system double-click exposed the quoted trailing
+backslash defect in both Windows wrappers. Version 0.1.2 normalizes `%~dp0` before passing it to
+Python, adds a regression test, and runs both packaged wrappers through `cmd.exe` during packaging.
+Version 0.1.3/code 4 added bounded launcher-argument forwarding. The final 0.1.4/code-5 package
+also fixes clean-guest VC++ prerequisite installation, extends the llama health timeout to 180
+seconds, sends SSH harness scripts over stdin rather than command-line encoding, and supplies the
+explicit VM ICE forward. Its Windows ZIP is 310,942,015 bytes with SHA-256
+`74899c85222faf65681e9512eafaee5c2dc05e79daf06d338148255ae801b838`; its APK is 55,425,169
+bytes with SHA-256 `78799b5f943fe0caba08e9cada443ba40e42c8a4e6f1424b7c081129ebd43358`.
+
+The clean guest's exact setup passed after the pinned Microsoft Visual C++ 2015-2022 x64 runtime
+was installed. The final setup wrapper reported the runtime and all six models ready. A normal
+release starts with no diagnostic tone. For VM acceptance only, the harness requested a locally
+muted tone 90 seconds after renderer startup so Android could finish ICE first. The media gateway
+then logged a 48 kHz/960-sample renderer block with peak 2621, a non-black 1280x720 frame
+(`rgb_min=0`, `rgb_max=255`), and a 48 kHz/960-sample emulator microphone frame. Android logged the
+goldfish VP8 decoder at 1280x720, rendered frames, audio playout, and active microphone capture.
+Godot's bounded generator publishes exactly two seconds and stops; no local PC sound was enabled.
+
+The lesson control sometimes entered a recoverable provider error during these resource-heavy VM
+runs; the exact **Retry lesson** action restored `lesson: ready`. A media disconnect later
+coincided with concurrent SSH evidence copying in the counting run, after all required evidence had
+been captured. An earlier exact-candidate run retained `media: connected · lesson: ready`. Every attempt
+used the same final package and ended cleanly. ADB screenshots intermittently captured the
+`SurfaceView` as black even while aiortc and Android renderer logs proved non-black frames; those
+screenshots are not used as visible-video evidence.
+The initial audio-enabled AVD still
+zeroed host input until
+the installed emulator's explicit `-allow-host-audio` switch was used. Acoustic playback completed
+two turns but was unreliable for the third; the emulator's documented loopback audio injection
+then completed the real signed-app PTT path. A tooling delay intentionally exercised the normal
+recoverable timeout and **Retry lesson** resumed the persisted third exercise. None of those failed
+attempts is reported as a passing physical/acoustic result.
+
+Milestone 8 is complete. A focused milestone commit accompanies this handoff after the final full
+suite, locked dependency audit, and all-files pre-commit gate passed. Milestone 9 is next but has
+not begun.
+The absence of physical phone/Wi-Fi/codec/acoustic/target-performance/monitor-off/thermal/soak
+evidence is assigned to Milestone 9 and does not weaken or expand this software-only M8 result.
+
 ## Renderer evidence and limitations
 
 The current local proof images visibly contain the stylized teacher in four distinct procedural
@@ -363,6 +511,8 @@ avatar/scene evidence is in
 - Godot 4.7.2 stable .NET (`ed1daf0bf`), repository-local editor and export templates.
 - Android Studio API 34 AVD `Pixel_3a_API_34_extension_level_7_x86_64`, serial
   `emulator-5554`, used only for development evidence.
+- Clean-software fixture: QEMU 11.0.50/WHPX, guest `GOVOR-M8-VM`, Windows
+  10.0.22000.0 AMD64; exact-image and VM limits are recorded above.
 - Renderer: `apps/renderer/Builds/Windows/GovorRenderer.exe` (ignored build output).
 - Debug APK: `apps/android/app/build/outputs/apk/debug/app-debug.apk`.
 - Runtime logs/proof images: ignored files under `.cache/`.
@@ -370,10 +520,9 @@ avatar/scene evidence is in
 
 ## Next steps
 
-Milestone 7 is complete. The next implementation milestone is Milestone 8: package the Windows
-host/renderer/local runtimes and Android app for reproducible installation, resolve all third-party
-distribution obligations, add integrity-checked model delivery/update behavior, and verify clean
-startup/shutdown without development tools.
+Milestone 8 is complete. The next implementation work is Milestone 9 release acceptance on the
+actual Windows target and a physical Android phone. Do not reuse the clean VM or Android emulator
+to mark any M9 row passing.
 
 Deferred mandatory Milestone 9 work:
 
@@ -388,12 +537,24 @@ Deferred mandatory Milestone 9 work:
 Milestone 1 must not be reopened merely because Milestone 9 hardware is unavailable. Conversely,
 Milestone 9 must not pass using emulator evidence.
 
-## Exact resume commands
+## Exact next commands
 
 ```powershell
 git -c safe.directory='C:/Users/PC/Documents/GitHub/govor.ai' status --short --branch
 ./scripts/bootstrap.ps1 -IncludeMedia -IncludeRenderer -IncludeLocalAi -NoDownload
 ./scripts/test.ps1 -Scope all
+$env:UV_CACHE_DIR = Join-Path (Resolve-Path '.cache').Path 'uv-m8-final'
+uv run --frozen --extra media --extra speech pip-audit --cache-dir .cache/pip-audit-m8-final
+$env:PRE_COMMIT_HOME = Join-Path (Resolve-Path '.cache').Path 'pre-commit-m8-resume'
+$env:GIT_CONFIG_COUNT = '1'
+$env:GIT_CONFIG_KEY_0 = 'safe.directory'
+$env:GIT_CONFIG_VALUE_0 = 'C:/Users/PC/Documents/GitHub/govor.ai'
+uv run --frozen pre-commit run --all-files
+./scripts/test.ps1 -Scope hardware
+./scripts/benchmark.ps1 -Profile media-poc
+./scripts/benchmark.ps1 -Profile local-ai
+./scripts/benchmark.ps1 -Profile speech
+./scripts/benchmark.ps1 -Profile renderer
 ./scripts/progress.ps1 -Action View
 ./scripts/progress.ps1 -Action Export -OutputPath '.cache/progress-export.json'
 ./scripts/progress.ps1 -Action DeleteAll -ConfirmDelete

@@ -1,8 +1,13 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
 }
+
+val govorVersionCode = providers.gradleProperty("govorVersionCode").orElse("1").get().toInt()
+val govorVersionName = providers.gradleProperty("govorVersionName").orElse("0.1.0").get()
 
 android {
     namespace = "ai.govor.app"
@@ -12,13 +17,30 @@ android {
         applicationId = "ai.govor.app"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = govorVersionCode
+        versionName = govorVersionName
     }
 
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+
+    val signingPropertiesPath = providers.gradleProperty("govorSigningProperties").orNull
+    if (signingPropertiesPath != null) {
+        val signingProperties = Properties().apply {
+            file(signingPropertiesPath).inputStream().use(::load)
+        }
+        signingConfigs.create("release") {
+            storeFile = file(requireNotNull(signingProperties.getProperty("storeFile")))
+            storePassword = requireNotNull(signingProperties.getProperty("storePassword"))
+            keyAlias = requireNotNull(signingProperties.getProperty("keyAlias"))
+            keyPassword = requireNotNull(signingProperties.getProperty("keyPassword"))
+        }
+        buildTypes.getByName("release") {
+            signingConfig = signingConfigs.getByName("release")
+            isMinifyEnabled = false
+        }
     }
 
     packaging {

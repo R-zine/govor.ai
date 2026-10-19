@@ -18,6 +18,7 @@ public partial class RendererSessionController : Node
     private ulong _nextConnectAtUs;
 
     public string ControlUrl { get; set; } = string.Empty;
+    public string? ControlCaPath { get; set; }
 
     public override void _Ready()
     {
@@ -79,7 +80,32 @@ public partial class RendererSessionController : Node
         }
 
         var candidate = new WebSocketPeer();
-        Error result = candidate.ConnectToUrl(ControlUrl);
+        TlsOptions? tlsOptions = null;
+        X509Certificate? certificate = null;
+        if (ControlUrl.StartsWith("wss://", StringComparison.Ordinal))
+        {
+            if (string.IsNullOrWhiteSpace(ControlCaPath))
+            {
+                GD.PushError("A WSS renderer control URL requires --control-ca.");
+                candidate.Dispose();
+                _nextConnectAtUs = Time.GetTicksUsec() + 1_000_000;
+                return;
+            }
+            certificate = new X509Certificate();
+            if (certificate.Load(ControlCaPath) != Error.Ok)
+            {
+                GD.PushError("The renderer control CA could not be loaded.");
+                certificate.Dispose();
+                candidate.Dispose();
+                _nextConnectAtUs = Time.GetTicksUsec() + 1_000_000;
+                return;
+            }
+            tlsOptions = TlsOptions.Client(certificate, "govor.ai");
+        }
+
+        Error result = candidate.ConnectToUrl(ControlUrl, tlsOptions);
+        tlsOptions?.Dispose();
+        certificate?.Dispose();
         if (result != Error.Ok)
         {
             candidate.Dispose();

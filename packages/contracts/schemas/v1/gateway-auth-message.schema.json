@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://govor.ai/contracts/v1/gateway-auth-message.schema.json",
+  "title": "GatewayAuthMessage",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["protocol_version", "message_type", "correlation_id", "payload"],
+  "properties": {
+    "protocol_version": { "const": "1.0" },
+    "message_type": {
+      "enum": ["pairing.request", "pairing.ok", "auth.request", "auth.ok", "error"]
+    },
+    "correlation_id": { "type": "string", "format": "uuid" },
+    "payload": { "type": "object" }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "message_type": { "const": "pairing.request" } } },
+      "then": { "properties": { "payload": { "$ref": "#/$defs/pairingRequest" } } }
+    },
+    {
+      "if": { "properties": { "message_type": { "const": "pairing.ok" } } },
+      "then": { "properties": { "payload": { "$ref": "#/$defs/pairingOk" } } }
+    },
+    {
+      "if": { "properties": { "message_type": { "const": "auth.request" } } },
+      "then": { "properties": { "payload": { "$ref": "#/$defs/authRequest" } } }
+    },
+    {
+      "if": { "properties": { "message_type": { "const": "auth.ok" } } },
+      "then": { "properties": { "payload": { "$ref": "#/$defs/empty" } } }
+    },
+    {
+      "if": { "properties": { "message_type": { "const": "error" } } },
+      "then": { "properties": { "payload": { "$ref": "#/$defs/error" } } }
+    }
+  ],
+  "$defs": {
+    "pairingRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "device_id", "device_name"],
+      "properties": {
+        "code": { "type": "string", "pattern": "^[0-9]{8}$" },
+        "device_id": { "type": "string", "format": "uuid" },
+        "device_name": { "type": "string", "minLength": 1, "maxLength": 64 }
+      }
+    },
+    "pairingOk": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["device_id", "credential"],
+      "properties": {
+        "device_id": { "type": "string", "format": "uuid" },
+        "credential": { "type": "string", "minLength": 32, "maxLength": 256 }
+      }
+    },
+    "authRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["device_id", "credential"],
+      "properties": {
+        "device_id": { "type": "string", "format": "uuid" },
+        "credential": { "type": "string", "minLength": 32, "maxLength": 256 }
+      }
+    },
+    "empty": {
+      "type": "object",
+      "additionalProperties": false,
+      "maxProperties": 0
+    },
+    "error": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "message", "retryable"],
+      "properties": {
+        "code": { "type": "string", "maxLength": 64 },
+        "message": { "type": "string", "maxLength": 512 },
+        "retryable": { "type": "boolean" }
+      }
+    }
+  }
+}

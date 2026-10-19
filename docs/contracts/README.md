@@ -18,6 +18,13 @@ events, host state/turn/error events, and the loopback Godot command/acknowledge
 Unknown message types and payload fields are rejected. Session, turn, utterance, command, event,
 and correlation identifiers are UUIDs; media durations and offsets are integer microseconds.
 
+`gateway-auth-message.schema.json` is the closed Milestone 8 release-pairing contract. A
+`pairing.request` contains the one-time eight-digit code, UUID device ID, and bounded device name;
+`pairing.ok` returns that device ID plus a random bounded credential. Subsequent control and media
+WebSockets begin with `gateway.authenticate`, carrying the device ID and credential inside the
+normal versioned envelope. Invalid codes, unknown fields, and malformed identifiers are rejected
+before dispatch. The debug development token remains outside this release lifecycle.
+
 Milestone 4 extends the same version with understood additive fields and closed message variants.
 `teacher.turn` contains bounded PCM16 WAV, an explicit sample rate, exact pronunciation ranges,
 accent-specific IPA, nullable provider-derived word/phoneme spans, and `fallback_used`.

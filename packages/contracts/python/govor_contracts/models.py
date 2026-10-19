@@ -60,6 +60,22 @@ class ErrorPayload(StrictModel):
     retryable: bool
 
 
+class PairingRequestPayload(StrictModel):
+    code: str = Field(pattern=r"^[0-9]{8}$")
+    device_id: UUID
+    device_name: str = Field(min_length=1, max_length=64)
+
+
+class PairingOkPayload(StrictModel):
+    device_id: UUID
+    credential: str = Field(min_length=32, max_length=256)
+
+
+class DeviceAuthPayload(StrictModel):
+    device_id: UUID
+    credential: str = Field(min_length=32, max_length=256)
+
+
 class SessionStartPayload(StrictModel):
     client_id: UUID
     scenario_id: str = Field(

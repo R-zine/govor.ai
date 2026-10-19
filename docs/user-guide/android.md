@@ -1,15 +1,74 @@
-# Android user guide (development status)
+# Android installation and use
 
-The Android application is not yet ready for learner use. Its debug build now provides a native
-Compose WebRTC feasibility screen: enter the Windows host and development token, connect, view
-remote video, hear remote application audio, and hold the microphone button to transmit. The
-debug default `127.0.0.1:8766` is for an Android Studio emulator with
-`adb reverse tcp:8766 tcp:8766`; a physical device uses the Windows LAN address.
+Use only the signed `govor.ai-<version>-android-release.apk` supplied with the same release as the
+Windows package. The debug APK permits a cleartext development path and is not a learner build.
 
-An Android Studio API 34 emulator completed video/audio/microphone and reconnect development
-checks on 2026-10-09. No physical-device run has occurred. Proper pairing, WSS, subtitles,
-release signing, installation/update UX, physical hardware-codec evidence, and accessibility
-acceptance remain to be implemented and tested. Physical-phone and Wi-Fi validation is scheduled
-as part of the final Milestone 9 release-acceptance bundle.
+The signed release, secure pairing, update, and a complete lesson have passed on an Android Studio
+API 34 emulator. No physical phone or intended Wi-Fi path has completed acceptance; those remain
+mandatory Milestone 9 checks.
 
-Do not distribute the debug APK as a finished application.
+## Install
+
+1. Verify the APK SHA-256 against the release artifact manifest.
+2. Transfer the APK to the phone over a trusted method.
+3. Open it with Android's package installer. Android may ask you to permit installs from that file
+   source. Grant the narrowest temporary permission and turn it off again afterward.
+4. If the device, store, account type, or region blocks this distribution method, stop and use an
+   Android-supported distribution route. Do not disable platform security globally.
+5. Open govor.ai and grant microphone permission when the app asks in context. The app has no
+   useful hold-to-talk path without that permission.
+
+Android installation and developer-verification policy changes independently of govor.ai. Check
+the current official Android guidance for the learner's device and region before distributing an
+APK: <https://developer.android.com/developer-verification>.
+
+## First pairing
+
+1. Connect the phone and Windows PC to the same trusted private Wi-Fi/LAN. Guest/client-isolated
+   networks may prevent devices from reaching one another.
+2. Start `Start-Govor.cmd` on Windows and leave its console open.
+3. In the release app enter:
+   - **Media host:port:** the displayed PC address followed by `:8766`;
+   - **Control host:port:** the same PC address followed by `:8765`;
+   - **Pairing code:** the current eight-digit one-time code; and
+   - **PC certificate SHA-256:** the complete fingerprint shown in the Windows console. Colons and
+     spaces are optional, but all 64 hexadecimal characters must match.
+4. Choose a scenario, accent, and spaced-review preference, then tap **Connect**.
+5. Confirm that both media and lesson state become connected before speaking.
+
+The code expires after ten minutes and is consumed by the first successful exchange. The app
+encrypts the resulting random device credential with Android Keystore. On later starts, enter the
+same media/control addresses and leave the code/fingerprint blank to reuse that credential.
+
+## Lesson controls and microphone
+
+- Hold **Hold to talk** for the entire learner response and release it when finished.
+- Do not start another recording while the app shows `processing` or the teacher is speaking.
+- **Replay** repeats the last teacher audio locally without advancing the lesson.
+- `0.75×`, `1.0×`, and `1.25×` change teacher playback speed.
+- Tap an annotated word to view pronunciation and request isolated-word audio.
+- **Disconnect** ends the current connection. Interrupted lessons retain structured progress on
+  Windows and resume at the current exercise.
+
+The app does not save raw microphone recordings. Normal logs omit full learner transcripts.
+
+## Update
+
+Install an APK with a higher version code over the existing app. Android accepts an in-place
+update only when it has the same application ID and signing key. Do not uninstall first: an
+uninstall removes the Android Keystore credential and requires pairing again. Learner progress is
+stored on Windows and is unaffected by an Android-only update.
+
+## Uninstall or reset pairing
+
+- Use Android Settings > Apps > govor.ai > Uninstall. This removes the app and its encrypted
+  device credential; it does not delete Windows progress or models.
+- To pair again without uninstalling, clear govor.ai storage in Android Settings, then obtain a new
+  code from a restarted Windows launcher.
+
+## Wi-Fi and release limits
+
+Use the PC's private-network IPv4 address, not `127.0.0.1` and not the emulator-only `10.0.2.2`.
+Do not expose ports 8765/8766 to the public internet or forward them on a router. Release WSS,
+pairing, and DTLS-SRTP are implemented, but physical Wi-Fi/firewall behavior, phone acoustics,
+hardware codecs, lifecycle recovery, and soak stability are not yet accepted.

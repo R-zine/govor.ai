@@ -47,6 +47,11 @@ Pass `--control-url=ws://127.0.0.1:8765/v1/renderer/control` after Godot's `--` 
 ordinary development and `--no-startup-tone --mute-local-audio` when the bounded media tone is not
 needed. `--scene-tour-output=<directory>` is a trusted local benchmark option, not a wire field.
 
+The release launcher instead passes
+`--control-url=wss://localhost:8765/v1/renderer/control` plus
+`--control-ca=<protected per-user certificate>`. The renderer still connects outward to loopback;
+the CA option does not expose a renderer listener or make certificate verification optional.
+
 Godot import/build/self-test success does not prove physical-device delivery, hardware codecs,
 Wi-Fi, acoustics, target-machine performance, monitor-off behavior, or soak stability. Emulator
 results are development evidence only. Those physical and target-environment checks remain the

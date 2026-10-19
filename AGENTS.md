@@ -67,6 +67,14 @@ Milestone handoff.
 ./scripts/progress.ps1 -Action Delete -ConfirmDelete
 ./scripts/progress.ps1 -Action DeleteAll -ConfirmDelete
 ./scripts/provider-credentials.ps1 -Action Status -Target '<credential-target>'
+./scripts/m8-vm.ps1 -Action Prerequisites -IsoPath '<windows-11-x64-iso>'
+./scripts/m8-vm.ps1 -Action Provision -IsoPath '<windows-11-x64-iso>' -IsoSha256 '<recorded-sha256>'
+./scripts/m8-vm.ps1 -Action Start
+./scripts/m8-vm.ps1 -Action StageRelease -Version '<semver>'
+./scripts/m8-vm.ps1 -Action SetupRelease
+./scripts/m8-vm.ps1 -Action StartRelease -SmokeSeconds 300
+./scripts/m8-vm.ps1 -Action WaitRelease -SmokeSeconds 300
+./scripts/m8-vm.ps1 -Action Stop
 ```
 
 Hardware tests are separate:
@@ -86,6 +94,12 @@ test **blocked** or **not executed**; never report simulated values as measureme
 The media development server and debug APK deliberately permit cleartext signaling only for the
 trusted-LAN feasibility test. They are not release-safe. Do not weaken the release manifest or
 describe the pre-shared development token as production pairing.
+
+The QEMU/WHPX fixture in `docs/testing/m8-clean-vm.md` satisfies only the Milestone 8 clean-
+Windows software row recorded on 2026-10-19. Its exact user-supplied ISO provenance and digest are
+part of that limited evidence; the image is not distributed by this project. Its host Android
+emulator remains emulator evidence. Neither VM nor emulator results satisfy any Milestone 9
+physical-hardware row.
 
 ## Milestone handoff
 

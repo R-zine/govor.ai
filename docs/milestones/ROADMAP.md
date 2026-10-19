@@ -13,7 +13,7 @@ criterion has direct evidence).
 | 5. Teaching/progress | complete | M3-4 | Four complete guided scenarios, adaptive explainable teaching, questions do not break lessons, SQLite persistence/resume |
 | 6. Avatar/scenes | complete | M1 media decision, M4 timing | Avatar and four validated dynamic environments, lip sync/fallback, memory/performance evidence |
 | 7. Optional cloud/privacy | complete | Stable provider interfaces | Independent opt-in providers, offline default, OS secret storage, no unintended cloud/secret logging |
-| 8. Packaging/distribution | not started | M1-7 | Clean Windows install/launcher, signed stable APK/update, integrity-checked models, no dev tools, clean shutdown |
+| 8. Packaging/distribution | complete | M1-7 | Portable launcher, signed stable APK/update, integrity-checked models, secure pairing, release lesson, clean shutdown, and clean-Windows VM/host-emulator acceptance passed |
 | 9. Release acceptance and target hardware | not started | M8 | Physical phone/Wi-Fi/audio/codecs/lifecycle/performance/monitor-off/soak bundle, full automated/manual/security suite, and complete local-first cafe scenario |
 
 ## Critical path
@@ -213,6 +213,59 @@ Verified software and current-user Windows evidence:
 
 Milestone 7 is complete. Provider-specific compatibility, quality, latency, pricing, and external
 retention were not tested and are never inferred from mock transports. Milestone 8 may begin.
+
+## Milestone 8 acceptance tracking
+
+Verified software, development-Windows, and native-emulator evidence:
+
+- The repeatable package exports Godot, builds/verifies the signed APK, embeds CPython plus
+  hash-locked dependencies, stages llama.cpp/whisper.cpp/application assets, checks package imports,
+  and produces an enumerated Windows ZIP plus an artifact digest manifest.
+- Guided setup installs six exact model/voice artifacts using pinned revisions, byte sizes, and
+  SHA-256 digests with atomic promotion. Normal release startup forces local-only providers.
+- The launcher creates a stable TLS identity, short-lived one-time pairing code, authenticated
+  HTTPS/WSS gateway, protected per-user state, status output, and clean Windows Job Object teardown.
+- The Android release pins the displayed certificate, encrypts its random device credential with
+  Android Keystore, and reuses that credential without another pairing code.
+- The stable signing identity updated the emulator from signed 0.1.0/code 1 to 0.1.1/code 2 without
+  uninstalling. The progress database was byte-identical across the update.
+- Signed 0.1.1 connected over its normal emulator router without `adb reverse`, received non-black
+  Godot media, returned microphone frames, and completed all three café exercises against the
+  packaged local stack. The deterministic final input used the emulator's documented loopback
+  microphone injection and is not physical acoustic evidence.
+- Normal launcher exit left zero package-owned processes and zero listeners on ports 8765–8768.
+- Runtime notices, Python package licenses, shipped govor.ai source, and pinned upstream GPL source
+  archives are included and integrity-checked.
+- A QEMU 11.0.50/WHPX fixture provisioned the exact digest-recorded user-supplied Windows image,
+  froze a clean base, created a disposable qcow2 run overlay, and exposed guest control/media to
+  the host Android emulator through loopback-only TCP plus one explicit UDP ICE forward. ADR-0012
+  defines the boundary and exact-image limitation.
+- The signed 0.1.4/code-5 candidate includes corrected learner wrappers, conditional verified VC++
+  prerequisite setup, a 180-second model health window, stdin-based SSH harness execution, and a
+  VM-only ICE/tone fixture. Package export/signature/import/doctor and both wrappers passed.
+- In Windows 10.0.22000.0 AMD64, `Setup-Govor.cmd` reported the VC++ runtime and all six models
+  ready. The signed host emulator connected without `adb reverse`; the guest logged non-black
+  1280x720 Godot video, nonzero 48 kHz Godot PCM, and 48 kHz microphone frames. `WaitRelease`
+  reported zero listeners/processes and clean shutdown.
+- The final full suite, 26-test contract scope, locked dependency audit, and all-files pre-commit
+  gate pass. A stale media mypy source-root list found on the first full run was fixed and both the
+  focused media scope and complete suite passed afterward.
+
+Historical failure and remaining boundary:
+
+- The first clean-system double-click of the 0.1.1 `Setup-Govor.cmd` failed before model
+  installation because its quoted trailing-backslash path consumed the launcher subcommand. The
+  0.1.4 clean-guest run directly verifies the corrected wrapper; the historical failure is not
+  erased.
+- The user-supplied ISO's SHA-256 was verified, but provenance, activation, and licensing were not
+  independently verified. It is test input only and is not distributed with govor.ai.
+- Physical Android installation, intended Wi-Fi/firewall path, audio hardware, codecs, lifecycle,
+  performance, monitor-off behavior, and soak remain the distinct Milestone 9 bundle.
+
+Milestone 8 is complete. Exact evidence and transient failures are in
+`docs/benchmarks/2026-10-15-release-packaging-and-distribution.md`,
+`docs/benchmarks/2026-10-17-m8-local-vm-fixture.md`,
+`docs/benchmarks/2026-10-19-m8-clean-vm-acceptance.md`, ADR-0011, and ADR-0012.
 
 ## Milestone 9 target-hardware acceptance tracking
 

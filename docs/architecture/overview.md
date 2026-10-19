@@ -127,3 +127,21 @@ backlog, and recover from renderer restart. Godot project/build validation, loca
 native-emulator delivery passed, so this architecture is accepted for Milestones 2-8. Final
 physical-device, Wi-Fi, codec, performance, lifecycle, and soak acceptance remains the mandatory
 Milestone 9 release gate. See ADR-0002, ADR-0003, and ADR-0004.
+
+## Release packaging boundary
+
+Milestone 8 uses a versioned portable Windows x64 archive and a signed native Android APK. The
+archive embeds CPython, pinned Python packages, the exported Godot player, llama.cpp, whisper.cpp,
+configuration, guides, notices, and corresponding source; model weights are installed separately
+from an exact size/SHA-256 manifest. Mutable models, progress, logs, TLS identity, and hashed device
+credentials live below `%LOCALAPPDATA%\govor.ai` so application updates do not replace them.
+
+The launcher is the only release process owner. It forces local/offline providers, starts
+loopback inference plus authenticated HTTPS/WSS LAN gateways, displays the PC address/certificate
+fingerprint/one-time pairing code, and places all children in a kill-on-close Windows Job Object.
+Android pins the displayed certificate and encrypts its random device credential with Android
+Keystore. ADR-0011 records the package/update/security decision. A development-machine/emulator
+release lesson passes. ADR-0012 adds a QEMU/WHPX clean-Windows base/overlay fixture that routes the
+host Android emulator through loopback TCP and fixture-only UDP ICE forwards. The final 0.1.4 guest
+setup/start/media/shutdown run closes Milestone 8's clean-software gate for the exact recorded VM
+image; it does not replace Milestone 9 hardware acceptance.

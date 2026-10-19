@@ -43,10 +43,7 @@ class WebRtcSession(private val context: Context) : PeerConnection.Observer {
     private val eglBase = EglBase.create()
     private val audioDeviceModule = JavaAudioDeviceModule.builder(context).createAudioDeviceModule()
     private val factory: PeerConnectionFactory
-    private val httpClient = OkHttpClient.Builder()
-        .connectTimeout(5, TimeUnit.SECONDS)
-        .readTimeout(0, TimeUnit.MILLISECONDS)
-        .build()
+    private var httpClient: OkHttpClient? = null
 
     private var socket: WebSocket? = null
     private var peerConnection: PeerConnection? = null
@@ -77,13 +74,23 @@ class WebRtcSession(private val context: Context) : PeerConnection.Observer {
             .createPeerConnectionFactory()
     }
 
-    fun connect(host: String, pairingToken: String) {
+    fun connect(
+        host: String,
+        credential: String,
+        secure: Boolean = false,
+        deviceId: String? = null,
+        certificateFingerprint: String? = null,
+    ) {
         disconnect()
-        if (pairingToken.length < 32) {
-            fail("Pairing token must contain at least 32 characters.")
+        if (credential.length !in 32..256) {
+            fail("Pairing credential is invalid.")
             return
         }
-        val normalizedHost = host.trim().removePrefix("ws://").removePrefix("wss://").trimEnd('/')
+        if (secure && (deviceId == null || certificateFingerprint == null)) {
+            fail("Secure pairing information is incomplete.")
+            return
+        }
+        val normalizedHost = GatewaySecurity.normalizeHost(host)
         if (normalizedHost.isBlank()) {
             fail("Enter the Windows host address.")
             return
@@ -113,14 +120,22 @@ class WebRtcSession(private val context: Context) : PeerConnection.Observer {
         mutableStatus.value = MediaConnectionStatus.SIGNALING
         val request = try {
             Request.Builder()
-                .url("ws://$normalizedHost/v1/media/signaling")
+                .url("${if (secure) "wss" else "ws"}://$normalizedHost/v1/media/signaling")
                 .build()
         } catch (_: IllegalArgumentException) {
             disconnect()
             fail("Enter a valid Windows host and port.")
             return
         }
-        socket = httpClient.newWebSocket(request, SignalingListener(pairingToken))
+        httpClient = if (secure) {
+            GatewaySecurity.pinnedClient(requireNotNull(certificateFingerprint))
+        } else {
+            GatewaySecurity.developmentClient()
+        }
+        socket = requireNotNull(httpClient).newWebSocket(
+            request,
+            SignalingListener(credential, deviceId),
+        )
     }
 
     fun attachRenderer(view: SurfaceViewRenderer) {
@@ -149,13 +164,14 @@ class WebRtcSession(private val context: Context) : PeerConnection.Observer {
         audioSource?.dispose()
         audioSource = null
         offerSent = false
+        httpClient?.dispatcher?.executorService?.shutdown()
+        httpClient?.connectionPool?.evictAll()
+        httpClient = null
         mutableStatus.value = MediaConnectionStatus.DISCONNECTED
     }
 
     fun release() {
         disconnect()
-        httpClient.dispatcher.executorService.shutdown()
-        httpClient.connectionPool.evictAll()
         factory.dispose()
         audioDeviceModule.release()
         eglBase.release()
@@ -208,9 +224,17 @@ class WebRtcSession(private val context: Context) : PeerConnection.Observer {
         mutableStatus.value = MediaConnectionStatus.FAILED
     }
 
-    private inner class SignalingListener(private val pairingToken: String) : WebSocketListener() {
+    private inner class SignalingListener(
+        private val credential: String,
+        private val deviceId: String?,
+    ) : WebSocketListener() {
         override fun onOpen(webSocket: WebSocket, response: Response) {
-            webSocket.send(envelope("auth.request", JSONObject().put("token", pairingToken)))
+            val payload = if (deviceId == null) {
+                JSONObject().put("token", credential)
+            } else {
+                JSONObject().put("device_id", deviceId).put("credential", credential)
+            }
+            webSocket.send(envelope("auth.request", payload))
         }
 
         override fun onMessage(webSocket: WebSocket, text: String) {

@@ -68,9 +68,14 @@
             "payload": {
               "type": "object",
               "additionalProperties": false,
-              "required": ["token"],
+              "oneOf": [
+                { "required": ["token"] },
+                { "required": ["device_id", "credential"] }
+              ],
               "properties": {
-                "token": { "type": "string", "minLength": 32, "maxLength": 256 }
+                "token": { "type": "string", "minLength": 32, "maxLength": 256 },
+                "device_id": { "type": "string", "format": "uuid" },
+                "credential": { "type": "string", "minLength": 32, "maxLength": 256 }
               }
             }
           }

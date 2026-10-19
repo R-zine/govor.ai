@@ -41,3 +41,17 @@ def test_cloud_endpoint_must_be_credential_free_https() -> None:
             dialogue_provider="cloud",
             cloud_dialogue_base_url="http://key@provider.example/v1?unsafe=true",
         )
+
+
+def test_lan_bind_requires_secure_gateway_credentials() -> None:
+    with pytest.raises(ValidationError, match="LAN control bind"):
+        Settings(bind_host="0.0.0.0")  # noqa: S104 - deliberate rejected LAN bind
+    with pytest.raises(ValidationError, match="credential store"):
+        Settings(secure_gateway=True)
+
+    settings = Settings(
+        bind_host="0.0.0.0",  # noqa: S104 - secure LAN gateway configuration
+        secure_gateway=True,
+        gateway_credentials_file="gateway.json",
+    )
+    assert settings.secure_gateway

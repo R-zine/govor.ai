@@ -27,6 +27,8 @@ def test_schema_is_valid_draft_2020_12(schema_path: Path) -> None:
     [
         ("message-envelope.schema.json", "message-envelope.json"),
         ("signaling-message.schema.json", "signaling-offer.json"),
+        ("gateway-auth-message.schema.json", "gateway-pairing-request.json"),
+        ("gateway-auth-message.schema.json", "gateway-auth-request.json"),
         ("control-message.schema.json", "control-teacher-turn.json"),
         ("control-message.schema.json", "control-word-replay-request.json"),
         ("control-message.schema.json", "control-word-audio.json"),
@@ -46,6 +48,7 @@ def test_positive_contract_fixtures(schema_name: str, fixture_name: str) -> None
     [
         ("message-envelope.schema.json", "message-envelope-missing-correlation.json"),
         ("signaling-message.schema.json", "signaling-unknown-field.json"),
+        ("gateway-auth-message.schema.json", "gateway-pairing-code-invalid.json"),
         ("control-message.schema.json", "control-recording-extra-field.json"),
         ("control-message.schema.json", "control-lesson-progress-invalid.json"),
         ("control-message.schema.json", "control-scene-arbitrary-asset.json"),

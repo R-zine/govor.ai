@@ -1,3 +1,4 @@
+using System.Globalization;
 using Godot;
 
 namespace Govor.Renderer;
@@ -27,6 +28,24 @@ public partial class MediaProofScene : Node
         Engine.MaxFps = RendererBridgeProtocol.TargetFrameRate;
         bool muteLocalAudio = arguments.Contains("--mute-local-audio", StringComparer.Ordinal);
         bool exitAfterTone = arguments.Contains("--exit-after-tone", StringComparer.Ordinal);
+        const string startupToneDelayPrefix = "--startup-tone-delay-seconds=";
+        string? startupToneDelayValue = arguments
+            .FirstOrDefault(argument => argument.StartsWith(
+                startupToneDelayPrefix,
+                StringComparison.Ordinal))?[startupToneDelayPrefix.Length..];
+        double startupToneDelaySeconds = 0.0;
+        if (startupToneDelayValue is not null &&
+            (!double.TryParse(
+                startupToneDelayValue,
+                NumberStyles.Float,
+                CultureInfo.InvariantCulture,
+                out startupToneDelaySeconds) ||
+             startupToneDelaySeconds is < 0.0 or > 300.0))
+        {
+            GD.PushError("The startup tone delay must be between zero and 300 seconds.");
+            GetTree().Quit(2);
+            return;
+        }
         const string sceneTourPrefix = "--scene-tour-output=";
         string? sceneTourOutput = arguments
             .FirstOrDefault(argument => argument.StartsWith(sceneTourPrefix, StringComparison.Ordinal))?
@@ -37,6 +56,10 @@ public partial class MediaProofScene : Node
         string? controlUrl = arguments
             .FirstOrDefault(argument => argument.StartsWith(controlUrlPrefix, StringComparison.Ordinal))?
             [controlUrlPrefix.Length..];
+        const string controlCaPrefix = "--control-ca=";
+        string? controlCaPath = arguments
+            .FirstOrDefault(argument => argument.StartsWith(controlCaPrefix, StringComparison.Ordinal))?
+            [controlCaPrefix.Length..];
         const string proofImagePrefix = "--proof-image=";
         _proofImagePath = arguments
             .FirstOrDefault(argument => argument.StartsWith(proofImagePrefix, StringComparison.Ordinal))?
@@ -67,6 +90,7 @@ public partial class MediaProofScene : Node
             {
                 Name = "RendererSessionController",
                 ControlUrl = controlUrl,
+                ControlCaPath = controlCaPath,
             });
         }
 
@@ -90,6 +114,7 @@ public partial class MediaProofScene : Node
                 Name = "ApplicationToneGenerator",
                 PlayLocally = !muteLocalAudio,
                 ExitWhenComplete = exitAfterTone,
+                StartDelaySeconds = startupToneDelaySeconds,
             };
             AddChild(tone);
         }

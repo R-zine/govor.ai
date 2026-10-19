@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "notices": [
+    {
+      "name": "Godot Engine 4.7.2 license",
+      "uri": "https://raw.githubusercontent.com/godotengine/godot/4.7.2-stable/LICENSE.txt",
+      "cache_name": "godot-4.7.2-LICENSE.txt",
+      "output_name": "GODOT-LICENSE.txt",
+      "size": 1149,
+      "sha256": "b0435e3b3e4e55238f05f4b306f30524a1b2e20147810d436eaa554fa6855c80"
+    },
+    {
+      "name": "Godot Engine 4.7.2 copyright and third-party notices",
+      "uri": "https://raw.githubusercontent.com/godotengine/godot/4.7.2-stable/COPYRIGHT.txt",
+      "cache_name": "godot-4.7.2-COPYRIGHT.txt",
+      "output_name": "GODOT-COPYRIGHT-AND-NOTICES.txt",
+      "size": 100108,
+      "sha256": "cb1980c88089573bcacd7221d777c689bb8bbd778799f24c27fca0fe5f774d6d"
+    },
+    {
+      "name": "llama.cpp b11540 license",
+      "uri": "https://raw.githubusercontent.com/ggml-org/llama.cpp/b11540/LICENSE",
+      "cache_name": "llama-b11540-LICENSE.txt",
+      "output_name": "LLAMA-CPP-LICENSE.txt",
+      "size": 1078,
+      "sha256": "94f29bbed6a22c35b992c5c6ebf0e7c92f13b836b90f36f461c9cf2f0f1d010d"
+    },
+    {
+      "name": "whisper.cpp b5454 license",
+      "uri": "https://raw.githubusercontent.com/ggml-org/whisper.cpp/b5454/LICENSE",
+      "cache_name": "whisper-b5454-LICENSE.txt",
+      "output_name": "WHISPER-CPP-LICENSE.txt",
+      "size": 1078,
+      "sha256": "94f29bbed6a22c35b992c5c6ebf0e7c92f13b836b90f36f461c9cf2f0f1d010d"
+    },
+    {
+      "name": "WebRTC Android 150.7871.01 wrapper and bundled dependency notices",
+      "uri": "https://github.com/webrtc-sdk/android/archive/7b6390fb098303b31af76906bf15f7decaa4ef95.tar.gz",
+      "cache_name": "webrtc-android-7b6390f.tar.gz",
+      "size": 129967,
+      "sha256": "d191fa38cc8f5fe98a8afc85c80ea370fadb48c321c02e4975c2b06203a64411",
+      "archive_members": [
+        {
+          "path": "android-7b6390fb098303b31af76906bf15f7decaa4ef95/LICENSE",
+          "output_name": "WEBRTC-ANDROID-WRAPPER-LICENSE.txt"
+        },
+        {
+          "path": "android-7b6390fb098303b31af76906bf15f7decaa4ef95/Licenses/WEBRTC.md",
+          "output_name": "WEBRTC-AND-THIRD-PARTY-NOTICES.md"
+        }
+      ]
+    }
+  ]
+}

@@ -38,6 +38,7 @@ import okhttp3.Request
 import okhttp3.Response
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
+import org.json.JSONObject
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.UUID
@@ -48,10 +49,7 @@ import kotlin.math.max
 /** Validated Milestone 2 control client. It performs no inference and persists no audio. */
 class LessonSessionClient {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private val httpClient = OkHttpClient.Builder()
-        .connectTimeout(5, TimeUnit.SECONDS)
-        .readTimeout(0, TimeUnit.MILLISECONDS)
-        .build()
+    private var httpClient: OkHttpClient? = null
 
     private var socket: WebSocket? = null
     private var sessionId: String? = null
@@ -97,6 +95,10 @@ class LessonSessionClient {
         scenarioId: String,
         englishLocale: String,
         spacedReviewEnabled: Boolean,
+        secure: Boolean = false,
+        deviceId: String? = null,
+        credential: String? = null,
+        certificateFingerprint: String? = null,
     ) {
         closeSocket(notifyHost = false)
         require(scenarioId in SUPPORTED_SCENARIOS)
@@ -104,20 +106,34 @@ class LessonSessionClient {
         selectedScenarioId = scenarioId
         selectedEnglishLocale = englishLocale
         selectedSpacedReview = spacedReviewEnabled
-        val normalizedHost = host.trim().removePrefix("ws://").removePrefix("wss://").trimEnd('/')
+        if (secure && (deviceId == null || credential == null || certificateFingerprint == null)) {
+            fail("Secure pairing information is incomplete.")
+            return
+        }
+        val normalizedHost = GatewaySecurity.normalizeHost(host)
         if (normalizedHost.isBlank()) {
             fail("Enter the Windows control host and port.")
             return
         }
         val request = try {
-            Request.Builder().url("ws://$normalizedHost/v1/control").build()
+            Request.Builder()
+                .url("${if (secure) "wss" else "ws"}://$normalizedHost/v1/control")
+                .build()
         } catch (_: IllegalArgumentException) {
             fail("Enter a valid Windows control host and port.")
             return
         }
         mutableError.value = null
         mutableState.value = SessionState.CONNECTING
-        socket = httpClient.newWebSocket(request, ControlListener())
+        httpClient = if (secure) {
+            GatewaySecurity.pinnedClient(requireNotNull(certificateFingerprint))
+        } else {
+            GatewaySecurity.developmentClient()
+        }
+        socket = requireNotNull(httpClient).newWebSocket(
+            request,
+            ControlListener(deviceId, credential),
+        )
     }
 
     fun beginRecording() {
@@ -196,8 +212,6 @@ class LessonSessionClient {
     fun release() {
         closeSocket(notifyHost = true)
         scope.cancel()
-        httpClient.dispatcher.executorService.shutdown()
-        httpClient.connectionPool.evictAll()
     }
 
     private fun handleMessage(text: String) {
@@ -207,6 +221,7 @@ class LessonSessionClient {
                 "session.state" -> applyState(
                     ControlContractCodec.decodePayload<SessionStatePayload>(envelope),
                 )
+                "auth.ok" -> sendSessionStart()
                 "teacher.turn" -> playTeacherTurn(
                     ControlContractCodec.decodePayload<TeacherTurnPayload>(envelope),
                 )
@@ -389,6 +404,9 @@ class LessonSessionClient {
         stopPlayback()
         socket?.close(1000, "client disconnect")
         socket = null
+        httpClient?.dispatcher?.executorService?.shutdown()
+        httpClient?.connectionPool?.evictAll()
+        httpClient = null
         sessionId = null
         turnId = null
         activeTurn = null
@@ -415,21 +433,41 @@ class LessonSessionClient {
         mutableState.value = SessionState.RECOVERABLE_ERROR
     }
 
-    private inner class ControlListener : WebSocketListener() {
+    private fun sendSessionStart() {
+        send(
+            "session.start",
+            SessionStartPayload(
+                client_id = UUID.randomUUID().toString(),
+                scenario_id = selectedScenarioId,
+                english_locale = selectedEnglishLocale,
+                spaced_review_enabled = selectedSpacedReview,
+            ),
+        )
+    }
+
+    private inner class ControlListener(
+        private val deviceId: String?,
+        private val credential: String?,
+    ) : WebSocketListener() {
         override fun onOpen(webSocket: WebSocket, response: Response) {
             if (socket !== webSocket) return
-            webSocket.send(
-                ControlContractCodec.encodeEnvelope(
-                    "session.start",
-                    UUID.randomUUID().toString(),
-                    SessionStartPayload(
-                        client_id = UUID.randomUUID().toString(),
-                        scenario_id = selectedScenarioId,
-                        english_locale = selectedEnglishLocale,
-                        spaced_review_enabled = selectedSpacedReview,
-                    ),
-                ),
-            )
+            if (deviceId == null || credential == null) {
+                sendSessionStart()
+            } else {
+                webSocket.send(
+                    JSONObject()
+                        .put("protocol_version", "1.0")
+                        .put("message_type", "auth.request")
+                        .put("correlation_id", UUID.randomUUID().toString())
+                        .put(
+                            "payload",
+                            JSONObject()
+                                .put("device_id", deviceId)
+                                .put("credential", credential),
+                        )
+                        .toString(),
+                )
+            }
         }
 
         override fun onMessage(webSocket: WebSocket, text: String) {

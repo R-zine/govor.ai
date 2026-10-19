@@ -26,6 +26,16 @@ def test_media_source_rejects_non_loopback_and_parameterized_urls() -> None:
         MediaMicrophoneSource("http://192.168.1.2:8766")
     with pytest.raises(ValueError, match="parameters"):
         MediaMicrophoneSource("http://127.0.0.1:8766?token=secret")
+    with pytest.raises(ValueError, match="trusted CA"):
+        MediaMicrophoneSource("https://127.0.0.1:8766")
+    with pytest.raises(ValueError, match="only for loopback HTTPS"):
+        MediaMicrophoneSource("http://127.0.0.1:8766", tls_ca_file="ca.pem")
+
+    source = MediaMicrophoneSource(
+        "https://127.0.0.1:8766",
+        tls_ca_file="ca.pem",
+    )
+    assert source is not None
 
 
 @pytest.mark.asyncio

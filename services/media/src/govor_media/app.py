@@ -3,15 +3,20 @@ from __future__ import annotations
 import hmac
 import ipaddress
 import json
+import logging
 from typing import Any, Literal
 from uuid import UUID
 
 from fastapi import FastAPI, HTTPException, Request, Response, WebSocket, WebSocketDisconnect
-from govor_contracts import MessageEnvelope
+from govor_contracts import DeviceAuthPayload, MessageEnvelope
+from govor_gateway_security import PairingAuthority
 from pydantic import BaseModel, ConfigDict, ValidationError
 
+from .fixture_ice import ForwardedIceConfiguration
 from .microphone_capture import CaptureConflict, CaptureEmpty, MicrophoneCapture
 from .peer import MediaPeer
+
+LOGGER = logging.getLogger("uvicorn.error")
 
 
 class CaptureRequest(BaseModel):
@@ -27,15 +32,44 @@ class CaptureCancelRequest(BaseModel):
 
 
 def create_media_app(
-    *, pairing_token: str, media_source: Literal["diagnostic", "renderer"] = "diagnostic"
+    *,
+    pairing_token: str | None = None,
+    gateway_credentials_file: str | None = None,
+    secure_gateway: bool = False,
+    media_source: Literal["diagnostic", "renderer"] = "diagnostic",
+    ice_fixture_advertise_host: str | None = None,
+    ice_fixture_bind_port: int | None = None,
 ) -> FastAPI:
-    if len(pairing_token) < 32:
+    if pairing_token is not None and len(pairing_token) < 32:
         raise ValueError("The development pairing token must contain at least 32 characters")
+    if (pairing_token is None) == (gateway_credentials_file is None):
+        raise ValueError("configure exactly one development token or release credential store")
+    if secure_gateway and gateway_credentials_file is None:
+        raise ValueError("the secure gateway requires a release credential store")
     if media_source not in {"diagnostic", "renderer"}:
         raise ValueError(f"Unsupported media source: {media_source}")
+    if (ice_fixture_advertise_host is None) != (ice_fixture_bind_port is None):
+        raise ValueError("configure both test-only ICE fixture values or neither")
+    forwarded_ice: ForwardedIceConfiguration | None = None
+    if ice_fixture_advertise_host is not None and ice_fixture_bind_port is not None:
+        try:
+            advertise_address = ipaddress.ip_address(ice_fixture_advertise_host)
+        except ValueError as error:
+            raise ValueError("the test-only ICE fixture host must be an IP address") from error
+        if not advertise_address.is_private and not advertise_address.is_loopback:
+            raise ValueError("the test-only ICE fixture host must be private or loopback")
+        if not 1024 <= ice_fixture_bind_port <= 65535:
+            raise ValueError("the test-only ICE fixture port must be between 1024 and 65535")
+        forwarded_ice = ForwardedIceConfiguration(
+            advertise_host=str(advertise_address),
+            bind_port=ice_fixture_bind_port,
+        )
 
     app = FastAPI(title="govor.ai media feasibility peer", version="0.1.0")
     microphone_capture = MicrophoneCapture()
+    pairing_authority = (
+        PairingAuthority(gateway_credentials_file) if gateway_credentials_file else None
+    )
     app.state.microphone_capture = microphone_capture
 
     def require_loopback(request: Request) -> None:
@@ -87,13 +121,17 @@ def create_media_app(
         return {
             "status": "ok",
             "service": "media-feasibility",
-            "production_ready": False,
+            "production_ready": secure_gateway and pairing_authority is not None,
             "sources": [f"{media_source}_video", f"{media_source}_audio"],
+            "ice_fixture": forwarded_ice is not None,
         }
 
     @app.websocket("/v1/media/signaling")
     async def signaling(websocket: WebSocket) -> None:
         await websocket.accept()
+        if secure_gateway and websocket.url.scheme != "wss":
+            await websocket.close(code=1008, reason="secure transport required")
+            return
         peer: MediaPeer | None = None
         authenticated = False
         try:
@@ -106,14 +144,27 @@ def create_media_app(
                 correlation_id = str(message.correlation_id)
 
                 if not authenticated:
-                    supplied = message.payload.get("token")
-                    if message.message_type != "auth.request" or not isinstance(supplied, str):
+                    if message.message_type != "auth.request":
                         await websocket.close(code=1008, reason="authentication required")
                         return
-                    if not hmac.compare_digest(pairing_token, supplied):
+                    if pairing_authority is not None:
+                        auth = DeviceAuthPayload.model_validate(message.payload)
+                        accepted = pairing_authority.authenticate(
+                            device_id=str(auth.device_id),
+                            credential=auth.credential,
+                        )
+                    else:
+                        supplied = message.payload.get("token")
+                        accepted = (
+                            isinstance(supplied, str)
+                            and pairing_token is not None
+                            and hmac.compare_digest(pairing_token, supplied)
+                        )
+                    if not accepted:
                         await websocket.close(code=1008, reason="authentication failed")
                         return
                     authenticated = True
+                    LOGGER.info("Media gateway authentication accepted")
                     await websocket.send_json(_envelope("auth.ok", correlation_id, {}))
                     continue
 
@@ -126,11 +177,14 @@ def create_media_app(
                     peer = MediaPeer(
                         media_source=media_source,
                         microphone_capture=microphone_capture,
+                        forwarded_ice=forwarded_ice,
                     )
+                    LOGGER.info("WebRTC offer accepted for ICE gathering")
                     answer = await peer.accept_offer(sdp)
                     await websocket.send_json(
                         _envelope("webrtc.answer", correlation_id, {"sdp": answer})
                     )
+                    LOGGER.info("WebRTC answer sent")
                 elif message.message_type == "webrtc.end":
                     await websocket.close(code=1000, reason="session ended")
                     return

@@ -187,3 +187,90 @@ development PC, not on the Android emulator; details are in
 `docs/benchmarks/2026-10-12-avatar-scenes-and-renderer-performance.md`. No physical-device row
 changes status. Hardware encode/decode, intended Wi-Fi, acoustics, target performance, lifecycle,
 thermals, monitor-off, and soak remain not executed for Milestone 9.
+
+## 2026-10-15 Milestone 8 signed-release emulator run
+
+The signed `0.1.1` release APK (`versionCode=2`) updated the installed signed `0.1.0` APK
+(`versionCode=1`) without uninstalling it. Android retained the original installation timestamp,
+the encrypted Android Keystore gateway credential continued to authenticate, and the protected
+Windows progress database had the same SHA-256 immediately before and after the binary update.
+
+The API 34 emulator connected to the packaged Windows launcher through its normal virtual-router
+address `10.0.2.2` over certificate-pinned HTTPS/WSS. No `adb reverse`, debug token, cleartext
+manifest, or development host process was used in the application path. The media service logged
+non-black 1280x720 renderer frames and 48 kHz/960-sample client microphone frames.
+
+After restarting the AVD with its explicit host-audio switch, two bounded acoustic PC-playback
+turns advanced the release lesson. The final deterministic turn used the installed emulator's
+loopback `android.emulation.control.EmulatorController/injectAudio` interface while the signed app's
+real hold-to-talk control was held. Whisper returned “Here, please. I will have my coffee for here,
+please.” The UI then displayed `Lesson complete · progress saved`; the SQLite view showed café
+`completed_count=1`, exercise index 3, and three successful exercises. This is a deterministic
+emulator-input technique, not a phone microphone or acoustic test.
+
+Stopping the launcher closed all managed children. The app and emulator were stopped immediately;
+ports 8765–8768 had zero listeners and no package-owned process remained. No audio continued.
+Exact commands, package hashes, transient failures, and limits are in
+`docs/benchmarks/2026-10-15-release-packaging-and-distribution.md`.
+
+This run changes no Milestone 9 row. It used a virtual router rather than the intended Wi-Fi, a
+virtual microphone injection rather than physical acoustics, and an emulator codec rather than
+phone hardware. Physical installation, Android platform verification, Windows Firewall behavior,
+credential storage, video/audio/microphone behavior, lifecycle, codecs, performance, thermals,
+monitor-off behavior, and soak all remain not executed on target hardware.
+
+## 2026-10-17 Milestone 8 local clean-VM fixture
+
+This is the historical pre-execution record. The clean-software run later passed on 2026-10-19 as
+recorded in the next section; none of the Milestone 9 hardware rows changed.
+
+A QEMU 11.0.50/WHPX fixture is implemented for the one remaining Milestone 8 software row. It uses
+an official, caller-supplied, digest-verified Windows 11 Enterprise evaluation ISO; a stopped clean
+base; a disposable qcow2 run overlay; generated-key loopback SSH; and host-loopback forwarding.
+The host Android emulator reaches guest release ports through `10.0.2.2:18765/18766`, without a
+nested emulator or `adb reverse`.
+
+Host QEMU/WHPX, EDK2 pflash, quoted-path, and qcow2-disk startup passed a bounded process probe. The
+official ISO is absent, so no guest was provisioned and no Windows setup, Godot launch, emulator
+connection, or guest teardown was executed. This is **blocked**, not hardware evidence and not a
+clean-Windows pass. Exact implementation evidence is in
+`docs/benchmarks/2026-10-17-m8-local-vm-fixture.md`; the runbook is
+`docs/testing/m8-clean-vm.md`.
+
+The later passing VM run leaves every Milestone 9 row unchanged: the VM is not the target
+Windows machine, and the Android Studio emulator is not a physical phone. Intended Wi-Fi,
+physical acoustics, hardware codecs, lifecycle, latency/resources, monitor-off behavior, thermals,
+and the 30-minute soak are still not executed.
+
+## 2026-10-19 Milestone 8 clean-VM and host-emulator acceptance
+
+This entry closes only Milestone 8's clean-Windows software row. It is intentionally recorded in
+the hardware ledger so no future reader mistakes the VM/emulator run for target-hardware evidence.
+
+- Host: Windows process build 10.0.26200, QEMU 11.0.50 with WHPX.
+- Guest: `GOVOR-M8-VM`, Windows 10.0.22000.0 AMD64, 8 GiB RAM/four virtual CPUs.
+- Test image: user-supplied, 4,693,557,248 bytes, SHA-256
+  `15fecff356411d43c77df040e1847427402b0e09da069bf1db0cb754932075b9`; not distributed, with
+  provenance/activation/licensing not independently verified.
+- Android: host API 34 AVD `emulator-5554`, `sdk_gphone64_x86_64`; release APK 0.1.4/code 5.
+- Network: QEMU user networking with host-loopback TCP 18765/18766 and UDP 18770; Android used
+  `10.0.2.2`; `adb reverse --list` was empty.
+
+The final 0.1.4 ZIP was independently re-hashed in the guest. `Setup-Govor.cmd` verified the
+conditional Microsoft VC++ prerequisite and all six pinned models. `Start-Govor.cmd` launched the
+actual local providers and Godot renderer. Authenticated WSS/DTLS-SRTP connected; the guest media
+log recorded non-black 1280x720 Godot video (`rgb_max=255`), nonzero 48 kHz/960-sample Godot PCM
+(`peak=2621`), and a 48 kHz/960-sample emulator microphone frame. Android logged the 1280x720
+goldfish VP8 decoder, rendered frames, audio playout, and an active microphone recorder. The exact
+Retry lesson action recovered a transient lesson error in one run.
+
+The final bounded shutdown record reported task `Ready`, zero listeners, zero owned processes, and
+`clean_shutdown=true`. The emulator was killed and the VM shut down normally; no server or tone
+remained. ADB `SurfaceView` screenshots were intermittently black despite non-black media and
+Android render callbacks, so they are not visible-scene evidence.
+
+This run does not change any Milestone 9 row. The physical phone, intended Wi-Fi, physical
+speakers/microphone, acoustic path, hardware codecs, lifecycle/interruption, target performance,
+monitor-off behavior, thermals, and 30-minute soak remain not executed. Exact commands, artifact
+hashes, failures, and limits are in
+`docs/benchmarks/2026-10-19-m8-clean-vm-acceptance.md`.

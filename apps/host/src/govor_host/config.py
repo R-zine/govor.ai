@@ -19,6 +19,8 @@ class Settings(BaseSettings):
     allow_cloud_microphone_upload: bool = False
     bind_host: str = "127.0.0.1"
     port: int = Field(default=8765, ge=1024, le=65535)
+    secure_gateway: bool = False
+    gateway_credentials_file: str | None = None
     max_control_message_bytes: int = Field(default=1_048_576, ge=1024, le=4_194_304)
     provider_timeout_seconds: float = Field(default=30.0, gt=0.0, le=60.0)
     capture_timeout_seconds: float = Field(default=2.0, gt=0.0, le=10.0)
@@ -27,6 +29,7 @@ class Settings(BaseSettings):
     recording_timeout_seconds: float = Field(default=60.0, gt=0.0, le=120.0)
     renderer_required: bool = True
     media_capture_url: str = "http://127.0.0.1:8766"
+    media_capture_tls_ca: str | None = None
     llama_base_url: str = "http://127.0.0.1:8767"
     dialogue_provider_id: str = Field(
         default="llama.cpp-qwen3-4b-q4_k_m",
@@ -62,6 +65,14 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_cloud_opt_in(self) -> Settings:
+        if self.bind_host not in {"127.0.0.1", "::1"} and (
+            not self.secure_gateway or not self.gateway_credentials_file
+        ):
+            raise ValueError(
+                "a LAN control bind requires the secure gateway and a credential store"
+            )
+        if self.secure_gateway and not self.gateway_credentials_file:
+            raise ValueError("the secure gateway requires a credential store")
         selected = {
             self.recognition_provider,
             self.dialogue_provider,
