@@ -3,9 +3,10 @@
 Use only the signed `govor.ai-<version>-android-release.apk` supplied with the same release as the
 Windows package. The debug APK permits a cleartext development path and is not a learner build.
 
-The signed release, secure pairing, update, and a complete lesson have passed on an Android Studio
-API 34 emulator. No physical phone or intended Wi-Fi path has completed acceptance; those remain
-mandatory Milestone 9 checks.
+The signed release, secure pairing, update, and complete lesson passed first on an Android Studio
+API 34 emulator and then on the documented physical realme RMX3939 over the intended private Wi-Fi.
+The exact signed `0.1.11`/code 12 candidate completed Milestone 9 acceptance on 2026-10-22; the
+earlier emulator evidence is not used as a substitute for any physical row.
 
 ## Install
 
@@ -71,4 +72,4 @@ stored on Windows and is unaffected by an Android-only update.
 Use the PC's private-network IPv4 address, not `127.0.0.1` and not the emulator-only `10.0.2.2`.
 Do not expose ports 8765/8766 to the public internet or forward them on a router. Release WSS,
 pairing, and DTLS-SRTP are implemented, but physical Wi-Fi/firewall behavior, phone acoustics,
-hardware codecs, lifecycle recovery, and soak stability are not yet accepted.
+hardware codecs, lifecycle recovery, and bounded stability require the recorded release evidence.

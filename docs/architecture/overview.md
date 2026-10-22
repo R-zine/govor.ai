@@ -121,12 +121,15 @@ the selected renderer and lives in `apps/renderer`. It owns a 1280x720 `SubViewp
 animation, and application PCM, but does not own signaling or WebRTC.
 
 The renderer writes RGBA readbacks and bounded PCM blocks into versioned Windows-local named
-memory mappings. aiortc is the sole network peer. The handoff adds no LAN listener and no native
+memory mappings. Video alternates between two complete latest-frame slots; the reader verifies a
+stable committed header and may briefly await the next publication to avoid producer/consumer
+phase aliasing. aiortc is the sole network peer. The handoff adds no LAN listener and no native
 plugin. Sequence locks, bounded audio storage, and writer-generation IDs reject torn data, cap
 backlog, and recover from renderer restart. Godot project/build validation, local runtime, and
-native-emulator delivery passed, so this architecture is accepted for Milestones 2-8. Final
-physical-device, Wi-Fi, codec, performance, lifecycle, and soak acceptance remains the mandatory
-Milestone 9 release gate. See ADR-0002, ADR-0003, and ADR-0004.
+native-emulator delivery passed. Milestone 9 has since measured this path on a physical phone and
+target PC, completed the bounded bilingual lesson/restart path, and received learner confirmation
+of moving phone video and intelligible teacher audio. Milestone 9 is complete. See ADR-0002,
+ADR-0003, and ADR-0004.
 
 ## Release packaging boundary
 

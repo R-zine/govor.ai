@@ -4,10 +4,10 @@ The Milestone 8 distribution is a portable Windows x64 archive. It contains the 
 player and its own Python/local-AI runtimes; do not install Python, Godot, Gradle, or Android Studio
 to use it.
 
-This package has passed development-machine, clean-Windows VM, and Android-emulator checks. The VM
-result applies only to the exact recorded image and does not establish target-PC or physical-phone
-behavior, so these remain candidate-release instructions rather than a finished public release
-claim. Physical target acceptance is Milestone 9.
+This package has passed development-machine, clean-Windows VM, Android-emulator, and physical
+target checks. The VM result still applies only to the exact recorded image and does not establish
+target-PC or physical-phone behavior; that separate physical evidence comes from the completed
+Milestone 9 run on the documented target PC, realme RMX3939, and intended private Wi-Fi.
 
 Do not use the obsolete 0.1.1 candidate: its Windows command wrappers cannot pass the launcher
 subcommand. Use 0.1.2 or later, verify its digest, and extract it into a new directory.

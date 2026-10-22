@@ -14,8 +14,9 @@ an internal missing implementation has a deterministic magenta fallback. See
 `Assets/Teacher/README.md` and ADR-0009 for the asset/license and boundary decisions.
 
 Godot publishes top-to-bottom RGBA frames and bounded PCM blocks through renderer-neutral Windows
-named memory mappings. Video uses a latest-frame slot; audio uses a bounded 64-block ring of 20 ms
-blocks. The mappings open no network listener, while aiortc remains the only network-facing media
+named memory mappings. Video uses two alternating latest-frame slots so a complete frame remains
+readable while the next slot is filled; audio uses a bounded 64-block ring of 20 ms blocks. The
+mappings open no network listener, while aiortc remains the only network-facing media
 implementation.
 
 `RendererSessionController` connects outward to the host's loopback-only
@@ -52,7 +53,8 @@ The release launcher instead passes
 `--control-ca=<protected per-user certificate>`. The renderer still connects outward to loopback;
 the CA option does not expose a renderer listener or make certificate verification optional.
 
-Godot import/build/self-test success does not prove physical-device delivery, hardware codecs,
-Wi-Fi, acoustics, target-machine performance, monitor-off behavior, or soak stability. Emulator
-results are development evidence only. Those physical and target-environment checks remain the
-mandatory Milestone 9 release gate.
+Godot import/build/self-test and emulator results remain development evidence only. The dated
+Milestone 9 ledger records physical Wi-Fi transport, hardware decode, cadence/resources,
+lifecycle recovery, monitor-off operation, and bounded stability on the target machine. The
+historical 30-minute transport run exceeds the current requirement; there is no fixed-duration
+lesson or soak release gate.

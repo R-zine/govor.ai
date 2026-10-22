@@ -25,6 +25,8 @@ failure, timeout, cancellation, correlation/log-redaction, and repeated-session 
 Milestone 4 adds real English/Bulgarian/fallback audio generation, curated accent-aware IPA,
 model-alignment/null-fallback checks, speed-duration ordering, deterministic fallback, native
 emulator `AudioTrack`/highlight/replay/word-selection evidence, and a separate human listening
-decision. Later milestones add persistence, scene, privacy, and packaging suites. Milestone 9 owns the complete
-physical-phone/Wi-Fi bundle: acoustic behavior, codecs, lifecycle, latency/resources,
-monitor-off/unfocused behavior, security on the physical network path, and the 30-minute soak.
+decision. Later milestones add persistence, scene, privacy, and packaging suites. Milestone 9 owns
+the complete physical-phone/Wi-Fi bundle: acoustic behavior, codecs, lifecycle,
+latency/resources, monitor-off/unfocused behavior, security on the physical network path, and
+recorded bounded stability runs. That bundle is complete; no fixed-duration lesson or soak is a
+release gate.

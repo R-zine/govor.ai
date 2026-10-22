@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import struct
 
 import numpy as np
@@ -20,6 +21,7 @@ from govor_media.renderer_bridge import (
     AUDIO_SLOT_HEADER,
     AUDIO_SLOT_HEADER_SIZE,
     AUDIO_SLOT_SIZE,
+    VIDEO_ACTIVE_SLOT_SHIFT,
     VIDEO_FLAG_BOTTOM_UP,
     VIDEO_HEADER,
     VIDEO_HEADER_SIZE,
@@ -29,6 +31,7 @@ from govor_media.renderer_bridge import (
     VIDEO_PAYLOAD_SIZE,
     VIDEO_PIXEL_FORMAT_RGBA,
     VIDEO_STRIDE,
+    VIDEO_VERSION,
     VIDEO_WIDTH,
     RendererAudioBufferReader,
     RendererAudioTrack,
@@ -44,6 +47,7 @@ def publish_video(
     value: int,
     torn: bool = False,
     generation: int = 71,
+    slot: int = 1,
 ) -> None:
     in_progress = sequence * 2 - 1
     published = sequence * 2
@@ -51,7 +55,7 @@ def publish_video(
         buffer,
         0,
         VIDEO_MAGIC,
-        1,
+        VIDEO_VERSION,
         VIDEO_HEADER_SIZE,
         VIDEO_WIDTH,
         VIDEO_HEIGHT,
@@ -59,11 +63,14 @@ def publish_video(
         VIDEO_PAYLOAD_SIZE,
         in_progress,
         123_456,
-        VIDEO_FLAG_BOTTOM_UP,
+        VIDEO_FLAG_BOTTOM_UP | (slot << VIDEO_ACTIVE_SLOT_SHIFT),
         VIDEO_PIXEL_FORMAT_RGBA,
         generation,
     )
-    buffer[VIDEO_HEADER_SIZE:] = bytes([value]) * VIDEO_PAYLOAD_SIZE
+    payload_offset = VIDEO_HEADER_SIZE + slot * VIDEO_PAYLOAD_SIZE
+    buffer[payload_offset : payload_offset + VIDEO_PAYLOAD_SIZE] = (
+        bytes([value]) * VIDEO_PAYLOAD_SIZE
+    )
     if not torn:
         struct.pack_into("<Q", buffer, 32, published)
 
@@ -133,6 +140,28 @@ def test_video_reader_rejects_in_progress_and_repeated_frames() -> None:
         reader.close()
 
 
+def test_video_reader_keeps_active_slot_while_writer_fills_inactive_slot() -> None:
+    buffer = bytearray(VIDEO_MAP_SIZE)
+    publish_video(buffer, sequence=1, value=17, slot=1)
+    inactive_offset = VIDEO_HEADER_SIZE
+    buffer[inactive_offset : inactive_offset + VIDEO_PAYLOAD_SIZE] = (
+        bytes([29]) * VIDEO_PAYLOAD_SIZE
+    )
+
+    reader = RendererVideoBufferReader(buffer)
+    try:
+        frame = reader.read_latest()
+        assert frame is not None
+        assert frame.rgba[:4] == bytes([17, 17, 17, 17])
+
+        publish_video(buffer, sequence=2, value=29, slot=0)
+        following = reader.read_latest()
+        assert following is not None
+        assert following.rgba[:4] == bytes([29, 29, 29, 29])
+    finally:
+        reader.close()
+
+
 def test_audio_reader_skips_retained_audio_then_preserves_order() -> None:
     buffer = bytearray(AUDIO_MAP_SIZE)
     initialize_audio(buffer)
@@ -183,3 +212,24 @@ async def test_renderer_tracks_emit_720p_video_and_continuous_audio() -> None:
     finally:
         video_reader.close()
         audio_reader.close()
+
+
+@pytest.mark.asyncio
+async def test_video_track_briefly_waits_for_next_renderer_publication() -> None:
+    video_buffer = bytearray(VIDEO_MAP_SIZE)
+    video_reader = RendererVideoBufferReader(video_buffer)
+    track = RendererVideoTrack(video_reader)
+
+    async def publish_after_consumer_tick() -> None:
+        await asyncio.sleep(0.005)
+        publish_video(video_buffer, sequence=1, value=83)
+
+    publisher = asyncio.create_task(publish_after_consumer_tick())
+    try:
+        frame = await track.recv()
+        await publisher
+        pixels = frame.to_ndarray(format="rgba")
+        assert int(pixels[0, 0, 0]) == 83
+        assert track.metrics()["renderer_frames"] == 1
+    finally:
+        video_reader.close()

@@ -105,4 +105,4 @@ Ignored runtime artifacts:
 Milestone 2's deterministic application skeleton is verified. It is safe to begin Milestone 3.
 No real AI capability, physical device behavior, Wi-Fi behavior, acoustic quality, codec hardware,
 latency/resource target, monitor-off behavior, or stability duration is claimed here. All such
-release evidence remains mandatory in Milestone 9.
+release evidence was deferred to and later passed separately in Milestone 9.

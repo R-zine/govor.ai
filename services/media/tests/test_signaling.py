@@ -52,6 +52,18 @@ def test_health_identifies_diagnostic_source() -> None:
     assert response.json()["ice_fixture"] is False
 
 
+def test_metrics_endpoint_is_loopback_only_and_inactive_without_peer() -> None:
+    app = create_media_app(pairing_token=TOKEN)
+    with TestClient(app, client=("127.0.0.1", 50_000)) as client:
+        inactive = client.get("/v1/internal/metrics")
+    with TestClient(app, client=("192.0.2.10", 50_000)) as client:
+        rejected = client.get("/v1/internal/metrics")
+
+    assert inactive.status_code == 200
+    assert inactive.json() == {"active": False}
+    assert rejected.status_code == 403
+
+
 def test_invalid_token_closes_with_policy_violation() -> None:
     with TestClient(create_media_app(pairing_token=TOKEN)).websocket_connect(
         "/v1/media/signaling"

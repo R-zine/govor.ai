@@ -64,6 +64,11 @@ async def test_bidirectional_audio_and_video_loopback() -> None:
         assert audio_frame.sample_rate == 48_000
         assert server.microphone.frames_received > 0
         assert server.microphone.samples_received > 0
+        metrics = await server.metrics()
+        assert metrics["connection_state"] == "connected"
+        assert metrics["microphone"]["frames_received"] > 0
+        assert {item["kind"] for item in metrics["outbound_rtp"]} == {"audio", "video"}
+        assert metrics["transports"][0]["dtls_state"] == "connected"
     finally:
         with suppress(Exception):
             await client.close()

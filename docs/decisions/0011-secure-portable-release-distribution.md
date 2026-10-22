@@ -73,8 +73,8 @@ project's distribution implementation record, not legal advice.
   local QEMU/WHPX harness can exercise that exact entry point and deterministic teardown. Version
   0.1.4 adds the verified conditional Microsoft VC++ prerequisite, longer cold-model health wait,
   and fixture-only ICE/tone controls. ADR-0012 defines the clean-base/overlay fixture. The 0.1.4
-  clean-VM flow passed on 2026-10-19; physical phone/Wi-Fi/hardware acceptance remains the separate
-  mandatory Milestone 9 bundle.
+  clean-VM flow passed on 2026-10-19; the separate physical phone/Wi-Fi/hardware bundle later
+  passed in Milestone 9.
 
 ## Rejected
 

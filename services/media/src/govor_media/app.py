@@ -71,6 +71,7 @@ def create_media_app(
         PairingAuthority(gateway_credentials_file) if gateway_credentials_file else None
     )
     app.state.microphone_capture = microphone_capture
+    app.state.active_peer = None
 
     def require_loopback(request: Request) -> None:
         client = request.client
@@ -115,6 +116,14 @@ def create_media_app(
         except CaptureConflict as error:
             raise HTTPException(status_code=409, detail=str(error)) from error
         return Response(status_code=204)
+
+    @app.get("/v1/internal/metrics")
+    async def media_metrics(request: Request) -> dict[str, Any]:
+        require_loopback(request)
+        peer: MediaPeer | None = app.state.active_peer
+        if peer is None:
+            return {"active": False}
+        return {"active": True, **await peer.metrics()}
 
     @app.get("/health")
     async def health() -> dict[str, Any]:
@@ -179,6 +188,7 @@ def create_media_app(
                         microphone_capture=microphone_capture,
                         forwarded_ice=forwarded_ice,
                     )
+                    app.state.active_peer = peer
                     LOGGER.info("WebRTC offer accepted for ICE gathering")
                     answer = await peer.accept_offer(sdp)
                     await websocket.send_json(
@@ -204,6 +214,8 @@ def create_media_app(
         finally:
             if peer is not None:
                 await peer.close()
+                if app.state.active_peer is peer:
+                    app.state.active_peer = None
             microphone_capture.cancel()
 
     return app

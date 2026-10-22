@@ -12,6 +12,8 @@ import logging
 import mmap
 import struct
 import sys
+import time
+from collections import deque
 from dataclasses import dataclass
 from fractions import Fraction
 from typing import Any, cast
@@ -22,7 +24,7 @@ from av import AudioFrame, VideoFrame
 
 LOGGER = logging.getLogger("uvicorn.error")
 
-VIDEO_MAP_NAME = "govor.ai.renderer.video.v1"
+VIDEO_MAP_NAME = "govor.ai.renderer.video.v2"
 AUDIO_MAP_NAME = "govor.ai.renderer.audio.v1"
 
 VIDEO_WIDTH = 1280
@@ -31,10 +33,15 @@ VIDEO_BYTES_PER_PIXEL = 4
 VIDEO_STRIDE = VIDEO_WIDTH * VIDEO_BYTES_PER_PIXEL
 VIDEO_HEADER_SIZE = 64
 VIDEO_PAYLOAD_SIZE = VIDEO_STRIDE * VIDEO_HEIGHT
-VIDEO_MAP_SIZE = VIDEO_HEADER_SIZE + VIDEO_PAYLOAD_SIZE
+VIDEO_VERSION = 2
+VIDEO_SLOT_COUNT = 2
+VIDEO_MAP_SIZE = VIDEO_HEADER_SIZE + VIDEO_SLOT_COUNT * VIDEO_PAYLOAD_SIZE
 VIDEO_MAGIC = b"GOVVID01"
 VIDEO_PIXEL_FORMAT_RGBA = 1
 VIDEO_FLAG_BOTTOM_UP = 1
+VIDEO_ACTIVE_SLOT_SHIFT = 8
+VIDEO_ACTIVE_SLOT_MASK = 0x03 << VIDEO_ACTIVE_SLOT_SHIFT
+VIDEO_NEW_FRAME_WAIT_SECONDS = 0.020
 VIDEO_HEADER = struct.Struct("<8sIIIIIIQqIIQ")
 VIDEO_SEQUENCE_OFFSET = 32
 VIDEO_GENERATION_OFFSET = 56
@@ -104,7 +111,7 @@ class RendererVideoBufferReader:
         ) = header
         if (
             magic != VIDEO_MAGIC
-            or version != 1
+            or version != VIDEO_VERSION
             or header_size != VIDEO_HEADER_SIZE
             or width != VIDEO_WIDTH
             or height != VIDEO_HEIGHT
@@ -117,19 +124,26 @@ class RendererVideoBufferReader:
         ):
             return None
 
+        active_slot = (flags & VIDEO_ACTIVE_SLOT_MASK) >> VIDEO_ACTIVE_SLOT_SHIFT
+        if active_slot >= VIDEO_SLOT_COUNT:
+            return None
+
         if writer_generation != self._writer_generation:
             self._writer_generation = writer_generation
             self._last_sequence = 0
         if sequence == self._last_sequence:
             return None
 
-        rgba = bytes(self._buffer[VIDEO_HEADER_SIZE : VIDEO_HEADER_SIZE + payload_size])
+        payload_offset = VIDEO_HEADER_SIZE + active_slot * payload_size
+        rgba = bytes(self._buffer[payload_offset : payload_offset + payload_size])
         (sequence_after_copy,) = struct.unpack_from("<Q", self._buffer, VIDEO_SEQUENCE_OFFSET)
         (generation_after_copy,) = struct.unpack_from("<Q", self._buffer, VIDEO_GENERATION_OFFSET)
+        (flags_after_copy,) = struct.unpack_from("<I", self._buffer, 48)
         if (
             sequence_after_copy != sequence
             or sequence_after_copy % 2 != 0
             or generation_after_copy != writer_generation
+            or flags_after_copy != flags
         ):
             return None
 
@@ -239,11 +253,32 @@ class RendererVideoTrack(VideoStreamTrack):
         self._reader = reader
         self._last_rgba = np.zeros((VIDEO_HEIGHT, VIDEO_WIDTH, 4), dtype=np.uint8)
         self._reported_renderer_frame = False
+        self._started_at = time.monotonic()
+        self._frames_emitted = 0
+        self._renderer_frames = 0
+        self._last_renderer_media_time_us: int | None = None
+        self._renderer_intervals_ms: deque[float] = deque(maxlen=4096)
 
     async def recv(self) -> VideoFrame:
         pts, time_base = await self.next_timestamp()
         publication = self._reader.read_latest()
+        if publication is None:
+            # Godot and VideoStreamTrack both run at 30 Hz. Without a small asynchronous wait,
+            # harmless phase jitter can sample just before publication, repeat the old frame,
+            # then skip the new one on the next tick. Align to the producer while keeping a
+            # bounded fallback for renderer stalls or shutdown.
+            loop = asyncio.get_running_loop()
+            deadline = loop.time() + VIDEO_NEW_FRAME_WAIT_SECONDS
+            while publication is None and loop.time() < deadline:
+                await asyncio.sleep(0.001)
+                publication = self._reader.read_latest()
         if publication is not None:
+            self._renderer_frames += 1
+            if self._last_renderer_media_time_us is not None:
+                interval_us = publication.media_time_us - self._last_renderer_media_time_us
+                if interval_us > 0:
+                    self._renderer_intervals_ms.append(interval_us / 1_000)
+            self._last_renderer_media_time_us = publication.media_time_us
             image = np.frombuffer(publication.rgba, dtype=np.uint8).reshape(
                 publication.height, publication.width, VIDEO_BYTES_PER_PIXEL
             )
@@ -265,7 +300,25 @@ class RendererVideoTrack(VideoStreamTrack):
         frame = VideoFrame.from_ndarray(self._last_rgba, format="rgba")
         frame.pts = pts
         frame.time_base = time_base
+        self._frames_emitted += 1
         return frame
+
+    def metrics(self) -> dict[str, int | float | None]:
+        elapsed = max(time.monotonic() - self._started_at, 0.001)
+        intervals = np.asarray(self._renderer_intervals_ms, dtype=np.float64)
+        return {
+            "frames_emitted": self._frames_emitted,
+            "renderer_frames": self._renderer_frames,
+            "stale_frames_repeated": self._frames_emitted - self._renderer_frames,
+            "emitted_fps": self._frames_emitted / elapsed,
+            "renderer_interval_ms_p50": (
+                float(np.percentile(intervals, 50)) if intervals.size else None
+            ),
+            "renderer_interval_ms_p95": (
+                float(np.percentile(intervals, 95)) if intervals.size else None
+            ),
+            "renderer_interval_ms_max": float(intervals.max()) if intervals.size else None,
+        }
 
 
 class RendererAudioTrack(AudioStreamTrack):
@@ -277,6 +330,8 @@ class RendererAudioTrack(AudioStreamTrack):
         self._sample_cursor = 0
         self._started_at: float | None = None
         self._reported_renderer_audio = False
+        self._blocks_emitted = 0
+        self._renderer_blocks = 0
 
     async def recv(self) -> AudioFrame:
         loop = asyncio.get_running_loop()
@@ -291,6 +346,7 @@ class RendererAudioTrack(AudioStreamTrack):
         if publication is None:
             samples = np.zeros((1, AUDIO_SAMPLES_PER_BLOCK), dtype=np.int16)
         else:
+            self._renderer_blocks += 1
             samples = np.frombuffer(publication.pcm_s16le, dtype="<i2").reshape(1, -1)
             if not self._reported_renderer_audio:
                 LOGGER.info(
@@ -306,7 +362,15 @@ class RendererAudioTrack(AudioStreamTrack):
         frame.pts = self._sample_cursor
         frame.time_base = Fraction(1, AUDIO_SAMPLE_RATE)
         self._sample_cursor += AUDIO_SAMPLES_PER_BLOCK
+        self._blocks_emitted += 1
         return frame
+
+    def metrics(self) -> dict[str, int]:
+        return {
+            "blocks_emitted": self._blocks_emitted,
+            "renderer_blocks": self._renderer_blocks,
+            "silence_blocks": self._blocks_emitted - self._renderer_blocks,
+        }
 
 
 class RendererBridgeSource:

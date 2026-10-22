@@ -51,7 +51,7 @@ Build the renderer and start the combined fake control/renderer stack:
 Start the media server separately with `scripts/media-dev.ps1` and a fresh development token. Use
 `127.0.0.1:8765` for control and `127.0.0.1:8766` for media in the debug app. The release manifest
 still rejects cleartext; this is the supported emulator development path only. It does not satisfy
-the physical-device/Wi-Fi release acceptance bundle scheduled for Milestone 9.
+the physical-device/Wi-Fi release acceptance bundle that later passed separately in Milestone 9.
 
 For the full Milestone 3 loopback stack, build the renderer and run:
 
@@ -79,4 +79,4 @@ Run the reproducible local model/STT comparison with:
 The speech benchmark writes non-sensitive generated samples under `.cache/speech-samples` for a
 brief listening check. The emulator smoke uses diagnostic WebRTC media plus real control-channel
 teacher speech, then force-stops the app and both servers. It is development evidence only; it does
-not replace Milestone 9 physical-phone/acoustic acceptance.
+not replace the separately completed Milestone 9 physical-phone/acoustic acceptance.

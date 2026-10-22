@@ -243,10 +243,10 @@ from the fresh `pre-commit-m8-entrypoint-fix` cache after the corrected-candidat
 | Required model downloads have integrity checks | verified passing | Exact size/SHA-256 plus atomic promotion; manifest and negative/positive tests passed |
 | Internet unnecessary during normal lessons | verified passing with current-machine scope | The packaged local lesson used installed models and local providers only; first-run downloads still require internet |
 
-Milestone 8 is not complete because the clean-Windows row is mandatory. No milestone commit is
-allowed until that execution is recorded. The emulator results also leave every Milestone 9
-physical phone, intended Wi-Fi, hardware codec, acoustic, lifecycle, target-performance,
-monitor-off, thermal, and 30-minute soak row not executed.
+At this checkpoint Milestone 8 was not complete because the clean-Windows row was mandatory, so no
+milestone commit was allowed yet. That row later passed on the recorded QEMU/WHPX fixture and M8
+was committed. These emulator results also left the Milestone 9 physical rows unexecuted at the
+time; they later passed independently, and the product owner removed the fixed-duration soak gate.
 
 The subsequent local-fixture design, 0.1.3 candidate, and still-blocked execution are recorded in
 `docs/benchmarks/2026-10-17-m8-local-vm-fixture.md` and ADR-0012.

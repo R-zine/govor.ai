@@ -2,11 +2,14 @@ package ai.govor.app
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.net.ConnectivityManager
+import android.net.Network
 import android.os.Bundle
 import ai.govor.core.SessionState
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.viewModels
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -33,7 +36,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -55,9 +58,36 @@ import org.webrtc.RendererCommon
 import org.webrtc.SurfaceViewRenderer
 
 class MainActivity : ComponentActivity() {
+    private val model: MediaSessionViewModel by viewModels()
+    private val connectivityManager by lazy {
+        getSystemService(ConnectivityManager::class.java)
+    }
+    private val networkCallback = object : ConnectivityManager.NetworkCallback() {
+        override fun onAvailable(network: Network) {
+            model.networkAvailable()
+        }
+    }
+    private var networkCallbackRegistered = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent { GovorApp() }
+        setContent { GovorApp(model) }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        model.enterForeground()
+        connectivityManager.registerDefaultNetworkCallback(networkCallback)
+        networkCallbackRegistered = true
+    }
+
+    override fun onStop() {
+        if (networkCallbackRegistered) {
+            connectivityManager.unregisterNetworkCallback(networkCallback)
+            networkCallbackRegistered = false
+        }
+        model.enterBackground()
+        super.onStop()
     }
 }
 
@@ -76,13 +106,17 @@ private fun GovorApp(model: MediaSessionViewModel = viewModel()) {
     val transcript by model.lesson.transcript.collectAsStateWithLifecycle()
     val lessonProgress by model.lesson.lessonProgress.collectAsStateWithLifecycle()
     // Debug emulator defaults use adb reverse for control 8765 and media 8766.
-    var mediaHost by remember { mutableStateOf(if (BuildConfig.DEBUG) "127.0.0.1:8766" else "") }
-    var controlHost by remember { mutableStateOf(if (BuildConfig.DEBUG) "127.0.0.1:8765" else "") }
-    var token by remember { mutableStateOf("") }
-    var certificateFingerprint by remember { mutableStateOf("") }
-    var scenarioId by remember { mutableStateOf("cafe-ordering") }
-    var englishLocale by remember { mutableStateOf("en-GB") }
-    var spacedReviewEnabled by remember { mutableStateOf(false) }
+    var mediaHost by rememberSaveable {
+        mutableStateOf(if (BuildConfig.DEBUG) "127.0.0.1:8766" else "")
+    }
+    var controlHost by rememberSaveable {
+        mutableStateOf(if (BuildConfig.DEBUG) "127.0.0.1:8765" else "")
+    }
+    var token by rememberSaveable { mutableStateOf("") }
+    var certificateFingerprint by rememberSaveable { mutableStateOf("") }
+    var scenarioId by rememberSaveable { mutableStateOf("cafe-ordering") }
+    var englishLocale by rememberSaveable { mutableStateOf("en-GB") }
+    var spacedReviewEnabled by rememberSaveable { mutableStateOf(false) }
     val context = LocalContext.current
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),

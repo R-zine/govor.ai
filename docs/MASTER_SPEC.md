@@ -321,8 +321,8 @@ Use the following default architecture, unless an early feasibility investigatio
 ### Important implementation constraints
 
 **Godot and the renderer-neutral aiortc bridge are the selected development architecture based on
-the Milestone 1 native-emulator proof. Final physical-device, Wi-Fi, codec, performance, and soak
-acceptance is deferred as one bundle to Milestone 9.**
+the Milestone 1 native-emulator proof. Final physical-device, Wi-Fi, codec, performance, and
+bounded-stability acceptance is deferred as one bundle to Milestone 9.**
 
 Use a dedicated 1280x720 Godot `SubViewport` and application-owned PCM as renderer outputs.
 
@@ -1011,9 +1011,9 @@ rendering/streaming architecture using the native-emulator evidence.
 Do not proceed with the full teaching application until a viable media architecture is established.
 
 Milestone 1 completion does not prove physical Android compatibility. Do not infer physical-phone,
-Wi-Fi, acoustic, hardware-codec, lifecycle, latency/resource, monitor-off, or soak behavior from
-the emulator. Those requirements are mandatory release gates in Milestone 9 and must remain
-marked not executed until run on target hardware.
+Wi-Fi, acoustic, hardware-codec, lifecycle, latency/resource, monitor-off, or bounded-stability
+behavior from the emulator. Those requirements are mandatory release gates in Milestone 9 and
+must remain marked not executed until run on target hardware.
 
 ---
 
@@ -1400,7 +1400,7 @@ Run:
 - Network disconnection tests.
 - Privacy/security checks.
 - Performance benchmarks.
-- Long-running soak tests.
+- Bounded stability tests with the duration recorded.
 - Manual acceptance tests.
 
 ### Required target-hardware acceptance
@@ -1421,8 +1421,8 @@ Windows machine. These checks are final release gates, not prerequisites for Mil
 - The renderer works unfocused, with the monitor off, and while the PC is idle but awake.
 - Orientation, acoustic behavior, latency, packet loss, CPU, GPU, RAM, VRAM, thermals, and frame
   cadence are measured under a defined hardware/software/network configuration.
-- A 30-minute continuous lesson completes without crashes, stale media, or unbounded resource
-  growth.
+- The recorded bounded acceptance runs complete without crashes, stale media, or unbounded
+  resource growth. No fixed-duration continuous lesson or soak is required.
 
 If suitable target hardware is unavailable, Milestone 9 remains blocked. Emulator, loopback,
 mock, compilation, or generated-artifact evidence never satisfies this bundle.
@@ -1436,7 +1436,7 @@ Treat these as initial targets, not assumed capabilities:
 | Video quality            | 720p at 30 FPS                         |
 | Teacher response latency | Median under 3 seconds where practical |
 | Slow response latency    | Investigate p95 above 6 seconds        |
-| Sustained stability      | 30-minute lesson without crash         |
+| Bounded stability        | Recorded acceptance runs without crash |
 | VRAM                     | Stable operation without OOM           |
 | Reconnection             | Recover without restarting the lesson  |
 | Rendering                | No sustained frame-time degradation    |

@@ -11,8 +11,9 @@
 This run may satisfy only the clean-Windows software row of Milestone 8. QEMU is not the target
 Windows machine, and the Android Studio AVD is not a physical phone. The run does not establish
 intended Wi-Fi behavior, physical speakers/microphone, acoustics, hardware codecs, target-machine
-performance, lifecycle/interruption, unfocused/monitor-off behavior, thermals, or a 30-minute soak.
-All of those remain mandatory Milestone 9 work.
+performance, lifecycle/interruption, unfocused/monitor-off behavior, or thermals. Those physical
+rows later passed independently in Milestone 9. The product owner also removed the fixed-duration
+soak requirement; neither later result changes this VM/emulator evidence boundary.
 
 The Windows image was supplied by the user at:
 

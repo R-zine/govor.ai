@@ -1,9 +1,13 @@
 package ai.govor.app
 
 import android.app.Application
+import android.util.Log
+import ai.govor.core.LifecycleReconnectPolicy
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -14,6 +18,10 @@ class MediaSessionViewModel(application: Application) : AndroidViewModel(applica
     private val credentialStore = SecureGatewayCredentialStore(application.applicationContext)
     private val mutablePairingError = MutableStateFlow<String?>(null)
     val pairingError: StateFlow<String?> = mutablePairingError
+    private val reconnectPolicy = LifecycleReconnectPolicy()
+    private var connectionJob: Job? = null
+    private var networkReconnectJob: Job? = null
+    private var lastConnection: ConnectionRequest? = null
 
     fun connect(
         mediaHost: String,
@@ -24,26 +32,47 @@ class MediaSessionViewModel(application: Application) : AndroidViewModel(applica
         englishLocale: String,
         spacedReviewEnabled: Boolean,
     ) {
+        val request = ConnectionRequest(
+            mediaHost = mediaHost,
+            controlHost = controlHost,
+            pairingToken = pairingToken,
+            certificateFingerprint = certificateFingerprint,
+            scenarioId = scenarioId,
+            englishLocale = englishLocale,
+            spacedReviewEnabled = spacedReviewEnabled,
+        )
+        lastConnection = request
+        reconnectPolicy.connectionRequested()
+        connect(request)
+    }
+
+    private fun connect(request: ConnectionRequest) {
+        connectionJob?.cancel()
         if (BuildConfig.DEBUG) {
-            session.connect(mediaHost, pairingToken)
-            lesson.connect(controlHost, scenarioId, englishLocale, spacedReviewEnabled)
+            session.connect(request.mediaHost, request.pairingToken)
+            lesson.connect(
+                request.controlHost,
+                request.scenarioId,
+                request.englishLocale,
+                request.spacedReviewEnabled,
+            )
             return
         }
-        viewModelScope.launch(Dispatchers.IO) {
+        connectionJob = viewModelScope.launch(Dispatchers.IO) {
             runCatching {
-                val normalizedControl = GatewaySecurity.normalizeHost(controlHost)
-                val normalizedMedia = GatewaySecurity.normalizeHost(mediaHost)
+                val normalizedControl = GatewaySecurity.normalizeHost(request.controlHost)
+                val normalizedMedia = GatewaySecurity.normalizeHost(request.mediaHost)
                 val stored = credentialStore.load()?.takeIf {
                     it.controlHost == normalizedControl && it.mediaHost == normalizedMedia &&
-                        (certificateFingerprint.isBlank() ||
+                        (request.certificateFingerprint.isBlank() ||
                             it.certificateFingerprint ==
-                            GatewaySecurity.normalizeFingerprint(certificateFingerprint))
+                            GatewaySecurity.normalizeFingerprint(request.certificateFingerprint))
                 }
                 val gateway = stored ?: GatewayPairingClient().pair(
                     normalizedControl,
                     normalizedMedia,
-                    pairingToken,
-                    certificateFingerprint,
+                    request.pairingToken,
+                    request.certificateFingerprint,
                 ).also(credentialStore::save)
                 mutablePairingError.value = null
                 session.connect(
@@ -55,9 +84,9 @@ class MediaSessionViewModel(application: Application) : AndroidViewModel(applica
                 )
                 lesson.connect(
                     gateway.controlHost,
-                    scenarioId,
-                    englishLocale,
-                    spacedReviewEnabled,
+                    request.scenarioId,
+                    request.englishLocale,
+                    request.spacedReviewEnabled,
                     secure = true,
                     deviceId = gateway.deviceId,
                     credential = gateway.credential,
@@ -69,18 +98,81 @@ class MediaSessionViewModel(application: Application) : AndroidViewModel(applica
         }
     }
 
+    fun enterBackground() {
+        if (!reconnectPolicy.enterBackground()) return
+        Log.i(LIFECYCLE_LOG_TAG, "background_disconnect")
+        networkReconnectJob?.cancel()
+        networkReconnectJob = null
+        connectionJob?.cancel()
+        connectionJob = null
+        lesson.disconnect()
+        session.disconnect()
+    }
+
+    fun enterForeground() {
+        if (!reconnectPolicy.enterForeground()) return
+        val request = lastConnection ?: return
+        Log.i(LIFECYCLE_LOG_TAG, "foreground_reconnect")
+        connect(reconnectRequest(request))
+    }
+
+    fun networkAvailable() {
+        if (!reconnectPolicy.shouldRetryConnection()) return
+        if (connectionJob?.isActive == true || networkReconnectJob?.isActive == true) return
+        if (
+            session.status.value !in setOf(
+                MediaConnectionStatus.DISCONNECTED,
+                MediaConnectionStatus.FAILED,
+            ) && lesson.state.value != ai.govor.core.SessionState.DISCONNECTED
+        ) {
+            return
+        }
+        val request = lastConnection ?: return
+        networkReconnectJob = viewModelScope.launch {
+            delay(NETWORK_RECOVERY_DELAY_MS)
+            if (!reconnectPolicy.shouldRetryConnection()) return@launch
+            Log.i(LIFECYCLE_LOG_TAG, "network_reconnect")
+            connect(reconnectRequest(request))
+        }
+    }
+
     fun setPushToTalk(active: Boolean) {
         session.setPushToTalk(active)
         if (active) lesson.beginRecording() else lesson.submitRecording()
     }
 
     fun disconnect() {
+        reconnectPolicy.explicitDisconnect()
+        networkReconnectJob?.cancel()
+        networkReconnectJob = null
+        connectionJob?.cancel()
+        connectionJob = null
         lesson.disconnect()
         session.disconnect()
     }
 
     override fun onCleared() {
+        networkReconnectJob?.cancel()
+        connectionJob?.cancel()
         lesson.release()
         session.release()
+    }
+
+    private fun reconnectRequest(request: ConnectionRequest): ConnectionRequest =
+        if (BuildConfig.DEBUG) request else request.copy(pairingToken = "")
+
+    private data class ConnectionRequest(
+        val mediaHost: String,
+        val controlHost: String,
+        val pairingToken: String,
+        val certificateFingerprint: String,
+        val scenarioId: String,
+        val englishLocale: String,
+        val spacedReviewEnabled: Boolean,
+    )
+
+    companion object {
+        private const val LIFECYCLE_LOG_TAG = "govor.lifecycle"
+        private const val NETWORK_RECOVERY_DELAY_MS = 1_000L
     }
 }

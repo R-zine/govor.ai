@@ -115,9 +115,14 @@ and actual-or-empty viseme cues, not the audio or transcript.
 The unauthenticated control path remains loopback-only and the long development token remains a
 cleartext feasibility mechanism, not release pairing. Milestone 8 software/emulator evidence covers
 the implemented release certificate, pairing, stored-credential, authenticated WSS, update,
-clean-Windows launch, and shutdown paths. The physical private-network path, firewall behavior,
-phone key storage, lifecycle recovery, and abuse behavior still require the Milestone 9
-release-security gate. No public-internet deployment is authorized.
+clean-Windows launch, and shutdown paths. On 2026-10-21 the release path also completed first
+pairing and stored-credential reuse over the intended private Wi-Fi, authenticated WSS, WebRTC
+DTLS-SRTP, background/foreground recovery, Wi-Fi loss/recovery, and explicit reconnect on a
+physical phone. The final suite also passes pairing one-time/expiry/rate/device bounds, missing or
+invalid device authentication, payload/schema rejection, loopback-only capture/metrics, scene
+allow-list, model-integrity, offline/cloud-consent, redaction, and release-manifest checks. The
+exact post-audit package passed the physical secure path. No public-internet deployment is
+authorized.
 
 The executed Milestone 8 QEMU/WHPX fixture keeps its generated SSH key, DPAPI-protected random
 guest password, disks, and logs below ACL-restricted ignored `.cache/m8-vm`. QEMU forwards SSH and

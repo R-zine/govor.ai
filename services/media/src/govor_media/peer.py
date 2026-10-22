@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 from contextlib import suppress
 from dataclasses import dataclass
 from typing import Literal
@@ -52,6 +53,7 @@ class MediaPeer:
             self.video = DiagnosticVideoTrack()
             self.audio = ApplicationAudioTrack()
         self.microphone = MicrophoneMetrics()
+        self._started_at = time.monotonic()
         self._microphone_capture = microphone_capture
         self.microphone_frame_received = asyncio.Event()
         self._tasks: set[asyncio.Task[None]] = set()
@@ -94,6 +96,61 @@ class MediaPeer:
             if self._renderer_bridge is not None:
                 self._renderer_bridge.close()
                 self._renderer_bridge = None
+
+    async def metrics(self) -> dict[str, object]:
+        report = await self.connection.getStats()
+        outbound_rtp: list[dict[str, object]] = []
+        remote_inbound_rtp: list[dict[str, object]] = []
+        transports: list[dict[str, object]] = []
+        for stat in report.values():
+            if stat.type == "outbound-rtp":
+                outbound_rtp.append(
+                    {
+                        "kind": stat.kind,
+                        "packets_sent": stat.packetsSent,
+                        "bytes_sent": stat.bytesSent,
+                    }
+                )
+            elif stat.type == "remote-inbound-rtp":
+                remote_inbound_rtp.append(
+                    {
+                        "kind": stat.kind,
+                        "packets_received": stat.packetsReceived,
+                        "packets_lost": stat.packetsLost,
+                        "fraction_lost": stat.fractionLost,
+                        "jitter": stat.jitter,
+                        "round_trip_time_seconds": stat.roundTripTime,
+                    }
+                )
+            elif stat.type == "transport":
+                transports.append(
+                    {
+                        "packets_sent": stat.packetsSent,
+                        "packets_received": stat.packetsReceived,
+                        "bytes_sent": stat.bytesSent,
+                        "bytes_received": stat.bytesReceived,
+                        "ice_role": stat.iceRole,
+                        "dtls_state": stat.dtlsState,
+                    }
+                )
+
+        renderer = self._renderer_bridge
+        return {
+            "connection_state": self.connection.connectionState,
+            "elapsed_seconds": time.monotonic() - self._started_at,
+            "microphone": {
+                "frames_received": self.microphone.frames_received,
+                "samples_received": self.microphone.samples_received,
+                "sample_rate_hz": self.microphone.sample_rate_hz,
+            },
+            "renderer_video": renderer.video.metrics() if renderer is not None else None,
+            "renderer_audio": renderer.audio.metrics() if renderer is not None else None,
+            "outbound_rtp": outbound_rtp,
+            "remote_inbound_rtp": remote_inbound_rtp,
+            "transports": transports,
+            "video_codec": "VP8",
+            "windows_hardware_video_encoding": False,
+        }
 
     async def _consume_microphone(self, track: MediaStreamTrack) -> None:
         try:

@@ -69,8 +69,8 @@ against the clean guest's actual authenticated gateway.
 - A passing run may satisfy only the Milestone 8 clean-Windows install/launch row. A VM is a clean
   software environment, not the target Windows hardware.
 - The host Android emulator remains emulator evidence. It cannot satisfy physical installation,
-  Wi-Fi, acoustic, codec, lifecycle, latency/resource, monitor-off, thermal, or soak requirements.
-  Those stay mandatory in Milestone 9.
+  Wi-Fi, acoustic, codec, lifecycle, latency/resource, monitor-off, thermal, or bounded-stability
+  requirements. Those were later executed independently and passed in Milestone 9.
 - This QEMU configuration has no virtual TPM or Secure Boot and exposes a generic virtual CPU. The
   unattended fixture uses Windows Setup registry compatibility switches for those three virtual-
   hardware checks. This is a test-fixture limitation, not release guidance or target-machine

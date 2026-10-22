@@ -39,7 +39,7 @@ transcript. This fake path is not a production STT/TTS or final speech-transport
 Both host control endpoints bind to loopback. The emulator reaches `/v1/control` only through the
 debug `adb reverse` path. There is no claim that this unauthenticated cleartext endpoint is safe on
 a LAN. Release pairing, device authorization, WSS, rate limits, firewall validation, and the
-physical network path remain mandatory Milestone 9 work.
+physical network path were deferred to and later passed in Milestone 9.
 
 ## Consequences
 
@@ -64,5 +64,5 @@ physical network path remain mandatory Milestone 9 work.
   disconnect/reconnect, acknowledgements for every renderer action, and bounded cleanup.
 
 This emulator evidence closes Milestone 2 only. It is not evidence for any physical phone, Wi-Fi,
-codec hardware, acoustics, target-machine performance, monitor-off, or soak requirement in
-Milestone 9.
+codec hardware, acoustics, target-machine performance, monitor-off, or bounded-stability
+requirement in Milestone 9.

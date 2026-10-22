@@ -6,7 +6,7 @@ namespace Govor.Renderer;
 /// </summary>
 public static class RendererBridgeProtocol
 {
-    public const string VideoMapName = "govor.ai.renderer.video.v1";
+    public const string VideoMapName = "govor.ai.renderer.video.v2";
     public const string AudioMapName = "govor.ai.renderer.audio.v1";
 
     public const int CaptureWidth = 1280;
@@ -14,12 +14,16 @@ public static class RendererBridgeProtocol
     public const int TargetFrameRate = 30;
 
     public const int VideoHeaderSize = 64;
+    public const int VideoVersion = 2;
     public const int VideoBytesPerPixel = 4;
     public const int VideoStride = CaptureWidth * VideoBytesPerPixel;
     public const int VideoPayloadSize = VideoStride * CaptureHeight;
-    public const int VideoMapSize = VideoHeaderSize + VideoPayloadSize;
+    public const int VideoSlotCount = 2;
+    public const int VideoMapSize = VideoHeaderSize + VideoSlotCount * VideoPayloadSize;
     public const int VideoSequenceOffset = 32;
     public const int VideoMediaTimeOffset = 40;
+    public const int VideoFlagsOffset = 48;
+    public const int VideoActiveSlotShift = 8;
     public const int VideoRgbaFormat = 1;
 
     public const int AudioSampleRate = 48_000;

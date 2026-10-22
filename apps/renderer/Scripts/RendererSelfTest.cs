@@ -10,7 +10,7 @@ internal static class RendererSelfTest
 
     public static void Run()
     {
-        if (RendererBridgeProtocol.VideoMapSize != 3_686_464)
+        if (RendererBridgeProtocol.VideoMapSize != 7_372_864)
         {
             throw new InvalidOperationException("Unexpected video mapping size.");
         }

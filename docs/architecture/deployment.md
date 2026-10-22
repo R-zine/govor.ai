@@ -86,5 +86,6 @@ from version code 1 to 2, and clean shutdown executed on the API 34 emulator wit
 The final 0.1.4 package also completed setup/start/media/shutdown in a Windows 10.0.22000.0 AMD64
 QEMU/WHPX guest using the host emulator. That closes Milestone 8's clean-software row for the exact
 recorded image. The intended physical phone, Wi-Fi path, firewall behavior, codecs, audio hardware,
-target performance, lifecycle, monitor-off behavior, thermals, and soak are distinct mandatory
-Milestone 9 checks and are not inferred from the VM/emulator run.
+target performance, lifecycle, monitor-off behavior, thermals, and bounded stability are distinct
+Milestone 9 checks and are not inferred from the VM/emulator run. They later passed separately on
+the documented target PC, physical phone, and intended private Wi-Fi.

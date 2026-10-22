@@ -8,7 +8,7 @@ files.
 | --- | --- | --- | --- | --- |
 | Python | 3.12.x | python.org | PSF-2.0 | Embedded runtime; retain Python license and bundled notices |
 | Microsoft Visual C++ Redistributable x64 | 14.51.36247.0 | download.visualstudio.microsoft.com | Microsoft Software License Terms | Not embedded in the ZIP; guided setup downloads Microsoft's signed installer directly, verifies exact size/SHA-256 plus Authenticode signer, and installs it centrally when the packaged llama runtime cannot load |
-| certifi | 2026.7.22 | github.com/certifi/python-certifi | MPL-2.0 | Pinned CA bundle used by release/runtime HTTPS; installed-package license is bundled |
+| certifi | 2026.10.19 | github.com/certifi/python-certifi | MPL-2.0 | Pinned CA bundle used by release/runtime HTTPS; installed-package license is bundled |
 | cryptography | 50.0.2 | github.com/pyca/cryptography | Apache-2.0 OR BSD-3-Clause | Release TLS identity generation; installed-package licenses are bundled |
 | FastAPI | 0.142.4 | github.com/fastapi/fastapi | MIT | Source notice required; upgraded after vulnerability audit |
 | Pydantic | 2.11.9 | github.com/pydantic/pydantic | MIT | Source notice required |

@@ -94,5 +94,6 @@ fixture, and the Android debug application compiles with scenario/settings contr
 display.
 
 These tests do not establish broad pedagogical efficacy, recognition accuracy, live-human lesson
-quality, or target-hardware usability. Those require ongoing content evaluation; physical phone,
-Wi-Fi, acoustics, performance, and soak acceptance remain Milestone 9.
+quality, or target-hardware usability. Those require ongoing content evaluation; the physical
+phone, Wi-Fi, acoustics, performance, and bounded-stability acceptance was later executed and
+passed separately in Milestone 9.

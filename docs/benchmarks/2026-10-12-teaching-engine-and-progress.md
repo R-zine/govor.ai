@@ -80,4 +80,4 @@ The guided phrase matcher proves deterministic progression for committed exercis
 general fluency, grammar, or pronunciation score. No live human lesson, broad learning-outcome
 study, physical phone, intended Wi-Fi path, hardware codec, acoustic check, target-load metric, or
 soak ran here. Those limitations do not block Milestone 5 but must not be reported as satisfied;
-the physical/target bundle remains mandatory in Milestone 9.
+the physical/target bundle later passed separately in Milestone 9.

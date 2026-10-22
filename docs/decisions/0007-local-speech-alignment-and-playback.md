@@ -86,4 +86,5 @@ user listened and confirmed on 2026-10-12 that the GB-English and Bulgarian samp
 so the required intelligibility/acceptable-naturalness criterion is accepted.
 
 The emulator is development evidence only. Physical speaker/microphone acoustics, Wi-Fi, target
-latency/resources, codec behavior, lifecycle, and soak remain mandatory Milestone 9 work.
+latency/resources, codec behavior, lifecycle, and bounded stability were later measured and passed
+separately in Milestone 9.

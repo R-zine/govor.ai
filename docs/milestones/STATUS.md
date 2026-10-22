@@ -1,6 +1,6 @@
 # Current verified status
 
-Last updated: 2026-10-19
+Last updated: 2026-10-22
 
 ## Outcome
 
@@ -44,7 +44,7 @@ procedural café, supermarket, airport, and home environments. The host maps les
 closed scene specification and maps actual speech PCM plus real-or-unavailable provider timing to
 bounded avatar animation. Four-scene runtime, cache/video-memory revisit, software-encoding,
 concurrent Qwen3 4B, real Kokoro lip-sync, and native-emulator media paths passed. This is
-development evidence; all target-hardware acceptance remains Milestone 9.
+development evidence; target-hardware acceptance was deferred to and later passed in Milestone 9.
 
 Milestone 7 is complete. Independent OpenAI-compatible dialogue, recognition, and speech
 adapters, a double-enforced offline-only gate, separate microphone-upload consent, Windows
@@ -67,15 +67,41 @@ listeners and zero owned processes.
 
 This VM/emulator result satisfies only the Milestone 8 clean-Windows software row. It does not
 satisfy any Milestone 9 physical phone, intended Wi-Fi, acoustic, hardware-codec, lifecycle,
-target-performance, monitor-off, thermal, or soak criterion.
+target-performance, monitor-off, thermal, or bounded-stability criterion.
+
+Milestone 9 is complete. On 2026-10-21 the target RTX 3060 Windows PC and a physical realme
+RMX3939 completed the intended private-Wi-Fi release path with no `adb reverse`: pairing and stored
+credential reuse, authenticated WSS and DTLS-SRTP, physical microphone return, hardware VP8
+decode, lifecycle/network reconnect, portrait behavior, unfocused and monitor-off rendering,
+resource/thermal measurement, and a historical 1,800-second transport/media run. That run
+sustained 30.018 emitted fps and 29.726 unique Godot fps with zero reported video/audio packet
+loss.
+
+On 2026-10-22 the exact signed post-audit `0.1.11`/code 12 candidate passed a fresh 30-second
+physical Wi-Fi benchmark, café completion through the phone microphone, Bulgarian help after
+recognition ambiguity and return to English, persisted completion, clean package restart,
+progress survival, IPA display, and bounded isolated-word playback. The product owner removed the fixed 30-minute
+continuous-lesson/soak gate; recorded bounded interaction, stability, lifecycle, resources, and
+clean teardown remain required. The historical long run remains supporting evidence only.
+
+On 2026-10-22 the unlocked physical phone received a bounded local
+Piper utterance saying `Какво означава order?` through hold-to-talk. Whisper displayed
+`(speaking in foreign language)` rather than the phrase, but the teacher provided Bulgarian
+guidance, returned to an English prompt, accepted the following bounded Kokoro English answer,
+and advanced the same attempt. A second accepted English answer reached café 3/3; tapping
+`Would` displayed `/wˈʊd/` and Bulgarian pronunciation help. This closes the explicit bilingual
+flow with the recognition limitation recorded, not as a human-speech accuracy claim. The learner
+then confirmed that the moving café/teacher was visible on the physical phone and that teacher
+speech was audible, clear, and intelligible. The final suite, dependency audit, and all-files
+pre-commit gates pass, so every Milestone 9 acceptance row is closed.
 
 ADR-0003 now selects Godot 4.7.2 .NET as the only renderer. The earlier proof from the proprietary
 engine was removed completely, including source, project metadata, build scripts, and dependencies.
 Godot import, C# compilation, self-test, Windows export, local runtime, non-black shared-memory
 video, non-silent application PCM, and emulator delivery have all executed successfully. The
-current synchronous `SubViewport.GetTexture().GetImage()` readback is accepted for continued
-development. It may still require revision if the mandatory Milestone 9 target-hardware
-measurements fail.
+current synchronous `SubViewport.GetTexture().GetImage()` readback is accepted because the
+mandatory Milestone 9 target-hardware cadence/resource measurements passed. Future target or
+performance regressions may still require revisiting it.
 
 ## Current implementation
 
@@ -92,8 +118,9 @@ measurements fail.
   viseme shapes are used only when real provider phoneme timing exists.
 - The tone stops automatically. Runtime smokes are muted by default; the single supervised
   audible check also stopped after two seconds.
-- Godot publishes top-to-bottom RGBA into a latest-frame Windows named mapping and PCM into a
-  bounded 64-block ring. The mappings are process-local and expose no LAN listener.
+- Godot publishes top-to-bottom RGBA through two alternating latest-frame slots in a Windows named
+  mapping and PCM into a bounded 64-block ring. The mappings are process-local and expose no LAN
+  listener.
 - aiortc owns signaling, encoding, transport, pacing, and silence fallback. The Android wire
   contract did not change during the renderer migration.
 - Bootstrap downloads the exact Godot .NET editor and export templates to ignored repository-local
@@ -278,8 +305,21 @@ measurements fail.
 | `uv run --frozen --extra media --extra speech pip-audit --cache-dir .cache/pip-audit-m8-vm` | verified passing | 2026-10-17 VM-fixture locked dependency graph: no known vulnerabilities found after the sandbox-denied metadata request was approved |
 | `uv run --frozen --extra media --extra speech pip-audit --cache-dir .cache/pip-audit-m8-final` | verified passing | 2026-10-19 final locked dependency graph: no known vulnerabilities found |
 | Pre-commit across all tracked/untracked sources | verified passing | 2026-10-19 final `pre-commit-m8-final` run passed JSON/YAML, line endings/whitespace, secret/size checks, Ruff, formatting, and 26 contract tests using command-scoped safe-directory configuration |
-| `./scripts/hardware-test.ps1` | Milestone 9 not executed | Ignores the active emulator and exits 2 because no physical phone is connected; this does not reopen Milestone 1 |
-| Physical Android/Wi-Fi/media/soak bundle | Milestone 9 not executed | No suitable physical phone; mandatory before release, not a prerequisite for Milestones 2-8 |
+| `./scripts/test.ps1 -Scope all` | verified passing | 2026-10-21 M9 source run passed all Python/contracts/Kotlin/C#/media/Godot gates and the Android debug build; the first attempt exposed only Ruff import ordering, which was corrected before the from-start pass |
+| M9 Kotlin lifecycle policy | verified passing | Four new pure tests cover single foreground reconnect, explicit-disconnect suppression, unused policy, and network retry; total Kotlin gate is 17 tests |
+| M9 media gate | verified passing | Strict mypy and 21 tests cover the version 2 two-slot bridge, stable header/inactive-slot publication, bounded phase wait, metrics, RTP state, and authenticated signaling |
+| `./scripts/hardware-test.ps1 -DurationSeconds 30 ...` | verified passing on physical target | Exact 0.1.10 candidate: 30.380 seconds, 30.052 unique Godot fps, +1,507 physical microphone frames, zero reported RTP loss, connected DTLS |
+| `./scripts/hardware-test.ps1 -DurationSeconds 1800 ...` | verified passing as transport soak | Physical intended-Wi-Fi run: 1,800.065 seconds, 30.018 emitted fps, 29.726 unique Godot fps, +89,863 microphone frames, zero reported RTP loss, bounded measured resources; not a continuous interactive lesson |
+| Physical lifecycle/network recovery | verified passing | Background/foreground, Wi-Fi loss/recovery, explicit disconnect/reconnect, stored-credential reuse, and state preservation passed on the real phone; delayed ICE transition was observed and recovered |
+| Hardware codec selection/fallback | verified with fallback | Android resource manager reported hardware `c2.unisoc.vp8.decoder`; Windows metrics reported VP8 software encoding (`windows_hardware_video_encoding=false`) |
+| Monitor-off/unfocused renderer | verified passing | Renderer/media/microphone/DTLS counters advanced with the application unfocused and monitor off; bounded wake restored the display after an unresponsive unrelated window blocked the first helper |
+| Human phone picture/speech confirmation | verified passing | On 2026-10-22 the learner confirmed that the moving café/teacher was visible and teacher speech was audible, clear, and intelligible on the physical phone |
+| Fixed-duration continuous lesson | removed from acceptance on 2026-10-22 | The historical 1,800-second transport run waited for learner input and is not relabeled as interactive; no fixed-duration lesson or soak is now required |
+| First M9 dependency audit | verified failing then remediated | Found certifi `PYSEC-2026-4320` and virtualenv `GHSA-vxj4-q4g9-crj7`; pins/lock were updated to certifi 2026.10.19 and virtualenv 21.14.12 |
+| `uv run --frozen --extra media --extra speech pip-audit --cache-dir .cache/pip-audit-m9-final` | verified passing | Post-remediation locked graph: no known vulnerabilities found |
+| M9 pre-commit across all sources | verified passing | Final post-documentation run passed JSON/YAML, line endings/whitespace, secret/size checks, Ruff, format, and 26 contract tests |
+| `./scripts/package.ps1 -Version 0.1.11 -VersionCode 12 -NoArchive ...` | verified passing | Post-audit Godot export, signed APK build/signature, dependency/source staging, imports, prerequisites, and wrapper doctor smokes passed; APK SHA-256 `94662d516bfff260b3276522142bb7ce34a995f03400011df914940c10b87e2a` |
+| Exact 0.1.11 physical smoke | blocked | APK installed, but the handset returned to its PIN screen before connection; no PIN was requested or guessed |
 | Remote GitHub Actions | not executed | Workflow includes the Godot renderer job, but the current milestone snapshot has not run remotely |
 
 The final `./scripts/test.ps1 -Scope all` run passed on 2026-10-19: 169 Python tests at 85.51%
@@ -312,9 +352,9 @@ Ctrl+C; its `finally` block then stopped every child/listener as designed.
 
 Not executed for Milestone 3: a live human conversation, Bulgarian-accented English audio, hesitant
 or short human audio, and a spoken mixed-language recording. Those are not inferred from text
-fixtures. They remain evaluation inputs for future teaching/speech work, while physical-phone,
-Wi-Fi, acoustics, codecs, concurrent target load, thermals, and soak remain mandatory Milestone 9
-criteria.
+fixtures and remain evaluation inputs for future teaching/speech work. The separate physical-phone,
+Wi-Fi, acoustics, codecs, concurrent target load, thermals, and bounded-stability criteria later
+passed in Milestone 9.
 
 ## Milestone 4 acceptance and handoff
 
@@ -352,9 +392,10 @@ artifacts, and limits are in `docs/benchmarks/2026-10-12-teaching-engine-and-pro
 third-party dependency was added. The phrase-pattern evaluator is intentionally scoped to committed
 guided tasks and is not a fluency, grammar, or pronunciation score.
 
-The API 34 UI check is emulator development evidence only. No live human lesson or physical phone,
-Wi-Fi, codec, acoustic, target-load, thermal, or soak acceptance ran. Those do not block Milestone
-5 and remain mandatory Milestone 9 work. This handoff is the required focused Milestone 5 commit.
+The API 34 UI check is emulator development evidence only. At this checkpoint no live human lesson
+or physical phone, Wi-Fi, codec, acoustic, target-load, thermal, or bounded-stability acceptance
+had run. Those did not block Milestone 5 and later passed separately in Milestone 9. This handoff
+is the required focused Milestone 5 commit.
 
 ## Milestone 6 acceptance and handoff
 
@@ -366,7 +407,7 @@ Wi-Fi, codec, acoustic, target-load, thermal, or soak acceptance ran. Those do n
 | Environment responds to lesson context | verified passing | Host integration maps selected scenario to its deterministic scene; the emulator smokes required the café scene marker, and planner tests cover every scenario. |
 | Invalid scene specifications rejected | verified passing | Python/JSON Schema/C# validation rejects unknown IDs, bounds, extra fields, and an explicit `../../downloaded-model.glb` fixture. |
 | Missing assets have predictable fallbacks | verified passing | Godot self-test invokes an internal unknown catalog item and verifies the named magenta fallback; untrusted unknown wire IDs are rejected earlier. |
-| Scene changes do not leak significant GPU memory | verified passing with bounded scope | After all four scenes, a cached café revisit added zero cached resources and zero Godot-reported video-memory bytes. This short run is not a soak claim. |
+| Scene changes do not leak significant GPU memory | verified passing with bounded scope | After all four scenes, a cached café revisit added zero cached resources and zero Godot-reported video-memory bytes. This short run is not a long-duration claim. |
 | Runtime scene data stays in memory | verified passing | Procedural scene nodes/resources are created in memory; the tour writes proof PNGs only in explicit benchmark mode, not generated 3D scene files. |
 | Rendering usable beside local inference | verified passing on development PC | Renderer tour/encoding overlapped two Qwen3 4B requests; frame p95 was 33.459 ms at the 30 fps target. |
 | Required performance measurements | verified passing with limits | Scene builds 0.243–1.210 ms; transitions 370.550–376.994 ms; cached revisit 0.436 ms; avatar 27.826 µs/frame; software VP8 p95 6.640 ms; memory figures recorded in the dated benchmark. |
@@ -377,10 +418,10 @@ failures, artifacts, metrics, and limits are in
 dependency or downloaded renderer asset was added.
 
 The real-alignment emulator run proves the control/timing path, not physical display quality or
-acoustics. The cache/video-memory revisit is a bounded regression check, not a 30-minute leak test.
-Hardware encode/decode, physical phone/Wi-Fi/audio, target-machine resource behavior, lifecycle,
-monitor-off, thermals, and soak remain mandatory Milestone 9 work. This handoff is the required
-focused Milestone 6 commit.
+acoustics. The cache/video-memory revisit is a bounded regression check, not a long-duration leak test.
+Physical phone/Wi-Fi/audio, target-machine resource behavior, lifecycle, monitor-off, thermals, and
+bounded stability were deferred to and later passed in Milestone 9; the accepted Windows codec
+path remained software VP8 encoding. This handoff is the required focused Milestone 6 commit.
 
 ## Milestone 7 acceptance and handoff
 
@@ -474,10 +515,86 @@ recoverable timeout and **Retry lesson** resumed the persisted third exercise. N
 attempts is reported as a passing physical/acoustic result.
 
 Milestone 8 is complete. A focused milestone commit accompanies this handoff after the final full
-suite, locked dependency audit, and all-files pre-commit gate passed. Milestone 9 is next but has
-not begun.
-The absence of physical phone/Wi-Fi/codec/acoustic/target-performance/monitor-off/thermal/soak
-evidence is assigned to Milestone 9 and does not weaken or expand this software-only M8 result.
+suite, locked dependency audit, and all-files pre-commit gate passed. Milestone 9 began on
+2026-10-21. Its new physical evidence does not alter or retroactively expand the M8 software-only
+result.
+
+## Milestone 9 acceptance and handoff (complete)
+
+| Acceptance criterion | Status | Direct evidence and limit |
+| --- | --- | --- |
+| Physical phone on intended Wi-Fi | verified passing | realme RMX3939 on `A1_B436` reached the target PC's release gateways with no `adb reverse`; Windows network profile was Private |
+| Continuously rendered PC scene reaches phone | verified passing | 53,508 unique Godot frames over 1,800.065 seconds, hardware decoder activity, and the learner's 2026-10-22 confirmation that the moving café/teacher was visible on the phone |
+| Teacher audio on phone | verified passing | Phone playback completion advanced the lesson while Windows playback was muted; the learner confirmed that teacher speech was audible, clear, and intelligible on the handset |
+| Phone microphone reaches PC | verified passing | +1,532 physical 48 kHz microphone frames in the exact-candidate smoke; bounded acoustic hold-to-talk turns completed café 3/3 |
+| No PC speaker/microphone dependency | verified architecturally/partially physically | Muted Windows playback did not stop phone lesson playback; capture opens only the phone WebRTC track and no PC microphone. A physical PC-microphone-disable action was not executed |
+| Pairing, WSS, DTLS-SRTP, firewall/private LAN | verified passing on measured candidate | Initial pairing, stored credential reuse, authenticated WSS, connected DTLS, and Private-profile Wi-Fi passed; public-network deployment remains forbidden |
+| Lifecycle/interruption/reconnect/state | verified passing | Background/foreground, Wi-Fi loss/recovery, explicit disconnect/reconnect, and same-process state preservation passed; one deliberate second-Activity harness misuse is excluded |
+| Codec selection/fallback | verified with explicit fallback | Android hardware `c2.unisoc.vp8.decoder`; Windows VP8 software encoding met cadence, and no hardware-encode claim is made |
+| Unfocused/monitor-off/idle-awake | verified passing | Renderer/media/mic/DTLS counters advanced while unfocused and through a monitor-off interval |
+| Orientation/acoustics/latency/loss/resources/thermals/cadence | verified passing | Portrait lock, latency/loss/resources/thermals/cadence were measured; the learner confirmed handset speech audibility and intelligibility |
+| Bounded stability | verified passing | Exact-candidate 30.609-second run had advancing media/microphone counters, zero reported RTP loss, and bounded resources; the historical 1,800.065-second transport run adds longer supporting evidence but is not a release gate |
+| Final local-first café scenario and restart | verified passing with recorded recognition limit | Physical microphone turns reached café 3/3, saved progress, survived package restart, retained completion, displayed IPA/help, and played bounded isolated-word audio. A later exact-candidate attempt sent the explicit local Piper phrase `Какво означава order?` acoustically through the physical phone microphone; Whisper reduced it to `(speaking in foreign language)`, the teacher supplied Bulgarian guidance and returned to English, recognized the following English answer, and advanced the same lesson to 3/3. This is end-to-end bilingual-flow evidence, not a human-speech accuracy claim |
+| Full automated suite/audit/pre-commit | verified passing | Final run passed: 169 Python at 85.51% branch coverage, 26 contracts, 17 Kotlin, 8 C#, 21 media, Godot import/build/self-test, and Android debug build; locked audit reported no known vulnerabilities and every all-files pre-commit hook passed |
+| Exact post-audit release | verified passing | Signed 0.1.11/code 12 passed the physical Wi-Fi benchmark, full café/restart path, stored-credential reconnect, and clean teardown |
+
+Implementation and decisions:
+
+- Android lifecycle recovery is Activity/ViewModel-owned and driven by a pure policy with four JVM
+  tests. Explicit disconnect remains authoritative; release retries never reuse a one-time pairing
+  code.
+- Renderer video mapping version 2 alternates two full RGBA slots and commits only the inactive
+  slot. The reader checks a stable header and the aiortc track may await a publication for 20 ms,
+  eliminating measured phase aliasing without queue growth.
+- Loopback-only metrics and the physical benchmark measure actual session/RTP/renderer/microphone
+  state. No diagnostics listener was exposed on the LAN.
+- Android hardware VP8 decode is accepted. aiortc software VP8 encoding is the recorded Windows
+  fallback because it sustained the target cadence; hardware encoding is not claimed.
+- The 2026-10-22 product decision removed fixed-duration lesson/soak acceptance. The historical
+  1,800-second record remains supporting transport evidence and is not called interactive.
+
+Implementation files changed for M9 are the Android Activity/ViewModel and new lifecycle policy
+plus tests; the Godot bridge protocol/publisher/self-test; media app, peer, reader, and tests; and
+the hardware/benchmark scripts. The dependency remediation also changes `pyproject.toml`,
+`uv.lock`, and `THIRD_PARTY_LICENSES.md`. Architecture, ADR, roadmap, hardware ledger, renderer
+README, and this handoff were updated together. Exact paths and measurements are listed in
+`docs/benchmarks/2026-10-21-m9-physical-release-acceptance.md`.
+
+Meaningful commands and results:
+
+- `./scripts/test.ps1 -Scope all`: the final post-documentation run passed with 169 Python, 26
+  contracts, 17 Kotlin, 8 C#, and 21 media tests plus Godot and Android build gates.
+- `./scripts/package.ps1 -Version 0.1.10 -VersionCode 11 -NoArchive ...`: passed and produced the
+  measured candidate.
+- `./scripts/hardware-test.ps1 -DurationSeconds 30 ...`: passed on exact 0.1.11 with 30.482 emitted
+  fps, 29.959 unique Godot fps, +1,532 microphone frames, zero reported RTP loss, and connected
+  DTLS.
+- `./scripts/hardware-test.ps1 -DurationSeconds 1800 ...`: passed the transport/media soak with
+  30.018 emitted fps, 29.726 unique Godot fps, zero reported RTP loss, and +89,863 microphone
+  frames.
+- First M9 `pip-audit`: failed on certifi/virtualenv advisories. Targeted lock updates followed;
+  repeat audit passed with no known vulnerabilities.
+- `./scripts/package.ps1 -Version 0.1.11 -VersionCode 12 -NoArchive ...`: passed. One launcher
+  attempt hit transient Windows asyncio WinError 64 during socket accept; a retry started all
+  required services and passed packaged-Python TLS health. After the phone was unlocked, the
+  exact package passed physical connection, lesson, restart, and pronunciation/playback checks.
+- Exact 0.1.11 physical follow-up on 2026-10-22: stored-credential Wi-Fi reconnect passed after
+  trimming two accidental trailing spaces from the certificate field. A repeated Bulgarian
+  acoustic attempt was mis-transcribed as Korean text; a clean single utterance was classified as
+  foreign language and produced Bulgarian guidance plus an English prompt. The next Kokoro phrase
+  was recognized as `Would you like a coffee, please?`, advanced to 2/3, and exposed
+  `Would /wˈʊd/`; `That is all, thank you` was recognized and advanced to 3/3. Transient
+  recoverable lesson states recovered through **Retry lesson**. A Windows SAPI job failed to
+  initialize and supplied no speech; it is recorded as a failed attempt, not evidence.
+- `uv run --frozen pre-commit run --all-files`: the post-follow-up documentation run passed every
+  configured hook, including Ruff and 26 contract tests.
+- All services, Godot, llama.cpp, and the Android app were stopped. Stay-awake and rotation were
+  restored; no tone is active.
+
+The learner confirmed the moving phone picture and clear, intelligible phone speech on
+2026-10-22. The release package, physical app, services, and every temporary generated utterance
+were stopped or deleted after the bounded follow-up. Milestone 9 has no remaining blocker and is
+closed by this focused handoff commit.
 
 ## Renderer evidence and limitations
 
@@ -495,79 +612,63 @@ the peer received non-black pixels, and Android emitted render callbacks, this i
 an ADB/`SurfaceView` capture limitation, but that explanation has not been independently proven.
 No screenshot-based scene-visibility claim is made.
 
-No controlled cadence distribution, latency, CPU, GPU, RAM, VRAM, thermals, Wi-Fi, hardware
-encoder/decoder, monitor-off, background/foreground, physical audio, or 30-minute soak result
-exists. The emulator used the virtual `c2.goldfish.vp8.decoder`, which is not hardware-decoder
-evidence. Every one of these checks remains mandatory in Milestone 9.
+The 2026-10-21 physical run now supplies controlled cadence, RTT/loss, CPU/GPU/RAM/VRAM,
+thermals, Wi-Fi, hardware Android decode, explicit Windows software-encode fallback,
+monitor-off/unfocused, lifecycle, physical microphone, and historical 1,800-second transport
+evidence. The exact 0.1.11 follow-ups add café completion/restart, pronunciation, and an explicit
+Bulgarian-help/English-return lesson path. Whisper did not preserve the Bulgarian phrase in the
+displayed transcript, so that run is not a human-speech accuracy claim. Subjective phone
+video/audio quality was confirmed by the learner on 2026-10-22. The older emulator's virtual
+`c2.goldfish.vp8.decoder` remains emulator-only evidence and is not used for the physical codec
+row.
 
 Initial migration evidence is in `docs/benchmarks/2026-10-09-godot-renderer-migration.md`; current
 avatar/scene evidence is in
-`docs/benchmarks/2026-10-12-avatar-scenes-and-renderer-performance.md`.
+`docs/benchmarks/2026-10-12-avatar-scenes-and-renderer-performance.md`; target evidence is in
+`docs/benchmarks/2026-10-21-m9-physical-release-acceptance.md`.
 
 ## Environment and artifacts
 
 - Windows process build 10.0.26200.
 - NVIDIA GeForce RTX 3060, 12,288 MiB; driver 560.94.
 - Godot 4.7.2 stable .NET (`ed1daf0bf`), repository-local editor and export templates.
+- Physical target: realme RMX3939, Android 16/API 36, security patch 2026-08-01; intended
+  `A1_B436` WPA2-Personal Wi-Fi. Its ADB serial is intentionally omitted.
 - Android Studio API 34 AVD `Pixel_3a_API_34_extension_level_7_x86_64`, serial
   `emulator-5554`, used only for development evidence.
 - Clean-software fixture: QEMU 11.0.50/WHPX, guest `GOVOR-M8-VM`, Windows
   10.0.22000.0 AMD64; exact-image and VM limits are recorded above.
 - Renderer: `apps/renderer/Builds/Windows/GovorRenderer.exe` (ignored build output).
 - Debug APK: `apps/android/app/build/outputs/apk/debug/app-debug.apk`.
+- Post-audit signed APK: `.cache/dist/govor.ai-0.1.11-android-release.apk`, 55,425,173 bytes,
+  SHA-256 `94662d516bfff260b3276522142bb7ce34a995f03400011df914940c10b87e2a`.
+- Physical reports: ignored `.cache/m9-final-candidate-smoke.json`,
+  `.cache/m9-physical-soak.json`, and `.cache/m9-011-physical-smoke.json`; committed summary in
+  the dated M9 benchmark.
 - Runtime logs/proof images: ignored files under `.cache/`.
 - Inventory: `docs/benchmarks/local/latest-inventory.json` (inventory only, no performance claim).
 
 ## Next steps
 
-Milestone 8 is complete. The next implementation work is Milestone 9 release acceptance on the
-actual Windows target and a physical Android phone. Do not reuse the clean VM or Android emulator
-to mark any M9 row passing.
+Milestone 9 and the master-spec milestone sequence are complete. This handoff is the focused M9
+closeout. Preserve the exact release/evidence artifacts and begin no additional milestone unless
+the product owner defines one. Phone settings are restored and no service or audio remains active.
 
-Deferred mandatory Milestone 9 work:
+The evidence boundaries remain explicit: Milestone 1 used emulator development evidence, while
+Milestone 9 passed only from the documented physical target execution and learner confirmation.
 
-1. Connect a physical Android phone over the intended Wi-Fi path and execute video, audible
-   application audio, microphone return, lifecycle, interruption, reconnect, and teardown checks.
-2. Validate pairing/WSS/firewall behavior and hardware codec selection/fallback.
-3. Measure cadence, latency, packet loss, CPU/GPU/RAM/VRAM, thermals, acoustics, orientation,
-   unfocused/monitor-off behavior, and a 30-minute soak.
-4. Retain or replace synchronous readback using those measurements; use a Godot GDExtension or
-   native capture/hardware-encoding bridge if necessary.
-
-Milestone 1 must not be reopened merely because Milestone 9 hardware is unavailable. Conversely,
-Milestone 9 must not pass using emulator evidence.
-
-## Exact next commands
+## Future regression commands
 
 ```powershell
 git -c safe.directory='C:/Users/PC/Documents/GitHub/govor.ai' status --short --branch
 ./scripts/bootstrap.ps1 -IncludeMedia -IncludeRenderer -IncludeLocalAi -NoDownload
 ./scripts/test.ps1 -Scope all
-$env:UV_CACHE_DIR = Join-Path (Resolve-Path '.cache').Path 'uv-m8-final'
-uv run --frozen --extra media --extra speech pip-audit --cache-dir .cache/pip-audit-m8-final
-$env:PRE_COMMIT_HOME = Join-Path (Resolve-Path '.cache').Path 'pre-commit-m8-resume'
+$env:UV_CACHE_DIR = Join-Path (Resolve-Path '.cache').Path 'uv-m9-final'
+uv run --frozen --extra media --extra speech pip-audit --cache-dir .cache/pip-audit-m9-final
+$env:PRE_COMMIT_HOME = Join-Path (Resolve-Path '.cache').Path 'pre-commit-m9-final'
 $env:GIT_CONFIG_COUNT = '1'
 $env:GIT_CONFIG_KEY_0 = 'safe.directory'
 $env:GIT_CONFIG_VALUE_0 = 'C:/Users/PC/Documents/GitHub/govor.ai'
 uv run --frozen pre-commit run --all-files
-./scripts/test.ps1 -Scope hardware
-./scripts/benchmark.ps1 -Profile media-poc
-./scripts/benchmark.ps1 -Profile local-ai
-./scripts/benchmark.ps1 -Profile speech
-./scripts/benchmark.ps1 -Profile renderer
-./scripts/progress.ps1 -Action View
-./scripts/progress.ps1 -Action Export -OutputPath '.cache/progress-export.json'
-./scripts/progress.ps1 -Action DeleteAll -ConfirmDelete
-./scripts/provider-credentials.ps1 -Action Status -Target '<credential-target>'
-./scripts/test.ps1 -Scope speech
-./scripts/benchmark.ps1 -Profile speech
-./scripts/emulator-speech-smoke.ps1
-./scripts/benchmark.ps1 -Profile local-ai
-./scripts/build.ps1 -Target renderer
-./scripts/renderer-smoke.ps1
-./scripts/renderer-scene-smoke.ps1
-./scripts/benchmark.ps1 -Profile renderer
-./scripts/emulator-renderer-smoke.ps1
-./scripts/dev.ps1 -Mode mock
-./scripts/dev.ps1 -Mode local -PairingToken '<at-least-32-random-characters>'
+git -c safe.directory='C:/Users/PC/Documents/GitHub/govor.ai' status --short --branch
 ```

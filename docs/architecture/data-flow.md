@@ -84,12 +84,15 @@ recoverable session error. Provider calls do not block the receive loop, so canc
 in-flight work. Playback, learner-response, recording, provider, and renderer acknowledgement
 timeouts all converge on explicit recoverable states.
 
-For the Milestone 1 renderer experiment, Godot publishes its latest complete 1280x720 RGBA frame
-into a fixed Windows-local memory mapping. Application-owned 48 kHz mono PCM uses a bounded
-64-block ring of 20 ms blocks. The aiortc peer reads these sources and sends WebRTC tracks to
-Android. The mapping protocol has writer generations and publication sequences; incomplete writes
-are ignored, old video is replaced, and an audio reader that falls behind resumes from the oldest
-still-available block. This transport is process-local and is not a wire contract.
+Godot publishes each latest complete 1280x720 RGBA frame into one of two alternating slots in a
+fixed Windows-local memory mapping. It fills the inactive slot before atomically committing the
+small header, so the previous complete frame stays readable. The aiortc reader verifies the header
+did not change during the copy and may asynchronously await a publication for up to 20 ms to avoid
+sampling the same frame solely because its 30 fps phase leads the renderer. Application-owned
+48 kHz mono PCM uses a bounded 64-block ring of 20 ms blocks. The mapping protocol has writer
+generations and publication sequences; incomplete writes are ignored, old video is replaced, and
+an audio reader that falls behind resumes from the oldest still-available block. This transport is
+process-local and is not a wire contract.
 
 The initial state sequence is:
 

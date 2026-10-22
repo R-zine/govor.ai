@@ -3,7 +3,8 @@
 This runbook closes only the clean-Windows software row of Milestone 8. It uses a QEMU/WHPX
 Windows guest for the PC release and the existing Android Studio emulator on the host. It never
 counts as physical-phone, intended-Wi-Fi, acoustic, hardware-codec, target-performance,
-monitor-off, thermal, or soak evidence; those are mandatory Milestone 9 work.
+monitor-off, thermal, or bounded-stability evidence; those later passed independently in
+Milestone 9.
 
 ## One-time input
 

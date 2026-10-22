@@ -1,7 +1,12 @@
 [CmdletBinding()]
 param(
     [ValidateSet('inventory', 'media-poc', 'local-ai', 'speech', 'renderer')]
-    [string]$Profile = 'inventory'
+    [string]$Profile = 'inventory',
+    [ValidateRange(30, 7200)]
+    [int]$DurationSeconds = 60,
+    [ValidateRange(1, 60)]
+    [int]$SampleIntervalSeconds = 5,
+    [string]$OutputPath = ''
 )
 
 . (Join-Path $PSScriptRoot 'common.ps1')
@@ -145,7 +150,262 @@ if ($Profile -eq 'renderer') {
 }
 
 if ($Profile -eq 'media-poc') {
-    throw 'The media hardware benchmark is not yet implemented. No simulated performance result was generated.'
+    $sdk = Get-GovorAndroidSdk
+    $adb = Join-Path $sdk 'platform-tools\adb.exe'
+    $previousErrorAction = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try {
+        $deviceOutput = & $adb devices -l 2>&1
+        $adbExitCode = $LASTEXITCODE
+    }
+    finally {
+        $ErrorActionPreference = $previousErrorAction
+    }
+    if ($adbExitCode -ne 0) {
+        throw 'ADB could not enumerate devices. No hardware measurement was produced.'
+    }
+    $physicalDevices = @(
+        $deviceOutput |
+            Where-Object { $_ -match '^\S+\s+device(?:\s|$)' -and $_ -notmatch '^emulator-' } |
+            ForEach-Object { ($_ -split '\s+')[0] }
+    )
+    if ($physicalDevices.Count -ne 1) {
+        throw "Expected exactly one authorized physical Android device; found $($physicalDevices.Count)."
+    }
+    $device = $physicalDevices[0]
+    $phoneIp = (& $adb -s $device shell ip -f inet addr show wlan0 |
+        Select-String -Pattern 'inet\s+(\d+\.\d+\.\d+\.\d+)' |
+        ForEach-Object { $_.Matches[0].Groups[1].Value } |
+        Select-Object -First 1)
+    if (-not $phoneIp) {
+        throw 'The physical phone has no wlan0 IPv4 address. No Wi-Fi measurement was produced.'
+    }
+    $phoneProcessId = ((& $adb -s $device shell pidof ai.govor.app) | Out-String).Trim()
+    if (-not $phoneProcessId) {
+        throw 'The signed Android app is not running on the physical phone.'
+    }
+    if (-not (Get-Command curl.exe -ErrorAction SilentlyContinue)) {
+        throw 'Windows curl.exe is required to query loopback-only media metrics.'
+    }
+
+    function Get-MediaMetrics {
+        $raw = & curl.exe --silent --show-error --fail --insecure --max-time 3 `
+            'https://127.0.0.1:8766/v1/internal/metrics'
+        if ($LASTEXITCODE -ne 0) {
+            throw 'The loopback media metrics endpoint is unavailable.'
+        }
+        return $raw | ConvertFrom-Json
+    }
+
+    function Get-Percentile([double[]]$Values, [double]$Percentile) {
+        if ($Values.Count -eq 0) { return $null }
+        $sorted = @($Values | Sort-Object)
+        $index = [Math]::Ceiling(($Percentile / 100) * $sorted.Count) - 1
+        return $sorted[[Math]::Max(0, [Math]::Min($index, $sorted.Count - 1))]
+    }
+
+    $initialMetrics = Get-MediaMetrics
+    if (-not $initialMetrics.active -or $initialMetrics.connection_state -ne 'connected') {
+        throw 'A connected physical WebRTC peer is required before the benchmark starts.'
+    }
+    $initialVideoFrames = [long]$initialMetrics.renderer_video.frames_emitted
+    $initialRendererFrames = [long]$initialMetrics.renderer_video.renderer_frames
+    $initialMicrophoneFrames = [long]$initialMetrics.microphone.frames_received
+    $startedAt = [DateTime]::UtcNow
+    $stopwatch = [Diagnostics.Stopwatch]::StartNew()
+    $samples = @()
+    $pingSuccesses = 0
+    $pingFailures = 0
+    $previousCpuSeconds = $null
+    $previousSampleSeconds = 0.0
+    $logicalProcessors = [Math]::Max(1, [Environment]::ProcessorCount)
+
+    while ($stopwatch.Elapsed.TotalSeconds -lt $DurationSeconds) {
+        $metrics = Get-MediaMetrics
+        if (-not $metrics.active -or $metrics.connection_state -ne 'connected') {
+            throw "The physical WebRTC peer disconnected at $([Math]::Round($stopwatch.Elapsed.TotalSeconds, 1)) seconds."
+        }
+        $listenerIds = @(
+            Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue |
+                Where-Object { $_.LocalPort -in 8765, 8766, 8767 } |
+                Select-Object -ExpandProperty OwningProcess -Unique
+        )
+        $applicationProcesses = @(
+            Get-Process -ErrorAction SilentlyContinue |
+                Where-Object {
+                    $_.Id -in $listenerIds -or $_.ProcessName -in @('GovorRenderer', 'llama-server')
+                }
+        )
+        $workingSetBytes = [long](($applicationProcesses | Measure-Object WorkingSet64 -Sum).Sum)
+        $cpuSeconds = [double](($applicationProcesses | Measure-Object CPU -Sum).Sum)
+        $cpuPercent = $null
+        if ($null -ne $previousCpuSeconds) {
+            $sampleElapsed = $stopwatch.Elapsed.TotalSeconds - $previousSampleSeconds
+            if ($sampleElapsed -gt 0) {
+                $cpuPercent = 100 * ($cpuSeconds - $previousCpuSeconds) /
+                    ($sampleElapsed * $logicalProcessors)
+            }
+        }
+        $previousCpuSeconds = $cpuSeconds
+        $previousSampleSeconds = $stopwatch.Elapsed.TotalSeconds
+
+        $gpu = $null
+        if (Get-Command nvidia-smi -ErrorAction SilentlyContinue) {
+            $gpuLine = (& nvidia-smi --query-gpu=utilization.gpu,memory.used,temperature.gpu `
+                --format=csv,noheader,nounits 2>$null | Select-Object -First 1)
+            if ($gpuLine) {
+                $gpuParts = @($gpuLine -split ',' | ForEach-Object { $_.Trim() })
+                $gpu = [ordered]@{
+                    utilization_percent = [double]$gpuParts[0]
+                    memory_used_mib = [double]$gpuParts[1]
+                    temperature_c = [double]$gpuParts[2]
+                }
+            }
+        }
+
+        $battery = & $adb -s $device shell dumpsys battery
+        $temperatureTenthsC = $battery |
+            Select-String -Pattern '^\s*temperature:\s*(\d+)' |
+            ForEach-Object { [double]$_.Matches[0].Groups[1].Value } |
+            Select-Object -First 1
+        $level = $battery |
+            Select-String -Pattern '^\s*level:\s*(\d+)' |
+            ForEach-Object { [int]$_.Matches[0].Groups[1].Value } |
+            Select-Object -First 1
+        $memInfo = & $adb -s $device shell dumpsys meminfo ai.govor.app
+        $totalPssKb = $memInfo |
+            Select-String -Pattern 'TOTAL\s+(\d+)' |
+            ForEach-Object { [long]$_.Matches[0].Groups[1].Value } |
+            Select-Object -First 1
+        $ping = Test-Connection -ComputerName $phoneIp -Count 1 -ErrorAction SilentlyContinue
+        $pingMs = $null
+        if ($ping) {
+            $pingSuccesses += 1
+            $pingMs = [double]$ping.ResponseTime
+        }
+        else {
+            $pingFailures += 1
+        }
+        $samples += [ordered]@{
+            elapsed_seconds = [Math]::Round($stopwatch.Elapsed.TotalSeconds, 3)
+            windows_working_set_bytes = $workingSetBytes
+            windows_cpu_percent = $cpuPercent
+            gpu = $gpu
+            android_total_pss_kib = $totalPssKb
+            android_battery_level_percent = $level
+            android_battery_temperature_c = if ($null -ne $temperatureTenthsC) {
+                $temperatureTenthsC / 10
+            } else { $null }
+            wifi_ping_ms = $pingMs
+            video_frames_emitted = [long]$metrics.renderer_video.frames_emitted
+            renderer_frames = [long]$metrics.renderer_video.renderer_frames
+            microphone_frames_received = [long]$metrics.microphone.frames_received
+        }
+        $remaining = $DurationSeconds - $stopwatch.Elapsed.TotalSeconds
+        if ($remaining -gt 0) {
+            Start-Sleep -Seconds ([Math]::Min($SampleIntervalSeconds, [Math]::Ceiling($remaining)))
+        }
+    }
+    $stopwatch.Stop()
+    $finalMetrics = Get-MediaMetrics
+    $endedAt = [DateTime]::UtcNow
+    $decoderEvidence = (& $adb -s $device shell dumpsys media.resource_manager |
+        Select-String -Pattern 'c2\..*vp8\.decoder|hw-video-codec|current VideoDec HW' |
+        Select-Object -First 20 | ForEach-Object { $_.Line.Trim() })
+    $phoneManufacturer = (& $adb -s $device shell getprop ro.product.manufacturer).Trim()
+    $phoneModel = (& $adb -s $device shell getprop ro.product.model).Trim()
+    $androidRelease = (& $adb -s $device shell getprop ro.build.version.release).Trim()
+    $androidApi = (& $adb -s $device shell getprop ro.build.version.sdk).Trim()
+    $windowsWorkingSets = [double[]]@($samples | ForEach-Object { $_.windows_working_set_bytes })
+    $windowsCpu = [double[]]@($samples | Where-Object { $null -ne $_.windows_cpu_percent } |
+        ForEach-Object { $_.windows_cpu_percent })
+    $androidPss = [double[]]@($samples | Where-Object { $null -ne $_.android_total_pss_kib } |
+        ForEach-Object { $_.android_total_pss_kib })
+    $pings = [double[]]@($samples | Where-Object { $null -ne $_.wifi_ping_ms } |
+        ForEach-Object { $_.wifi_ping_ms })
+    $gpuMemory = [double[]]@($samples | Where-Object { $null -ne $_.gpu } |
+        ForEach-Object { $_.gpu.memory_used_mib })
+    $gpuUtilization = [double[]]@($samples | Where-Object { $null -ne $_.gpu } |
+        ForEach-Object { $_.gpu.utilization_percent })
+    $videoFramesEmittedDelta =
+        [long]$finalMetrics.renderer_video.frames_emitted - $initialVideoFrames
+    $rendererFramesDelta =
+        [long]$finalMetrics.renderer_video.renderer_frames - $initialRendererFrames
+    $microphoneFramesDelta =
+        [long]$finalMetrics.microphone.frames_received - $initialMicrophoneFrames
+    $result = [ordered]@{
+        schema_version = '1.0'
+        result_kind = 'physical_media_hardware'
+        measured_at_utc = $startedAt.ToString('o')
+        measured_finished_at_utc = $endedAt.ToString('o')
+        requested_duration_seconds = $DurationSeconds
+        measured_duration_seconds = $stopwatch.Elapsed.TotalSeconds
+        sample_interval_seconds = $SampleIntervalSeconds
+        sample_count = $samples.Count
+        phone = [ordered]@{
+            manufacturer = $phoneManufacturer
+            model = $phoneModel
+            android_release = $androidRelease
+            android_api = $androidApi
+            transport = 'physical-wifi'
+            hardware_decoder_evidence = $decoderEvidence
+        }
+        media = [ordered]@{
+            video_frames_emitted_delta = $videoFramesEmittedDelta
+            video_frames_emitted_fps = $videoFramesEmittedDelta / $stopwatch.Elapsed.TotalSeconds
+            renderer_frames_delta = $rendererFramesDelta
+            renderer_frames_fps = $rendererFramesDelta / $stopwatch.Elapsed.TotalSeconds
+            microphone_frames_received_delta = $microphoneFramesDelta
+            final = $finalMetrics
+        }
+        network = [ordered]@{
+            ping_successes = $pingSuccesses
+            ping_failures = $pingFailures
+            ping_ms_p50 = Get-Percentile $pings 50
+            ping_ms_p95 = Get-Percentile $pings 95
+            ping_ms_max = if ($pings.Count) { ($pings | Measure-Object -Maximum).Maximum } else { $null }
+        }
+        resources = [ordered]@{
+            windows_working_set_bytes_start = if ($windowsWorkingSets.Count) { $windowsWorkingSets[0] } else { $null }
+            windows_working_set_bytes_end = if ($windowsWorkingSets.Count) { $windowsWorkingSets[-1] } else { $null }
+            windows_working_set_bytes_max = if ($windowsWorkingSets.Count) { ($windowsWorkingSets | Measure-Object -Maximum).Maximum } else { $null }
+            windows_cpu_percent_p50 = Get-Percentile $windowsCpu 50
+            windows_cpu_percent_p95 = Get-Percentile $windowsCpu 95
+            android_total_pss_kib_start = if ($androidPss.Count) { $androidPss[0] } else { $null }
+            android_total_pss_kib_end = if ($androidPss.Count) { $androidPss[-1] } else { $null }
+            android_total_pss_kib_max = if ($androidPss.Count) { ($androidPss | Measure-Object -Maximum).Maximum } else { $null }
+            gpu_memory_used_mib_start = if ($gpuMemory.Count) { $gpuMemory[0] } else { $null }
+            gpu_memory_used_mib_end = if ($gpuMemory.Count) { $gpuMemory[-1] } else { $null }
+            gpu_memory_used_mib_max = if ($gpuMemory.Count) { ($gpuMemory | Measure-Object -Maximum).Maximum } else { $null }
+            gpu_utilization_percent_p50 = Get-Percentile $gpuUtilization 50
+            gpu_utilization_percent_p95 = Get-Percentile $gpuUtilization 95
+        }
+        samples = $samples
+    }
+    $output = if ($OutputPath) {
+        [IO.Path]::GetFullPath($OutputPath)
+    }
+    else {
+        Join-Path $script:CacheRoot 'media-hardware-benchmark.json'
+    }
+    $parent = Split-Path -Parent $output
+    if ($parent) { New-Item -ItemType Directory -Force -Path $parent | Out-Null }
+    $result | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath $output -Encoding utf8
+    $minimumSustainedVideoFps = 27
+    if ($result.media.video_frames_emitted_fps -lt $minimumSustainedVideoFps) {
+        throw "Emitted video cadence fell below the 27 fps acceptance floor. Results: $output"
+    }
+    if ($result.media.renderer_frames_fps -lt $minimumSustainedVideoFps) {
+        throw "Unique renderer cadence fell below the 27 fps acceptance floor. Results: $output"
+    }
+    if ($result.media.microphone_frames_received_delta -le 0) {
+        throw "No physical microphone frames arrived during the benchmark. Results: $output"
+    }
+    if ($pingFailures -gt 0) {
+        throw "Wi-Fi ping loss was observed. Results: $output"
+    }
+    Write-Output "Physical media hardware benchmark passed. Results: $output"
+    exit 0
 }
 
 if ($Profile -eq 'speech') {

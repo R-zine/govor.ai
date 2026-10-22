@@ -105,4 +105,6 @@ The four proof images and short timing sample establish deterministic assembly a
 behavior on this development machine; they are not a long-run leak or target-hardware claim. No
 physical phone, intended Wi-Fi path, Windows hardware encoder, physical Android decoder, acoustic
 test, monitor-off/unfocused run, thermal measurement, packet-loss study, or 30-minute soak was
-executed. All remain mandatory Milestone 9 acceptance work.
+executed in this checkpoint. The later completed Milestone 9 run supplied the physical evidence,
+accepted Windows software encoding as the measured fallback, and removed any fixed-duration soak
+requirement; this earlier benchmark itself remains development-machine evidence only.

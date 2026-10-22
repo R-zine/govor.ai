@@ -1,6 +1,6 @@
 # ADR-0003: Select Godot .NET as the renderer
 
-- Status: accepted for continued development; physical performance is a Milestone 9 release gate
+- Status: accepted; physical performance passed the Milestone 9 release gate
 - Date: 2026-10-09
 
 ## Context
@@ -70,8 +70,8 @@ packaging will ship only the exported renderer, not the editor.
 5. A bounded emulator frame-cadence sample and clean reconnect/teardown are recorded.
 
 These migration-proof criteria are complete. Physical Android, Wi-Fi, hardware-codec,
-latency/resource, orientation, unfocused/monitor-off, and soak evidence remains mandatory in
-Milestone 9 and is not inferred from this proof.
+latency/resource, orientation, unfocused/monitor-off, and bounded-stability evidence is not
+inferred from this proof; it was later measured and passed separately in Milestone 9.
 
 ## Evidence on 2026-10-09
 
@@ -86,4 +86,4 @@ Milestone 9 and is not inferred from this proof.
 - Disconnect/reconnect passed while the renderer stayed active: the second peer received a
   non-black frame and a second microphone return, teardown was clean, and stale retained tone PCM
   was not replayed. The bounded emulator interval reached 120 rendered frames over 4.001 seconds
-  with zero drops. Controlled target-hardware measurements remain open for Milestone 9.
+  with zero drops. Controlled target-hardware measurements later passed in Milestone 9.

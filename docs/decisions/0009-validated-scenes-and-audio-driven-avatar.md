@@ -67,5 +67,6 @@ growth on a cached revisit. Real Kokoro timing reached Godot as 23 viseme cues p
 samples. A concurrent Qwen3 4B run overlapped two inference requests with the renderer scene tour.
 
 These are Windows development-machine and Android-emulator results. Software VP8 was measured;
-Windows hardware encoding, a physical phone, Wi-Fi, acoustics, target-machine resource behavior,
-monitor-off operation, thermals, and soak remain mandatory Milestone 9 work.
+physical phone, Wi-Fi, acoustics, target-machine resource behavior, monitor-off operation,
+thermals, and bounded stability later passed separately in Milestone 9. Windows remained on the
+explicit measured software-encoding fallback; no hardware-encoding claim is made.

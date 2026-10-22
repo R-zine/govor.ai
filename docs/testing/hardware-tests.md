@@ -1,9 +1,9 @@
 # Hardware test ledger
 
-Milestone 9 hardware acceptance requires a physical Android phone and suitable Windows
-GPU/audio/network conditions. Emulator and synthetic loopback results may diagnose code but do
-not satisfy device criteria. ADR-0004 makes this a final release gate rather than a prerequisite
-for Milestones 2-8.
+Milestone 9 hardware acceptance required a physical Android phone and suitable Windows
+GPU/audio/network conditions and completed on 2026-10-22. Emulator and synthetic loopback results
+may diagnose code but do not satisfy device criteria. ADR-0004 made this a final release gate
+rather than a prerequisite for Milestones 2-8.
 
 ## 2026-10-08 environment inventory
 
@@ -30,7 +30,7 @@ Result: command succeeded and listed zero devices. No physical phone was connect
 The initial inventory did not launch an AVD. A separate development-only emulator run was later
 performed on 2026-10-09 and is recorded below; it does not satisfy physical compatibility.
 
-### Milestone 9 acceptance results (not executed)
+### 2026-10-08 Milestone 9 acceptance snapshot (not executed at initial inventory)
 
 | Criterion | Result | Reason |
 | --- | --- | --- |
@@ -43,7 +43,7 @@ performed on 2026-10-09 and is recorded below; it does not satisfy physical comp
 | Disconnect/reconnect and state integrity | blocked/not executed | Requires physical-device execution; emulator development path passes |
 | Unfocused/monitor-off renderer | blocked/not executed | No renderer runtime was available during this 2026-10-08 run |
 | Performance and latency measurements | not executed | No suitable end-to-end path |
-| 30-minute stability | not executed | No suitable end-to-end path |
+| Bounded stability | not executed | No suitable end-to-end path |
 
 The aiortc in-process loopback tests are recorded in `docs/milestones/STATUS.md`; they are software
 tests, not hardware acceptance.
@@ -59,9 +59,10 @@ disconnect/reconnect cycle were observed. The virtual decoder identified itself 
 `c2.goldfish.vp8.decoder`; this is explicitly not evidence of hardware decoding. The detailed
 record and screenshot are in `docs/benchmarks/2026-10-09-android-emulator-media.md`.
 
-All physical-device rows above remain not executed for Milestone 9. The emulator also does not establish
-Wi-Fi behavior, acoustic audio quality, physical microphone behavior, encoder/decoder hardware
-selection, performance, thermals, or stability.
+At this checkpoint all physical-device rows above remained unexecuted. The emulator also does not
+establish Wi-Fi behavior, acoustic audio quality, physical microphone behavior, encoder/decoder
+hardware selection, performance, thermals, or stability. The physical rows later passed in the
+2026-10-21/22 Milestone 9 run recorded below.
 
 The hardware-test script explicitly filters out ADB serials beginning with `emulator-` and returns
 the blocked exit code when no physical serial remains.
@@ -85,7 +86,7 @@ This entry is source/software evidence only:
   LicensingClient IPC timed out after 60 seconds, and Unity returned 199.
 - Unity player build, scene launch, visual inspection, two-second audible check, GPU readback,
   shared-memory publication, aiortc consumption, and Android-emulator reception: not executed.
-- Physical Android, Wi-Fi, codecs, latency/resources, unfocused/monitor-off behavior, and soak:
+- Physical Android, Wi-Fi, codecs, latency/resources, unfocused/monitor-off behavior, and bounded stability:
   still blocked/not executed.
 
 No hardware acceptance row changes status. Compilation and in-memory test fixtures do not prove a
@@ -111,12 +112,13 @@ replayed. The bounded script stopped the Android app, renderer, server, and reve
 The ADB screenshot captured the connected UI but a black WebRTC `SurfaceView`. Because non-black
 pixels reached aiortc and Android emitted render callbacks, the screenshot is recorded as
 inconclusive rather than as visible-scene proof. Controlled performance/latency,
-unfocused/monitor-off behavior, and soak were not executed; the short emulator interval is not a
+unfocused/monitor-off behavior, and bounded stability were not executed; the short emulator interval is not a
 physical performance result.
 
 Exact commands, artifacts, failures, and limitations are in
-`docs/benchmarks/2026-10-09-godot-renderer-migration.md`. Every physical-device acceptance row
-remains not executed for Milestone 9; this does not reopen the completed Milestone 1 proof.
+`docs/benchmarks/2026-10-09-godot-renderer-migration.md`. At this checkpoint every physical-device
+acceptance row was still unexecuted; those rows later passed in Milestone 9 and do not alter the
+scope of the completed Milestone 1 proof.
 
 ## 2026-10-10 Milestone 2 emulator session run
 
@@ -134,8 +136,9 @@ figures describe only a short emulator loopback diagnostic and are not target pe
 
 This is native-emulator functional evidence for Milestone 2 only. The fake recognizer did not
 transcribe microphone samples, and the virtual device supplies no physical acoustics, Wi-Fi,
-hardware-codec, thermals, or target-lifecycle evidence. Every Milestone 9 row remains not executed.
-Exact commands, transient failures, artifacts, and limitations are recorded in
+hardware-codec, thermals, or target-lifecycle evidence. At this checkpoint every Milestone 9 row
+was still unexecuted; those rows later passed independently. Exact commands, transient failures,
+artifacts, and limitations are recorded in
 `docs/benchmarks/2026-10-10-milestone-2-session-orchestration.md`.
 
 ## 2026-10-11 Milestone 3 desktop local-AI run
@@ -149,7 +152,7 @@ The selected 4B model and recognizer results are recorded in
 This did not use a physical phone or the intended Wi-Fi/acoustic path. The recordings are local
 fixtures, the host smoke injects them at the microphone-source boundary, and response audio is a
 diagnostic marker rather than TTS. It changes no Milestone 9 row: phone microphones, speakers,
-Wi-Fi, codecs, concurrent target load, latency, thermals, lifecycle, and soak remain not executed.
+Wi-Fi, codecs, concurrent target load, latency, thermals, lifecycle, and bounded stability remain not executed.
 
 ## 2026-10-12 Milestone 4 speech emulator run
 
@@ -167,7 +170,8 @@ surface active; the teacher voice itself came from Kokoro over the bounded contr
 
 This proves native-emulator decoding, scheduling, interaction, and cleanup. It does not prove a
 physical speaker, phone, acoustics, Wi-Fi, hardware codec, target performance, or speech
-naturalness. All such target-hardware rows remain not executed in Milestone 9.
+naturalness. At this checkpoint those target-hardware rows remained unexecuted; they later passed
+independently in Milestone 9.
 
 ## 2026-10-12 Milestone 6 scene/avatar emulator run
 
@@ -185,8 +189,9 @@ proves the missing-alignment fallback does not invent timing or block animation.
 The four-environment scene tour and concurrent Qwen performance run happened on the Windows
 development PC, not on the Android emulator; details are in
 `docs/benchmarks/2026-10-12-avatar-scenes-and-renderer-performance.md`. No physical-device row
-changes status. Hardware encode/decode, intended Wi-Fi, acoustics, target performance, lifecycle,
-thermals, monitor-off, and soak remain not executed for Milestone 9.
+changed status in this emulator run. Physical codec/fallback, intended Wi-Fi, acoustics, target
+performance, lifecycle, thermals, monitor-off, and bounded stability later passed independently in
+Milestone 9.
 
 ## 2026-10-15 Milestone 8 signed-release emulator run
 
@@ -217,7 +222,7 @@ This run changes no Milestone 9 row. It used a virtual router rather than the in
 virtual microphone injection rather than physical acoustics, and an emulator codec rather than
 phone hardware. Physical installation, Android platform verification, Windows Firewall behavior,
 credential storage, video/audio/microphone behavior, lifecycle, codecs, performance, thermals,
-monitor-off behavior, and soak all remain not executed on target hardware.
+monitor-off behavior, and bounded stability all remain not executed on target hardware.
 
 ## 2026-10-17 Milestone 8 local clean-VM fixture
 
@@ -240,7 +245,7 @@ clean-Windows pass. Exact implementation evidence is in
 The later passing VM run leaves every Milestone 9 row unchanged: the VM is not the target
 Windows machine, and the Android Studio emulator is not a physical phone. Intended Wi-Fi,
 physical acoustics, hardware codecs, lifecycle, latency/resources, monitor-off behavior, thermals,
-and the 30-minute soak are still not executed.
+and bounded stability are still not executed.
 
 ## 2026-10-19 Milestone 8 clean-VM and host-emulator acceptance
 
@@ -271,6 +276,107 @@ Android render callbacks, so they are not visible-scene evidence.
 
 This run does not change any Milestone 9 row. The physical phone, intended Wi-Fi, physical
 speakers/microphone, acoustic path, hardware codecs, lifecycle/interruption, target performance,
-monitor-off behavior, thermals, and 30-minute soak remain not executed. Exact commands, artifact
+monitor-off behavior, thermals, and bounded stability remain not executed. Exact commands, artifact
 hashes, failures, and limits are in
 `docs/benchmarks/2026-10-19-m8-clean-vm-acceptance.md`.
+
+## 2026-10-21 Milestone 9 physical target run
+
+Configuration:
+
+- Target PC: Windows process build 10.0.26200; NVIDIA GeForce RTX 3060 12,288 MiB; driver 560.94.
+- Physical phone: realme RMX3939, Android 16/API 36, 720x1600 at density 320, security patch
+  2026-08-01. The ADB serial is intentionally not recorded.
+- Network: SSID `A1_B436`, WPA2-Personal, 2.4 GHz channel 7/802.11ax. PC
+  `192.168.100.61/24`, phone `192.168.100.71/24`; the Windows profile was verified Private.
+- There was no `adb reverse` mapping. The phone used the LAN-facing release HTTPS/WSS gateways.
+- Measured candidate: `0.1.10`/code 11 signed APK, 55,425,173 bytes, SHA-256
+  `2bbfb230925767f50613c0947702241103556ccb93c1840d97f495b524c2d50d`. The signer is the
+  existing RSA-3072 release identity; no signing secret is recorded.
+
+Executed commands included:
+
+```powershell
+./scripts/package.ps1 -Version 0.1.10 -VersionCode 11 -NoArchive `
+    -GradleUserHome 'C:\Users\PC\.gradle' -GradleOffline
+./scripts/hardware-test.ps1 -DurationSeconds 30 -SampleIntervalSeconds 5 `
+    -OutputPath .cache/m9-final-candidate-smoke.json
+./scripts/hardware-test.ps1 -DurationSeconds 1800 -SampleIntervalSeconds 5 `
+    -OutputPath .cache/m9-physical-soak.json
+```
+
+The wrapper verified exactly one non-emulator device, Wi-Fi addressing, no reverse mapping, the
+signed running package, release media listener, authenticated connected metrics, renderer
+publication, and physical microphone frames before delegating to the benchmark. Its original
+array-splat implementation passed `-Profile` as a literal positional value; hashtable splatting
+fixed that harness defect before the recorded runs.
+
+| Criterion | Result | Direct evidence and limit |
+| --- | --- | --- |
+| Physical intended-Wi-Fi path | verified passing | Release HTTPS/WSS and WebRTC used the documented LAN addresses with no reverse mapping; all 292 soak pings succeeded |
+| Pairing/authentication/secure media | verified passing | First pairing and later Android-Keystore credential reuse passed; WSS authenticated and metrics reported connected DTLS-SRTP |
+| Continuous renderer transport | verified passing | 1,800.065 seconds; 54,035 emitted frames (30.018 fps), 53,508 unique Godot frames (29.726 fps); p50/p95 publication intervals 33.333/33.349 ms, max 133.335 ms |
+| Physical phone microphone reaches PC | verified passing | 89,863 additional 48 kHz microphone frames during soak; earlier supervised hold-to-talk turns reached recognition and advanced café to 2/3 |
+| Teacher audio from phone | verified passing | Phone lesson state advanced through playback with Windows playback muted; on 2026-10-22 the learner confirmed handset teacher speech was audible, clear, and intelligible |
+| No PC audio-hardware dependency | verified architecturally/partially physically | Muting the default Windows playback endpoint did not stop phone playback completion/lesson advance; the capture service received only the phone WebRTC track and opens no PC microphone. A separate physical PC-microphone-disable action was not performed |
+| Codecs | verified with fallback | Android resource-manager evidence named hardware `c2.unisoc.vp8.decoder`; RTP codec was VP8; metrics explicitly reported `windows_hardware_video_encoding=false`, so Windows used software encoding |
+| Lifecycle and recovery | verified passing | Background/foreground, explicit disconnect/reconnect, and physical Wi-Fi loss/recovery reconnected without re-pairing and preserved café 2/3; ICE transition after Wi-Fi loss was delayed but recovered |
+| Orientation | verified passing with product constraint | Physical attempts retained the manifest-locked portrait orientation; device rotation settings were restored afterward |
+| Unfocused/monitor-off/idle-awake | verified passing | Renderer had no foreground window requirement; the monitor was turned off during the soak and video, unique renderer frames, microphone frames, and DTLS continued advancing. A bounded `SendMessageTimeout` was needed after an unbounded helper encountered an unresponsive window |
+| Latency and loss | verified passing | 145,989 video packets and 97,775 audio packets received with zero reported loss; final RTT 13.247 ms video and 8.985 ms audio; Wi-Fi ping p50/p95/max 3/12/44 ms |
+| Resources and thermals | verified passing | Windows CPU p50/p95 4.168/4.595%; RAM start/end/max 3,560,075,264/3,625,168,896/3,628,318,720 bytes; Android PSS start/end/max 123,086/120,787/123,086 KiB; VRAM start/end/max 5,116/4,632/5,296 MiB; GPU utilization p50/p95 20/44%; GPU max 62 °C; phone max 27.9 °C |
+| Bounded stability | verified passing | The final exact-candidate 30-second run had advancing media/microphone counters, zero reported RTP loss, and bounded resources. A historical 1,800-second transport run supplies additional evidence but is not a release requirement or an interactive-lesson claim |
+| Exact post-audit package | verified passing with recorded recognition limit | Signed 0.1.11/code 12 passed the physical Wi-Fi benchmark, café completion, clean package restart, progress survival, IPA display, isolated-word playback, and an explicit Bulgarian-help/English-return physical microphone path on 2026-10-22. Whisper displayed `(speaking in foreign language)` instead of preserving the Bulgarian phrase, so this is not a human-speech accuracy claim |
+| Human visible-video/acoustic quality | verified passing | On 2026-10-22 the learner confirmed that the moving café/teacher was visible and teacher speech was audible, clear, and intelligible at the handset |
+
+The Android lifecycle implementation now retains the last connection request in its Activity-owned
+ViewModel, suppresses reconnect after an explicit disconnect, reconnects on foreground/network
+availability, and blanks the one-time pairing token before release retries. Four pure Kotlin policy
+tests cover those decisions. The media service exposes authenticated-session statistics only at a
+loopback-only internal endpoint; no LAN metrics route was added.
+
+The monitor-off helper's original broadcast `SendMessage` blocked on an unresponsive window. It
+was stopped and the display was restored with bounded `SendMessageTimeout`; the media run itself
+continued. One Android relaunch attempt explicitly started a second Activity instance and appeared
+disconnected. Pressing Back returned to the original connected Activity, showing that this was a
+harness misuse rather than lifecycle recovery evidence. Neither failed attempt is reported as a
+passing product result.
+
+After the run, the dependency audit found `PYSEC-2026-4320` in `certifi==2026.7.22` and
+`GHSA-vxj4-q4g9-crj7` in `virtualenv==21.14.6`. The lock was updated to certifi 2026.10.19 and
+virtualenv 21.14.12; the repeat audit reported no known vulnerabilities. The resulting signed
+`0.1.11`/code 12 APK is 55,425,173 bytes with SHA-256
+`94662d516bfff260b3276522142bb7ce34a995f03400011df914940c10b87e2a`. Packaging, signing,
+imports, prerequisites, and wrapper doctor smokes passed. After the phone was unlocked, the exact
+candidate passed a 30.609-second physical Wi-Fi benchmark with 30.482 emitted fps, 29.959 unique
+Godot fps, +1,532 microphone frames, zero reported RTP loss, connected DTLS, hardware Android VP8
+decode, and the explicit Windows software-encode fallback. It then completed the café path through
+physical microphone input, entered Bulgarian help after recognition ambiguity, returned to
+English, saved progress, survived a clean package restart, displayed
+`Welcome /wˈɛlkʌm/` with Bulgarian help, and played bounded 24 kHz isolated-word audio. No PIN was
+requested, guessed, or recorded.
+
+A later unlocked-phone attempt submitted a bounded local Piper utterance saying
+`Какво означава order?` through hold-to-talk and the physical phone microphone. A repeated first
+attempt was mis-transcribed as Korean text. The clean single attempt was displayed as
+`(speaking in foreign language)`; the teacher nevertheless supplied Bulgarian guidance and
+returned to the English prompt `Say: I would like a coffee, please.` A bounded local Kokoro answer
+was recognized as `Would you like a coffee, please?`, advanced the same attempt to 2/3, and tapping
+`Would` displayed `/wˈʊd/` plus Bulgarian pronunciation help. A second recognized answer,
+`That's all, thank you`, advanced to 3/3. This supplies the explicit bilingual physical flow with
+the transcript limitation recorded; it is not claimed as human-speech recognition evidence.
+
+Transient recoverable lesson states passed **Retry lesson**. One Windows SAPI playback job failed
+to initialize and supplied no speech, so it is not evidence. The app and release stack were then
+stopped, every temporary utterance was deleted, stay-awake/rotation were restored, and ports
+8765-8768 plus Godot/llama/app process checks were empty. The learner then confirmed the moving
+phone scene and clear, intelligible handset speech, closing the final subjective row.
+
+On 2026-10-22 the product owner removed the fixed 30-minute lesson/soak gate. Future acceptance
+uses recorded bounded interactive, stability, lifecycle, and teardown checks. The earlier
+1,800-second transport record remains historical supporting evidence only.
+
+The app was force-stopped, phone stay-awake and rotation settings were restored, and all release
+listeners, Godot, llama.cpp, and package-owned processes were stopped. No tone or media service was
+left running. Detailed measurements and the completed release acceptance are in
+`docs/benchmarks/2026-10-21-m9-physical-release-acceptance.md`.

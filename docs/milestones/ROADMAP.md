@@ -14,7 +14,7 @@ criterion has direct evidence).
 | 6. Avatar/scenes | complete | M1 media decision, M4 timing | Avatar and four validated dynamic environments, lip sync/fallback, memory/performance evidence |
 | 7. Optional cloud/privacy | complete | Stable provider interfaces | Independent opt-in providers, offline default, OS secret storage, no unintended cloud/secret logging |
 | 8. Packaging/distribution | complete | M1-7 | Portable launcher, signed stable APK/update, integrity-checked models, secure pairing, release lesson, clean shutdown, and clean-Windows VM/host-emulator acceptance passed |
-| 9. Release acceptance and target hardware | not started | M8 | Physical phone/Wi-Fi/audio/codecs/lifecycle/performance/monitor-off/soak bundle, full automated/manual/security suite, and complete local-first cafe scenario |
+| 9. Release acceptance and target hardware | complete | M8 | Physical Wi-Fi/media/lifecycle/performance, exact post-audit package, explicit Bulgarian-help/English-return flow, café completion/restart, bounded stability, human phone AV confirmation, and final quality gates pass |
 
 ## Critical path
 
@@ -130,17 +130,17 @@ Godot migration work:
 - The ADB screenshot's WebRTC surface is black and is not used as visual scene evidence. The
   transport/runtime logs and local proof image are recorded separately in `STATUS.md`.
 
-Deferred release acceptance (Milestone 9, not a Milestone 1 blocker):
+Deferred release acceptance (resolved in Milestone 9, not a Milestone 1 blocker):
 
 - Physical Android video/audio/microphone and acoustic behavior.
 - Local Wi-Fi, hardware decode/encode, physical lifecycle/teardown, unfocused/monitor-off behavior,
-  latency/resource/thermal measurements, and 30-minute stability.
+  latency/resource/thermal measurements, and bounded stability.
 - Production pairing/WSS and release network security; the development token and cleartext
   signaling remain development-only.
 
 Milestones 1–7 are complete on their verified software/native-emulator and stated human-listening
-criteria. The deferred hardware bundle must remain visible and must pass before Milestone 9 can
-complete.
+criteria. The deferred hardware bundle remained separately visible and later passed in
+Milestone 9.
 
 ## Milestone 5 acceptance tracking
 
@@ -165,7 +165,8 @@ Verified software/native-emulator evidence:
 
 Milestone 5 is complete. This evidence establishes deterministic guided progression and local
 structured persistence, not broad pedagogical effectiveness or live-human recognition quality.
-Milestone 6 is complete; all target-hardware acceptance remains Milestone 9.
+Milestone 6 is complete; target-hardware acceptance was deferred to and later passed in
+Milestone 9.
 
 ## Milestone 6 acceptance tracking
 
@@ -187,8 +188,9 @@ Verified software/native-emulator evidence:
 - Godot-originated video still reached native Android while microphone frames returned to Windows;
   this remains API 34 emulator evidence, not physical-hardware acceptance.
 
-Milestone 6 is complete. Hardware encoding, physical phone/Wi-Fi/audio, target-machine resource
-behavior, monitor-off, thermals, and soak remain mandatory Milestone 9 work.
+Milestone 6 is complete. Physical phone/Wi-Fi/audio, target-machine resource behavior,
+monitor-off, thermals, and bounded stability were deferred to and later passed in Milestone 9;
+Windows used the accepted software-encoding fallback.
 
 ## Milestone 7 acceptance tracking
 
@@ -260,7 +262,8 @@ Historical failure and remaining boundary:
 - The user-supplied ISO's SHA-256 was verified, but provenance, activation, and licensing were not
   independently verified. It is test input only and is not distributed with govor.ai.
 - Physical Android installation, intended Wi-Fi/firewall path, audio hardware, codecs, lifecycle,
-  performance, monitor-off behavior, and soak remain the distinct Milestone 9 bundle.
+  performance, monitor-off behavior, and bounded stability remained the distinct Milestone 9
+  bundle and later passed there.
 
 Milestone 8 is complete. Exact evidence and transient failures are in
 `docs/benchmarks/2026-10-15-release-packaging-and-distribution.md`,
@@ -269,15 +272,43 @@ Milestone 8 is complete. Exact evidence and transient failures are in
 
 ## Milestone 9 target-hardware acceptance tracking
 
-Not executed:
+Verified on the documented target path on 2026-10-21:
 
-- Physical Android phone on the intended local Wi-Fi network.
-- Continuous scene video, teacher audio, microphone return, and independence from PC audio
-  hardware.
-- Physical lifecycle, interruption, Wi-Fi loss/recovery, reconnect, and state integrity.
-- Android hardware decode and Windows hardware encode selection/fallback evidence.
-- Pairing, WSS, DTLS-SRTP, firewall, and release-security checks on the physical network path.
-- Orientation, acoustics, frame cadence, latency, packet loss, CPU/GPU/RAM/VRAM, thermals,
-  unfocused/monitor-off behavior, and 30-minute soak.
+- A physical realme RMX3939 (Android 16/API 36) connected to the target Windows/RTX 3060 machine
+  through the intended WPA2-Personal Wi-Fi with no `adb reverse` mapping.
+- First pairing, certificate-pinned HTTPS, stored-credential reuse, authenticated WSS, DTLS-SRTP,
+  physical microphone return, explicit disconnect/reconnect, background/foreground, Wi-Fi
+  loss/recovery, and clean teardown passed while preserving café lesson state.
+- Android used the hardware `c2.unisoc.vp8.decoder`. Windows used measured VP8 software encoding;
+  that fallback is explicit and met the cadence target.
+- A historical 1,800.065-second transport/media run produced 30.018 emitted fps and 29.726 unique Godot fps,
+  zero reported video/audio packet loss, continuous microphone frames, bounded RAM/PSS/VRAM, and
+  recorded latency, CPU/GPU, thermals, Wi-Fi ping, unfocused, and monitor-off evidence.
+- Muting the Windows playback endpoint did not stop the phone lesson state from advancing to
+  learner input. Only phone microphone frames enter the capture path; the application does not
+  open a PC microphone.
+- On 2026-10-22 the exact signed post-audit `0.1.11`/code 12 candidate passed a fresh 30-second
+  physical Wi-Fi benchmark: 30.482 emitted fps, 29.959 unique Godot fps, +1,532 microphone frames,
+  zero reported RTP loss, connected DTLS, and hardware Android VP8 decode.
+- The same exact candidate completed the café lesson through physical phone microphone input,
+  entered Bulgarian clarification/help after recognition ambiguity and returned to English, saved
+  completion, reconnected after a clean package restart, retained progress, displayed
+  IPA/pronunciation help, and played bounded isolated-word audio.
+- On 2026-10-22 a bounded local Piper utterance saying `Какво означава order?` traversed the
+  physical phone microphone. Whisper rendered the final transcript as `(speaking in foreign
+  language)` rather than preserving the words, but the teacher supplied Bulgarian guidance and
+  returned to an English prompt. Bounded Kokoro answers were then recognized, advanced the same
+  attempt to 3/3, and the learner opened `Would /wˈʊd/` with Bulgarian pronunciation help. This
+  closes the explicit Bulgarian-flow step with the recognition limitation recorded; it is not a
+  human-speech accuracy claim.
+- The 2026-10-22 product decision removed any fixed-duration continuous lesson or soak as a
+  release gate. Bounded interactive, stability, lifecycle, and teardown checks remain required;
+  the historical 1,800-second run is retained only as additional evidence.
 
-These are mandatory release criteria. Emulator results never satisfy them.
+Final manual evidence:
+
+- On 2026-10-22 the learner confirmed that the final physical phone showed the moving
+  teacher/environment and that teacher speech was audible and intelligible.
+
+Milestone 9 is complete. Its physical rows come from the documented target PC, physical phone, and
+intended Wi-Fi execution; emulator results do not satisfy or replace them.

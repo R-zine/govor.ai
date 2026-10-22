@@ -1,8 +1,8 @@
 # ADR-0002: Prove native WebRTC through a renderer-neutral media boundary
 
-- Status: accepted for Milestones 2-8; target-hardware release path remains a Milestone 9 gate
+- Status: accepted; target-hardware release acceptance passed in Milestone 9
 - Date: 2026-10-08
-- Updated: 2026-10-09 after the Godot selection in ADR-0003
+- Updated: 2026-10-22 after physical target-path measurement
 
 ## Context
 
@@ -17,20 +17,24 @@ Own a small versioned signaling contract and keep media transport behind a rende
 boundary. aiortc is the Windows WebRTC peer. A renderer supplies only its latest complete
 1280x720 RGBA frame and application-owned PCM through two Windows named memory mappings.
 
-Video uses a single latest-frame slot. Audio uses a bounded ring of 20 ms, 48 kHz mono blocks.
-Publication sequences reject torn writes, writer-generation values permit renderer restart, and a
-lagging reader skips stale data rather than growing memory. A newly attached audio reader begins
-after the current write position so reconnect cannot replay a retained block after PCM production
-has stopped. aiortc owns pacing, silence fallback, encoding, DTLS-SRTP, and the Android-facing
-peer connection.
+Video uses two alternating latest-frame slots. The writer fills the inactive slot and commits a
+small header only after the complete RGBA frame is present; the reader verifies that header stayed
+stable during its copy. The aiortc track may await the next publication for up to 20 ms when its
+30 fps sample precedes Godot's publication, avoiding phase-alias repeats without building a queue.
+Audio uses a bounded ring of 20 ms, 48 kHz mono blocks. Publication sequences reject torn writes,
+writer-generation values permit renderer restart, and a lagging reader skips stale data rather
+than growing memory. A newly attached audio reader begins after the current write position so
+reconnect cannot replay a retained block after PCM production has stopped. aiortc owns pacing,
+silence fallback, encoding, DTLS-SRTP, and the Android-facing peer connection.
 
 The current renderer is Godot 4.7.2 .NET, selected in ADR-0003. Changing renderers must not alter
 the Android signaling or media contracts.
 
-The bridge is the accepted development path. It performs GPU-to-CPU readback and a managed copy
-before software-visible aiortc encoding. Windows hardware encoding is not proven. If Milestone 9
-target-hardware measurements miss the release gate, first evaluate an asynchronous Godot
-GDExtension or a dedicated native capture/hardware-encoding bridge.
+The bridge is the accepted path. It performs GPU-to-CPU readback and a managed copy before aiortc
+software VP8 encoding. The target run sustained the cadence and resource goals with that fallback;
+Windows hardware encoding was unavailable and is recorded as such. If later target configurations
+miss the release gate, first evaluate an asynchronous Godot GDExtension or a dedicated native
+capture/hardware-encoding bridge.
 
 Android libwebrtc remains pinned to `io.github.webrtc-sdk:android:150.7871.01` for this experiment,
 including its BSD and third-party notices.
@@ -44,11 +48,13 @@ including its BSD and third-party notices.
 - Sending raw renderer frames over a LAN socket: expands the attack surface without solving codec
   or latency requirements.
 
-## Milestone 9 release evidence still required
+## Milestone 9 release evidence
 
-Physical Android video/audio/microphone, hardware decoder evidence, Windows hardware encoder
-evidence, reconnect/teardown, unfocused/monitor-off behavior, LAN security, latency/resource
-measurements, and a 30-minute stability run.
+The exact post-audit package passed the physical path, bounded stability, bilingual lesson flow,
+restart, and pronunciation checks. On 2026-10-22 the learner also confirmed the moving phone
+picture and teacher-audio intelligibility, closing the inherently subjective row and Milestone 9.
+ADR-0004 records both that evidence and the product decision that no fixed-duration continuous
+lesson or soak is required.
 
 ## Evidence to date
 
@@ -61,8 +67,15 @@ measurements, and a 30-minute stability run.
 - Godot import/build/export and local runtime pass. On the API 34 emulator, two sequential peers
   received non-black Godot frames and microphone return while the renderer remained active; stale
   retained tone PCM was not replayed on reconnect.
-- All physical-device and hardware-codec criteria are deferred to Milestone 9 and remain not
-  executed. Per ADR-0004, they do not block Milestones 2-8 but remain mandatory for release.
+- On 2026-10-21 a realme RMX3939 on the intended Wi-Fi completed authenticated WSS/DTLS-SRTP,
+  physical microphone return, lifecycle and network recovery, hardware VP8 decode, monitor-off,
+  cadence/resource measurement, and a 1,800-second transport/media soak. Godot publications
+  averaged 29.726 fps; video/audio packet loss was zero.
+- The same run recorded the Windows side as VP8 software encoding. That fallback met the measured
+  cadence target, but no Windows hardware-encoding claim is made.
+- On 2026-10-22 the exact post-audit package passed a physical smoke, complete café scenario,
+  restart/progress check, IPA display, and isolated-word playback. Human visual/acoustic
+  confirmation remains outside automation.
 
 ## Historical note
 

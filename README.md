@@ -18,12 +18,15 @@ local SQLite resume/history without retaining recordings or complete transcripts
 adds the animated procedural teacher, PCM/real-phoneme lip synchronization, and validated dynamic
 café, supermarket, airport, and home environments. Milestone 7 adds independently selectable,
 explicitly opt-in OpenAI-compatible providers while retaining a hard offline-only default and
-protected Windows credentials. Physical-phone, Wi-Fi, hardware-codec, performance, and soak
-acceptance remains mandatory in the final release milestone. Milestone 8 is complete: the
-portable Windows package, signed Android APK, integrity-checked model setup, HTTPS/WSS pairing,
-stable update identity, license/source bundle, clean-Windows QEMU/WHPX run, and host-emulator
-release path passed. That VM/emulator evidence is software-only and does not replace the physical
-target-hardware acceptance in Milestone 9.
+protected Windows credentials. Physical-phone, Wi-Fi, hardware-codec, performance, and bounded
+stability acceptance belongs to the final release milestone. Milestone 8 is complete: the portable
+Windows package, signed Android APK, integrity-checked model setup, HTTPS/WSS pairing, stable update
+identity, license/source bundle, clean-Windows QEMU/WHPX run, and host-emulator release path passed.
+Milestone 9 has since passed the objective physical-phone/Wi-Fi, codec, lifecycle, performance,
+bounded-stability, bilingual lesson, restart, and cleanup rows on the exact post-audit candidate.
+The learner confirmed on 2026-10-22 that the moving phone scene was visible and teacher speech was
+audible and intelligible, completing Milestone 9. VM/emulator evidence is not used for any physical
+row.
 
 ## Quick start (Windows PowerShell)
 

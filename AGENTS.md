@@ -30,8 +30,14 @@ Milestone handoff.
 - Work milestone by milestone and update `STATUS.md` after every meaningful verification run.
 - The active renderer is Godot 4.7.2 .NET under `apps/renderer`; Unity is not part of the stack.
 - Milestone 1 is complete on the native-emulator development proof. Physical phone, Wi-Fi,
-  hardware-codec, acoustic, target-machine performance, monitor-off, and soak acceptance is one
-  mandatory Milestone 9 release bundle; do not use its absence to block Milestones 2-8.
+  hardware-codec, acoustic, target-machine performance, monitor-off, and bounded-stability
+  acceptance is one mandatory Milestone 9 release bundle; do not use its absence to block
+  Milestones 2-8. Milestone 9 has no fixed-duration lesson or soak requirement.
+- Milestone 9 is complete as of 2026-10-22 on the documented target PC, physical realme RMX3939,
+  intended private Wi-Fi, and exact signed `0.1.11`/code 12 candidate. The learner confirmed the
+  moving phone scene and clear, intelligible teacher speech. Preserve the recorded Whisper
+  limitation on the bounded Bulgarian fixture and never substitute VM/emulator evidence for the
+  physical acceptance record.
 - Keep the domain independent of FastAPI, Android, Godot, and provider implementations.
 - Put versioned wire contracts in `packages/contracts/schemas`; validate untrusted messages at
   process boundaries.

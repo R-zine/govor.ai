@@ -80,6 +80,6 @@ provenance are in `docs/benchmarks/2026-10-11-local-ai-bilingual.md`.
 
 The benchmark is a bounded development-machine sample, not a broad language-quality study. It did
 not cover live hesitant speech, Bulgarian-accented English, acoustics, physical Android hardware,
-Wi-Fi, simultaneous final rendering/encoding load, thermals, or soak. Those deficits inform future
-fixtures and the mandatory Milestone 9 target-hardware bundle; they do not turn emulator/software
-results into physical evidence.
+Wi-Fi, simultaneous final rendering/encoding load, thermals, or bounded stability. Those deficits
+informed the separately executed Milestone 9 target-hardware bundle, which later passed; they do
+not turn these emulator/software results into physical evidence.
