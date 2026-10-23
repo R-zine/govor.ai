@@ -97,4 +97,7 @@ jobs:
           version: "0.9.30"
       - run: uv python install 3.12
       - run: uv sync --dev --frozen
+      # The path-aware hook is Windows-local; the dedicated jobs above already run every suite.
       - run: uv run pre-commit run --all-files
+        env:
+          SKIP: affected-tests,powershell-syntax

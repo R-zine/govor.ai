@@ -14,6 +14,7 @@
 | `./scripts/test.ps1 -Scope godot` | Godot headless import, C# build, and renderer self-test |
 | `./scripts/test.ps1 -Scope all` | All tests, Godot validation, and debug APK build |
 | `./scripts/test.ps1 -Scope hardware` | Milestone 9 physical-device release suite; never a mock or emulator substitute |
+| `./scripts/pre-commit-tests.ps1 -ListOnly <paths...>` | Show the software test scopes selected for staged paths without running them |
 | `./scripts/build.ps1` | Build Android debug and C# development artifacts |
 | `./scripts/build.ps1 -Target renderer` | Export the local Godot Windows renderer |
 | `./scripts/renderer-smoke.ps1` | Run a muted, bounded Godot frame/PCM/cleanup smoke check |
@@ -63,6 +64,16 @@ For example:
 
 Never print, copy, commit, or package `.secrets/android-signing.properties` or the signing key.
 Back up both securely together; losing the key prevents updates over an installed APK.
+
+Pre-commit runs formatting, linting, PowerShell syntax, JSON/YAML, secret, size, whitespace, and
+contract checks, then uses `scripts/pre-commit-tests.ps1` to test the staged applications. Host,
+launcher, and shared Python changes run the Python lint/type/test/coverage gate; media and speech
+use their dedicated gates;
+Android runs JVM tests plus debug compilation; renderer changes run the bounded Godot gate; C#
+contracts run their tests plus the renderer consumer gate. Shared wire contracts, dependency files,
+CI workflows, and test infrastructure run the complete software suite. Documentation-only commits
+skip software suites. Hardware and benchmark commands remain explicit and are never run by the
+hook.
 
 The Milestone 8 VM workflow is documented in `docs/testing/m8-clean-vm.md`. It uses a Windows
 guest plus the Android Studio emulator on the host. This is clean-system software acceptance only,

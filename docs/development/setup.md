@@ -16,6 +16,7 @@ Run:
 ```powershell
 ./scripts/bootstrap.ps1 -IncludeMedia -IncludeRenderer -IncludeLocalAi
 ./scripts/test.ps1 -Scope fast
+uv run --frozen pre-commit install
 ```
 
 `bootstrap.ps1` keeps downloaded Python/.NET/Gradle state in ignored `.tools` and `.cache`
@@ -29,6 +30,12 @@ ignored and are not part of this repository.
 
 If Git reports dubious ownership in a managed checkout, use the command-scoped `safe.directory`
 example in `AGENTS.md`; do not modify global configuration automatically.
+
+The installed pre-commit hook runs repository hygiene checks and selects software tests from the
+staged paths. It requires the same Windows toolchains as the affected application. Documentation-
+only commits skip software suites; hardware and benchmark commands are never selected implicitly.
+CI runs the same suites in dedicated platform jobs and skips the Windows-local dispatcher and
+PowerShell parser hooks in its separate Linux pre-commit hygiene job.
 
 ## Android Studio emulator
 

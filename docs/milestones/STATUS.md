@@ -167,6 +167,36 @@ Verification for this amendment:
 - The native file-picker dialog and resulting Android selector were not manually exercised in this
   run. No emulator/device was attached, and no release package or physical acceptance was rerun.
 
+### Path-aware pre-commit software gate
+
+On 2026-10-23 pre-commit gained a staged-path dispatcher in
+`scripts/pre-commit-tests.ps1`. Host, launcher, domain, progress, and ordinary shared Python changes
+select the complete Python lint/format/mypy/test/coverage gate. Media and speech select their
+dedicated typed test gates. Android changes select JVM tests and debug APK compilation. Renderer
+changes select the bounded Godot import/build/self-test gate. C# contract changes select C# tests
+and the renderer consumer gate. Shared wire contracts, dependency/lock files, CI workflows, and
+test infrastructure select `Scope all`. Multiple component selections are de-duplicated and run in
+a stable order; documentation-only changes skip software suites.
+
+The existing JSON/YAML, line-ending, whitespace, secret, large-file, Ruff, formatting, and contract
+checks remain. A new local hook parses every changed PowerShell file before affected tests run.
+Neither hook ever selects physical-device, acoustic, performance, network-acceptance, or soak
+commands. The separate Linux pre-commit CI job skips the two Windows-local hooks because the
+dedicated Windows/Android/renderer CI jobs already execute their software suites.
+
+Verification:
+
+- `uv run --frozen pre-commit validate-config`: verified passing.
+- Dispatcher mapping and PowerShell accept/reject integration tests: 9 verified passing.
+- Repository-wide `*.ps1` parser run: verified passing.
+- `uv run --frozen pre-commit run affected-tests --files scripts/pre-commit-tests.ps1`: verified
+  passing; the infrastructure path selected and completed the full software suite.
+- `./scripts/test.ps1 -Scope all`: verified passing on the final hook implementation; 209 Python
+  tests at 85.28% combined coverage, Kotlin, 8 C# tests, 21 media tests, Godot
+  import/build/self-test, and Android debug assembly all passed.
+- `uv run --frozen pre-commit run --all-files`: verified passing with every hygiene hook, the new
+  PowerShell parser, and the affected-tests full-suite selection.
+
 ADR-0003 now selects Godot 4.7.2 .NET as the only renderer. The earlier proof from the proprietary
 engine was removed completely, including source, project metadata, build scripts, and dependencies.
 Godot import, C# compilation, self-test, Windows export, local runtime, non-black shared-memory

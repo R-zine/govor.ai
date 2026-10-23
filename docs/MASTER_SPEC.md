@@ -854,11 +854,15 @@ Implement hooks for:
 - Secret detection.
 - Whitespace and line-ending checks.
 - Documentation consistency.
-- Relevant fast unit tests.
+- All software tests for each affected application or shared boundary, selected from staged paths.
 
-Keep normal pre-commit execution reasonably fast.
+Keep documentation-only and isolated component commits reasonably fast through path-aware test
+selection. Shared wire-contract, dependency, workflow, or test-infrastructure changes must run the
+complete software suite.
 
-Reserve slow integration and GPU tests for appropriate pipelines.
+Physical-hardware, acoustic, performance benchmark, network acceptance, and soak tests must never
+run implicitly as commit hooks; keep those explicit and evidence-recorded. A renderer source change
+does run the bounded headless Godot import/build/self-test gate.
 
 ### CI pipelines
 

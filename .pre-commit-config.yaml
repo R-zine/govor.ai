@@ -23,3 +23,17 @@ repos:
         entry: uv run pytest tests/contracts -q
         language: system
         pass_filenames: false
+        files: ^(packages/contracts/schemas/|tests/contracts/|tests/fixtures/contracts/)
+      - id: powershell-syntax
+        name: PowerShell syntax
+        entry: powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/check-powershell-syntax.ps1
+        language: system
+        files: \.ps1$
+        pass_filenames: true
+        require_serial: true
+      - id: affected-tests
+        name: Tests for affected applications
+        entry: powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/pre-commit-tests.ps1
+        language: system
+        pass_filenames: true
+        require_serial: true
