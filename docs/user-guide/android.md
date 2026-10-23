@@ -34,8 +34,9 @@ APK: <https://developer.android.com/developer-verification>.
    - **Pairing code:** the current eight-digit one-time code; and
    - **PC certificate SHA-256:** the complete fingerprint shown in the Windows console. Colons and
      spaces are optional, but all 64 hexadecimal characters must match.
-4. Choose a scenario, accent, and spaced-review preference, then tap **Connect**.
-5. Confirm that both media and lesson state become connected before speaking.
+4. Tap **Connect and load lessons**. The lesson list comes from the Windows host.
+5. Choose a lesson, accent, and spaced-review preference, then tap **Start lesson**.
+6. Confirm that both media and lesson state become connected before speaking.
 
 The code expires after ten minutes and is consumed by the first successful exchange. The app
 encrypts the resulting random device credential with Android Keystore. On later starts, enter the

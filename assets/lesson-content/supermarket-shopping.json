@@ -1,0 +1,129 @@
+{
+  "schema_version": 1,
+  "scenario_id": "supermarket-shopping",
+  "title": "Shopping in a supermarket",
+  "description": "Ask where an item is.",
+  "display_order": 2,
+  "scene_template_id": "supermarket",
+  "objectives": [
+    "Ask where an item is.",
+    "Request a quantity.",
+    "Respond at the checkout."
+  ],
+  "target_vocabulary": [
+    "where can I find",
+    "a kilo of",
+    "checkout",
+    "bag"
+  ],
+  "difficulty_descriptions": [
+    "Named products and complete models.",
+    "Short shopping questions.",
+    "Natural supermarket role-play."
+  ],
+  "examples": [
+    {
+      "teacher": "Can I help you?",
+      "learner": "Where can I find the milk?"
+    },
+    {
+      "teacher": "Would you like a bag?",
+      "learner": "Yes, please."
+    }
+  ],
+  "common_misunderstandings": [
+    {
+      "pattern": "Where is milks?",
+      "correction": "Milk is normally uncountable: say ‘the milk’.",
+      "explanation_bg": "‘Milk’ обикновено е неброимо и не получава окончание -s."
+    }
+  ],
+  "exercises": [
+    {
+      "exercise_id": "find-milk",
+      "exercise_type": "guided_response",
+      "goal": "Ask where a product is.",
+      "expected_intent": "locate_product",
+      "prompts": [
+        "Say: Where can I find the milk?",
+        "Ask me where the milk is.",
+        "You cannot see the dairy section. Ask an employee for help."
+      ],
+      "accepted_patterns": [
+        [
+          "where",
+          "milk"
+        ],
+        [
+          "find",
+          "milk"
+        ]
+      ],
+      "target_vocabulary": [
+        "where",
+        "find",
+        "milk"
+      ],
+      "gentle_correction": "Make it a clear question and name the product.",
+      "explanation_bg": "Използвайте ‘Where can I find ...?’ за да попитате къде е продуктът."
+    },
+    {
+      "exercise_id": "buy-apples",
+      "exercise_type": "vocabulary",
+      "goal": "Request a quantity of produce.",
+      "expected_intent": "request_quantity",
+      "prompts": [
+        "Say: I would like a kilo of apples, please.",
+        "How many apples would you like?",
+        "Tell the assistant the quantity of apples you need."
+      ],
+      "accepted_patterns": [
+        [
+          "kilo",
+          "apple"
+        ],
+        [
+          "kilogram",
+          "apple"
+        ]
+      ],
+      "target_vocabulary": [
+        "kilo",
+        "apples"
+      ],
+      "gentle_correction": "Include both the amount and the product.",
+      "explanation_bg": "‘A kilo of apples’ означава един килограм ябълки."
+    },
+    {
+      "exercise_id": "checkout-bag",
+      "exercise_type": "comprehension",
+      "goal": "Answer a checkout question.",
+      "expected_intent": "choose_bag",
+      "prompts": [
+        "Answer: Yes, I would like a bag, please.",
+        "Would you like a bag?",
+        "At the checkout I ask whether you need a bag. Respond naturally."
+      ],
+      "accepted_patterns": [
+        [
+          "yes",
+          "bag"
+        ],
+        [
+          "no",
+          "bag"
+        ],
+        [
+          "no thank"
+        ]
+      ],
+      "target_vocabulary": [
+        "checkout",
+        "bag"
+      ],
+      "gentle_correction": "Say clearly whether you need a bag.",
+      "explanation_bg": "‘Would you like a bag?’ пита дали желаете торбичка."
+    }
+  ],
+  "completion_condition": "Complete all three supermarket exchanges in English."
+}

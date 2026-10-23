@@ -177,9 +177,26 @@ try {
     Start-Sleep -Milliseconds 200
     $entryUi = Get-EmulatorUiDocument
     $connect = $entryUi.SelectNodes('//node') |
-        Where-Object { $_.text -eq 'Connect' } | Select-Object -First 1
-    if (-not $connect) { throw 'The Android connection form had no Connect button.' }
+        Where-Object { $_.text -eq 'Connect and load lessons' } | Select-Object -First 1
+    if (-not $connect) { throw 'The Android connection form had no catalog connection button.' }
     Invoke-NodeTap -Node $connect
+
+    $catalogUi = $null
+    for ($attempt = 0; $attempt -lt 100; $attempt++) {
+        $candidate = Get-EmulatorUiDocument
+        $connected = $candidate.SelectNodes('//node') |
+            Where-Object { $_.text -like 'media: connected*' }
+        $startLesson = $candidate.SelectNodes('//node') |
+            Where-Object { $_.text -eq 'Start lesson' } | Select-Object -First 1
+        if ($connected -and $startLesson) { $catalogUi = $candidate; break }
+        Start-Sleep -Milliseconds 200
+    }
+    if (-not $catalogUi) {
+        throw "The Android client did not load the host lesson catalog. See $controlStderr."
+    }
+    $startLesson = $catalogUi.SelectNodes('//node') |
+        Where-Object { $_.text -eq 'Start lesson' } | Select-Object -First 1
+    Invoke-NodeTap -Node $startLesson
 
     $lessonUi = $null
     for ($attempt = 0; $attempt -lt 200; $attempt++) {

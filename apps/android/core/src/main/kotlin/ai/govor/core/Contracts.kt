@@ -80,6 +80,46 @@ data class SessionStartPayload(
 )
 
 @Serializable
+class LessonCatalogRequestPayload
+
+@Serializable
+data class LessonCatalogItemPayload(
+    val scenario_id: String,
+    val title: String,
+    val description: String,
+    val display_order: Int,
+) {
+    fun validate(): LessonCatalogItemPayload {
+        require(scenario_id.matches(Regex("^[a-z][a-z0-9-]{2,63}$")))
+        require(title.isNotBlank() && title.length <= 128)
+        require(description.isNotBlank() && description.length <= 512)
+        require(display_order in 0..9_999)
+        return this
+    }
+}
+
+@Serializable
+data class LessonCatalogPayload(
+    val default_scenario_id: String,
+    val lessons: List<LessonCatalogItemPayload>,
+) {
+    fun validate(): LessonCatalogPayload {
+        require(lessons.size in 1..64)
+        lessons.forEach { it.validate() }
+        require(lessons.map { it.scenario_id }.distinct().size == lessons.size)
+        require(default_scenario_id in lessons.map { it.scenario_id })
+        require(
+            lessons == lessons.sortedWith(
+                compareBy<LessonCatalogItemPayload> { it.display_order }
+                    .thenBy { it.title }
+                    .thenBy { it.scenario_id },
+            ),
+        )
+        return this
+    }
+}
+
+@Serializable
 data class SessionScopedPayload(val session_id: String)
 
 @Serializable

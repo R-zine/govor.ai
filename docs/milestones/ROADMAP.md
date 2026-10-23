@@ -25,6 +25,16 @@ privacy/provider options -> packaging -> M9 physical target-hardware and release
 Milestone 1 is complete. Its emulator evidence does not satisfy or reduce the mandatory Milestone 9
 physical target-hardware bundle.
 
+## Post-milestone maintenance
+
+On 2026-10-22 guided lesson definitions moved from Python/Android constants to strict versioned
+JSON in `assets/lesson-content`. The host loads immutable catalog snapshots, Android discovers the
+ordered list over the authenticated control contract, and lessons choose one of four closed
+reusable scene templates. A later maintenance amendment adds a packaged Windows JSON/ZIP picker,
+bounded additive import, live whole-catalog replacement, and same-connection Android catalog
+updates while preserving active-session snapshots. This work is not a new milestone and does not
+revise earlier physical acceptance evidence. See ADR-0013 and the current status handoff.
+
 ## Milestone 2 acceptance tracking
 
 Verified software and native-emulator evidence:

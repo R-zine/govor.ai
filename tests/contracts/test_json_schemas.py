@@ -10,6 +10,7 @@ from jsonschema.exceptions import ValidationError
 ROOT = Path(__file__).resolve().parents[2]
 SCHEMA_ROOT = ROOT / "packages" / "contracts" / "schemas" / "v1"
 FIXTURE_ROOT = ROOT / "tests" / "fixtures" / "contracts"
+LESSON_ROOT = ROOT / "assets" / "lesson-content"
 
 
 def load_json(path: Path) -> object:
@@ -22,6 +23,15 @@ def test_schema_is_valid_draft_2020_12(schema_path: Path) -> None:
     Draft202012Validator.check_schema(load_json(schema_path))
 
 
+def test_default_lesson_files_match_the_versioned_schema() -> None:
+    validator = Draft202012Validator(load_json(SCHEMA_ROOT / "lesson-definition.schema.json"))
+    lesson_paths = sorted(LESSON_ROOT.glob("*.json"))
+
+    assert len(lesson_paths) == 4
+    for lesson_path in lesson_paths:
+        validator.validate(load_json(lesson_path))
+
+
 @pytest.mark.parametrize(
     ("schema_name", "fixture_name"),
     [
@@ -32,6 +42,7 @@ def test_schema_is_valid_draft_2020_12(schema_path: Path) -> None:
         ("control-message.schema.json", "control-teacher-turn.json"),
         ("control-message.schema.json", "control-word-replay-request.json"),
         ("control-message.schema.json", "control-word-audio.json"),
+        ("control-message.schema.json", "control-lesson-catalog.json"),
         ("control-message.schema.json", "control-renderer-command.json"),
         ("local-ai-dialogue.schema.json", "local-ai-dialogue.json"),
     ],

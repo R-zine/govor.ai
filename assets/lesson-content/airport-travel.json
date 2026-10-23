@@ -1,0 +1,131 @@
+{
+  "schema_version": 1,
+  "scenario_id": "airport-travel",
+  "title": "Traveling through an airport",
+  "description": "State a destination at check-in.",
+  "display_order": 3,
+  "scene_template_id": "airport",
+  "objectives": [
+    "State a destination at check-in.",
+    "Describe hand luggage.",
+    "Understand a boarding-gate direction."
+  ],
+  "target_vocabulary": [
+    "check in",
+    "boarding pass",
+    "hand luggage",
+    "gate"
+  ],
+  "difficulty_descriptions": [
+    "Modelled airport phrases.",
+    "Common check-in questions.",
+    "Natural airport role-play and directions."
+  ],
+  "examples": [
+    {
+      "teacher": "Where are you flying today?",
+      "learner": "I am flying to London."
+    },
+    {
+      "teacher": "Do you have hand luggage?",
+      "learner": "Yes, I have one small bag."
+    }
+  ],
+  "common_misunderstandings": [
+    {
+      "pattern": "I fly in London",
+      "correction": "Use ‘fly to’ before a destination.",
+      "explanation_bg": "За посока се използва ‘fly to’, а не ‘fly in’."
+    }
+  ],
+  "exercises": [
+    {
+      "exercise_id": "state-destination",
+      "exercise_type": "guided_response",
+      "goal": "State a flight destination.",
+      "expected_intent": "state_destination",
+      "prompts": [
+        "Say: I am flying to London.",
+        "Where are you flying today?",
+        "Good morning. What is your destination?"
+      ],
+      "accepted_patterns": [
+        [
+          "flying to",
+          "london"
+        ],
+        [
+          "flight to",
+          "london"
+        ],
+        [
+          "going to",
+          "london"
+        ]
+      ],
+      "target_vocabulary": [
+        "flying",
+        "destination",
+        "London"
+      ],
+      "gentle_correction": "Use ‘to’ before the destination.",
+      "explanation_bg": "Кажете ‘flying to’ и след това града, към който пътувате."
+    },
+    {
+      "exercise_id": "hand-luggage",
+      "exercise_type": "vocabulary",
+      "goal": "Describe cabin baggage.",
+      "expected_intent": "describe_luggage",
+      "prompts": [
+        "Say: I have one small bag as hand luggage.",
+        "Do you have any hand luggage?",
+        "Tell the check-in agent what you will take into the cabin."
+      ],
+      "accepted_patterns": [
+        [
+          "hand luggage"
+        ],
+        [
+          "carry on"
+        ],
+        [
+          "small bag"
+        ]
+      ],
+      "target_vocabulary": [
+        "hand luggage",
+        "small bag"
+      ],
+      "gentle_correction": "Name the bag that stays with you in the cabin.",
+      "explanation_bg": "‘Hand luggage’ е багажът, който вземате със себе си в самолета."
+    },
+    {
+      "exercise_id": "find-gate",
+      "exercise_type": "comprehension",
+      "goal": "Ask for the boarding gate.",
+      "expected_intent": "locate_gate",
+      "prompts": [
+        "Ask: Where is gate twelve, please?",
+        "Your boarding pass says gate twelve. Ask for directions.",
+        "Boarding starts soon and you cannot find gate twelve. What do you ask?"
+      ],
+      "accepted_patterns": [
+        [
+          "where",
+          "gate"
+        ],
+        [
+          "find",
+          "gate"
+        ]
+      ],
+      "target_vocabulary": [
+        "boarding pass",
+        "gate"
+      ],
+      "gentle_correction": "Ask where the gate is and include its number if you know it.",
+      "explanation_bg": "‘Gate’ е изходът за качване. Попитайте ‘Where is gate ...?’."
+    }
+  ],
+  "completion_condition": "Complete check-in, luggage, and gate tasks in English."
+}

@@ -1,17 +1,23 @@
 from __future__ import annotations
 
+import asyncio
+import contextlib
 import ipaddress
-from collections.abc import Callable
+from collections.abc import AsyncIterator, Callable
+from contextlib import asynccontextmanager
 from typing import Any
 from uuid import UUID
 
 from fastapi import FastAPI, Request, Response, WebSocket, WebSocketDisconnect
 from govor_contracts import DeviceAuthPayload, MessageEnvelope, PairingRequestPayload
+from govor_domain import LessonCatalog, load_lesson_catalog
 from govor_gateway_security import PairingAuthority, PairingRejected
+from govor_scene_planner import ScenePlanner
 from pydantic import ValidationError
 
 from .config import Settings, get_settings
 from .fake_lesson import FakeLessonService
+from .lesson_catalog_registry import LessonCatalogRegistry
 from .microphone import MediaMicrophoneSource, MicrophoneAudioSource, ReferenceOnlyMicrophoneSource
 from .orchestration import ControlSession, LessonService, SessionRegistry
 from .renderer_gateway import RendererControl, RendererGateway
@@ -21,21 +27,36 @@ def create_app(
     settings: Settings | None = None,
     *,
     lesson: LessonService | None = None,
+    lesson_catalog: LessonCatalog | None = None,
     microphone: MicrophoneAudioSource | None = None,
     renderer: RendererControl | None = None,
 ) -> FastAPI:
     runtime = settings or get_settings()
-    app = FastAPI(title="govor.ai host", version="0.2.0")
-    lesson_factory: Callable[[], LessonService]
+    catalog = lesson_catalog or load_lesson_catalog(runtime.lesson_directory)
+    scene_planner = ScenePlanner()
+    for definition in catalog.lessons:
+        scene_planner.plan(definition.scene_template_id)
+    catalog_registry = LessonCatalogRegistry(
+        runtime.lesson_directory,
+        catalog,
+        reload_enabled=lesson_catalog is None,
+    )
+    control_sessions: set[ControlSession] = set()
+    lesson_factory: Callable[[LessonCatalog], LessonService]
     if lesson is None and runtime.mode == "local":
         from govor_provider_router.factory import build_configured_lesson_service
 
-        lesson_factory = lambda: build_configured_lesson_service(runtime)  # noqa: E731
+        lesson_factory = lambda selected_catalog: build_configured_lesson_service(  # noqa: E731
+            runtime,
+            lesson_catalog=selected_catalog,
+        )
     elif lesson is None:
-        lesson_factory = FakeLessonService
+        lesson_factory = lambda selected_catalog: FakeLessonService(  # noqa: E731
+            catalog=selected_catalog
+        )
     else:
-        lesson_factory = lambda: lesson  # noqa: E731
-    provider_capabilities = lesson_factory().capabilities
+        lesson_factory = lambda selected_catalog: lesson  # noqa: ARG005, E731
+    provider_capabilities = lesson_factory(catalog).capabilities
     microphone_source = microphone or (
         MediaMicrophoneSource(
             runtime.media_capture_url,
@@ -47,14 +68,41 @@ def create_app(
     renderer_gateway = renderer or RendererGateway(
         acknowledgement_timeout_seconds=runtime.renderer_ack_timeout_seconds
     )
-    registry = SessionRegistry()
+    session_registry = SessionRegistry()
     pairing_authority = (
         PairingAuthority(runtime.gateway_credentials_file)
         if runtime.gateway_credentials_file
         else None
     )
-    app.state.session_registry = registry
+
+    @asynccontextmanager
+    async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+        async def watch_lesson_catalog() -> None:
+            while True:
+                await asyncio.sleep(0.5)
+                if catalog_registry.refresh() is None:
+                    continue
+                results = await asyncio.gather(
+                    *(session.send_lesson_catalog_update() for session in tuple(control_sessions)),
+                    return_exceptions=True,
+                )
+                for result in results:
+                    if isinstance(result, Exception):
+                        # A failed socket send is cleaned up by its connection handler.
+                        continue
+
+        watcher = asyncio.create_task(watch_lesson_catalog())
+        try:
+            yield
+        finally:
+            watcher.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await watcher
+
+    app = FastAPI(title="govor.ai host", version="0.2.0", lifespan=lifespan)
+    app.state.session_registry = session_registry
     app.state.renderer_gateway = renderer_gateway
+    app.state.lesson_catalog_registry = catalog_registry
 
     @app.get("/health")
     async def health() -> dict[str, Any]:
@@ -65,7 +113,9 @@ def create_app(
             "production_ready": runtime.secure_gateway and pairing_authority is not None,
             "network_scope": "loopback" if runtime.bind_host in {"127.0.0.1", "::1"} else "lan",
             "renderer_connected": renderer_gateway.connected,
-            "active_sessions": registry.active_count,
+            "active_sessions": session_registry.active_count,
+            "lesson_count": len(catalog_registry.catalog.lessons),
+            "lesson_catalog_status": catalog_registry.status,
             "providers": [
                 {
                     "provider_id": capability.provider_id,
@@ -140,11 +190,13 @@ def create_app(
         session = ControlSession(
             send_json=websocket.send_json,
             renderer=renderer_gateway,
-            lesson=lesson_factory(),
+            lesson_factory=lesson_factory,
+            lesson_catalog_provider=lambda: catalog_registry.catalog,
             microphone=microphone_source,
             settings=runtime,
-            registry=registry,
+            registry=session_registry,
         )
+        control_sessions.add(session)
         try:
             while True:
                 raw = await websocket.receive_text()
@@ -155,6 +207,7 @@ def create_app(
         except WebSocketDisconnect:
             return
         finally:
+            control_sessions.discard(session)
             await session.close()
 
     if isinstance(renderer_gateway, RendererGateway):

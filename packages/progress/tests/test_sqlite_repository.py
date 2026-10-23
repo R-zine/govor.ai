@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from datetime import UTC, datetime
+from pathlib import Path
 
 from govor_domain import (
     DetectedLanguage,
@@ -9,21 +10,32 @@ from govor_domain import (
     LearnerIntent,
     LearnerSettings,
     TeachingEngine,
-    get_scenario,
+    TeachingState,
+    load_lesson_catalog,
 )
 from govor_progress import SQLiteProgressRepository
 
 NOW = datetime(2026, 10, 12, 12, 0, tzinfo=UTC)
+ROOT = Path(__file__).resolve().parents[3]
+CATALOG = load_lesson_catalog(ROOT / "assets" / "lesson-content")
 
 
 def repository(tmp_path) -> SQLiteProgressRepository:  # type: ignore[no-untyped-def]
     return SQLiteProgressRepository(tmp_path / "progress.sqlite3", clock=lambda: NOW)
 
 
+def load_progress(
+    progress: SQLiteProgressRepository,
+    scenario_id: str,
+) -> tuple[TeachingState, bool]:
+    lesson = CATALOG.get(scenario_id)
+    return progress.load_or_start(scenario_id, len(lesson.exercises))
+
+
 def test_interrupted_session_resumes_from_saved_exercise(tmp_path) -> None:  # type: ignore[no-untyped-def]
     first_repository = repository(tmp_path)
-    state, resumed = first_repository.load_or_start("cafe-ordering")
-    engine = TeachingEngine(get_scenario("cafe-ordering"), state, resumed=resumed)
+    state, resumed = load_progress(first_repository, "cafe-ordering")
+    engine = TeachingEngine(CATALOG.get("cafe-ordering"), state, resumed=resumed)
     outcome = engine.evaluate(
         "I would like coffee, please.",
         DetectedLanguage.ENGLISH,
@@ -31,10 +43,8 @@ def test_interrupted_session_resumes_from_saved_exercise(tmp_path) -> None:  # t
     )
     first_repository.record_outcome(outcome, engine.state)
 
-    restored_state, restored = repository(tmp_path).load_or_start("cafe-ordering")
-    restored_engine = TeachingEngine(
-        get_scenario("cafe-ordering"), restored_state, resumed=restored
-    )
+    restored_state, restored = load_progress(repository(tmp_path), "cafe-ordering")
+    restored_engine = TeachingEngine(CATALOG.get("cafe-ordering"), restored_state, resumed=restored)
 
     assert restored
     assert restored_state.exercise_index == 1
@@ -46,8 +56,8 @@ def test_history_tracks_attempts_help_vocabulary_and_completion_without_transcri
     tmp_path,  # type: ignore[no-untyped-def]
 ) -> None:
     progress = repository(tmp_path)
-    state, _ = progress.load_or_start("cafe-ordering")
-    engine = TeachingEngine(get_scenario("cafe-ordering"), state)
+    state, _ = load_progress(progress, "cafe-ordering")
+    engine = TeachingEngine(CATALOG.get("cafe-ordering"), state)
     learner_text = "I would like coffee, please. PRIVATE-TRANSCRIPT"
     inputs = [
         (
@@ -94,8 +104,8 @@ def test_settings_due_review_export_and_delete(tmp_path) -> None:  # type: ignor
             spaced_review_enabled=True,
         )
     )
-    state, _ = progress.load_or_start("supermarket-shopping")
-    engine = TeachingEngine(get_scenario("supermarket-shopping"), state)
+    state, _ = load_progress(progress, "supermarket-shopping")
+    engine = TeachingEngine(CATALOG.get("supermarket-shopping"), state)
     failed = engine.evaluate(
         "I need something.",
         DetectedLanguage.ENGLISH,
@@ -123,7 +133,7 @@ def test_delete_all_learner_data_restores_default_settings(tmp_path) -> None:  #
             spaced_review_enabled=True,
         )
     )
-    progress.load_or_start("airport-travel")
+    load_progress(progress, "airport-travel")
 
     progress.delete_all_learner_data()
 

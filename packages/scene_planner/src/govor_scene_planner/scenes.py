@@ -82,9 +82,9 @@ class SceneSpecification:
             raise ValueError("scene object instance IDs must be unique")
 
 
-_SCENES: Final[MappingProxyType[str, SceneSpecification]] = MappingProxyType(
+_SCENE_TEMPLATES: Final[MappingProxyType[str, SceneSpecification]] = MappingProxyType(
     {
-        "cafe-ordering": SceneSpecification(
+        "cafe": SceneSpecification(
             scene_id="cafe-ordering-v1",
             environment_id="cafe",
             camera_preset="counter",
@@ -99,7 +99,7 @@ _SCENES: Final[MappingProxyType[str, SceneSpecification]] = MappingProxyType(
                 SceneObject("cup", "cafe-cup", (0.65, 1.05, 0.55), 0.0, 0.9),
             ),
         ),
-        "supermarket-shopping": SceneSpecification(
+        "supermarket": SceneSpecification(
             scene_id="supermarket-shopping-v1",
             environment_id="supermarket",
             camera_preset="wide",
@@ -114,7 +114,7 @@ _SCENES: Final[MappingProxyType[str, SceneSpecification]] = MappingProxyType(
                 SceneObject("crate", "market-crate", (1.65, 0.0, 1.0), -10.0),
             ),
         ),
-        "airport-travel": SceneSpecification(
+        "airport": SceneSpecification(
             scene_id="airport-travel-v1",
             environment_id="airport",
             camera_preset="counter",
@@ -129,7 +129,7 @@ _SCENES: Final[MappingProxyType[str, SceneSpecification]] = MappingProxyType(
                 SceneObject("suitcase", "airport-suitcase", (-1.55, 0.0, 1.3), 10.0),
             ),
         ),
-        "home-conversation": SceneSpecification(
+        "home": SceneSpecification(
             scene_id="home-conversation-v1",
             environment_id="home",
             camera_preset="conversation",
@@ -152,11 +152,11 @@ class ScenePlanner:
     """Resolve committed lesson context to a validated deterministic scene."""
 
     @property
-    def supported_scenarios(self) -> tuple[str, ...]:
-        return tuple(_SCENES)
+    def supported_templates(self) -> tuple[str, ...]:
+        return tuple(_SCENE_TEMPLATES)
 
-    def plan(self, scenario_id: str) -> SceneSpecification:
+    def plan(self, scene_template_id: str) -> SceneSpecification:
         try:
-            return _SCENES[scenario_id]
+            return _SCENE_TEMPLATES[scene_template_id]
         except KeyError as error:
-            raise ValueError("scenario_id has no allow-listed scene") from error
+            raise ValueError("scene_template_id is not allow-listed") from error

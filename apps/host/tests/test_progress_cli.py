@@ -9,7 +9,7 @@ from govor_progress import SQLiteProgressRepository
 
 def test_view_and_export_contain_only_structured_history(tmp_path, capsys) -> None:  # type: ignore[no-untyped-def]
     database = tmp_path / "progress.sqlite3"
-    SQLiteProgressRepository(database).load_or_start("cafe-ordering")
+    SQLiteProgressRepository(database).load_or_start("cafe-ordering", 3)
 
     assert main(["view", "--database", str(database)]) == 0
     viewed = json.loads(capsys.readouterr().out)
@@ -25,7 +25,7 @@ def test_view_and_export_contain_only_structured_history(tmp_path, capsys) -> No
 def test_delete_requires_confirmation_and_preserves_settings(tmp_path) -> None:  # type: ignore[no-untyped-def]
     database = tmp_path / "progress.sqlite3"
     repository = SQLiteProgressRepository(database)
-    repository.load_or_start("airport-travel")
+    repository.load_or_start("airport-travel", 3)
 
     with pytest.raises(SystemExit):
         main(["delete", "--database", str(database)])

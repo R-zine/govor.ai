@@ -1,0 +1,137 @@
+{
+  "schema_version": 1,
+  "scenario_id": "cafe-ordering",
+  "title": "Ordering at a café",
+  "description": "Make a polite drink order.",
+  "display_order": 1,
+  "scene_template_id": "cafe",
+  "objectives": [
+    "Make a polite drink order.",
+    "Respond to follow-up questions.",
+    "Choose between drinking in and takeaway."
+  ],
+  "target_vocabulary": [
+    "would like",
+    "please",
+    "anything else",
+    "for here",
+    "to go"
+  ],
+  "difficulty_descriptions": [
+    "Modelled phrases and a named item.",
+    "Short service questions with light cues.",
+    "Natural role-play with minimal prompting."
+  ],
+  "examples": [
+    {
+      "teacher": "What would you like?",
+      "learner": "I would like a coffee, please."
+    },
+    {
+      "teacher": "For here or to go?",
+      "learner": "For here, please."
+    }
+  ],
+  "common_misunderstandings": [
+    {
+      "pattern": "I want coffee",
+      "correction": "Use ‘I would like’ for a gentler request.",
+      "explanation_bg": "‘I would like’ звучи по-учтиво от директното ‘I want’."
+    }
+  ],
+  "exercises": [
+    {
+      "exercise_id": "order-drink",
+      "exercise_type": "guided_response",
+      "goal": "Order a drink politely.",
+      "expected_intent": "order_drink",
+      "prompts": [
+        "Say: I would like a coffee, please.",
+        "What would you like to drink?",
+        "Welcome to the café. May I take your order?"
+      ],
+      "accepted_patterns": [
+        [
+          "would like",
+          "coffee"
+        ],
+        [
+          "can i have",
+          "coffee"
+        ],
+        [
+          "coffee",
+          "please"
+        ]
+      ],
+      "target_vocabulary": [
+        "would like",
+        "coffee",
+        "please"
+      ],
+      "gentle_correction": "A polite order needs the item and a courteous request.",
+      "explanation_bg": "Кажете какво искате с учтивата фраза ‘I would like ... please’."
+    },
+    {
+      "exercise_id": "finish-order",
+      "exercise_type": "vocabulary",
+      "goal": "Finish an order after a follow-up question.",
+      "expected_intent": "finish_order",
+      "prompts": [
+        "Say: That is all, thank you.",
+        "Would you like anything else?",
+        "Anything else for you today?"
+      ],
+      "accepted_patterns": [
+        [
+          "that's all"
+        ],
+        [
+          "that is all"
+        ],
+        [
+          "nothing else"
+        ]
+      ],
+      "target_vocabulary": [
+        "anything else",
+        "that's all",
+        "thank you"
+      ],
+      "gentle_correction": "Use a complete phrase to show that the order is finished.",
+      "explanation_bg": "‘That is all’ означава, че не желаете нищо допълнително."
+    },
+    {
+      "exercise_id": "here-or-go",
+      "exercise_type": "comprehension",
+      "goal": "Understand and answer the dine-in or takeaway question.",
+      "expected_intent": "choose_service",
+      "prompts": [
+        "Answer: For here, please.",
+        "Is that for here or to go?",
+        "Will you be having that here, or taking it away?"
+      ],
+      "accepted_patterns": [
+        [
+          "for here"
+        ],
+        [
+          "to go"
+        ],
+        [
+          "take away"
+        ],
+        [
+          "takeaway"
+        ]
+      ],
+      "target_vocabulary": [
+        "for here",
+        "to go"
+      ],
+      "gentle_correction": "Choose either eating here or taking the order away.",
+      "explanation_bg": "‘For here’ е за консумация на място, а ‘to go’ е за вкъщи."
+    }
+  ],
+  "completion_condition": "Complete all three café exchanges with English production."
+}

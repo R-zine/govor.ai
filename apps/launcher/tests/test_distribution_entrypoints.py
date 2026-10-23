@@ -13,6 +13,24 @@ def test_windows_entrypoints_pass_a_normalized_install_root() -> None:
         assert "--doctor-only" in script
 
 
+def test_lesson_manager_uses_a_native_picker_and_local_import_command() -> None:
+    command = (REPOSITORY_ROOT / "distribution" / "windows" / "Manage-Lessons.cmd").read_text(
+        encoding="utf-8"
+    )
+    picker = (REPOSITORY_ROOT / "distribution" / "windows" / "Import-Lessons.ps1").read_text(
+        encoding="utf-8"
+    )
+    packager = (REPOSITORY_ROOT / "scripts" / "package.ps1").read_text(encoding="utf-8")
+
+    assert "Import-Lessons.ps1" in command
+    assert "Windows.Forms.OpenFileDialog" in picker
+    assert "*.json;*.zip" in picker
+    assert "import-lessons --source $dialog.FileName" in picker
+    assert "Invoke-WebRequest" not in picker
+    assert "Manage-Lessons.cmd" in packager
+    assert "Import-Lessons.ps1" in packager
+
+
 def test_start_entrypoint_forwards_bounded_smoke_arguments() -> None:
     script = (REPOSITORY_ROOT / "distribution" / "windows" / "Start-Govor.cmd").read_text(
         encoding="utf-8"

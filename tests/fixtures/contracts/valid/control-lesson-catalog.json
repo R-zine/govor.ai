@@ -1,0 +1,22 @@
+{
+  "protocol_version": "1.0",
+  "message_type": "lesson.catalog",
+  "correlation_id": "a2c37e0e-65c4-4e4b-9a32-63d6ba46b591",
+  "payload": {
+    "default_scenario_id": "cafe-ordering",
+    "lessons": [
+      {
+        "scenario_id": "cafe-ordering",
+        "title": "Ordering at a café",
+        "description": "Make a polite drink order.",
+        "display_order": 1
+      },
+      {
+        "scenario_id": "airport-travel",
+        "title": "Traveling through an airport",
+        "description": "State a destination at check-in.",
+        "display_order": 3
+      }
+    ]
+  }
+}

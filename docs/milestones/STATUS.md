@@ -95,6 +95,78 @@ then confirmed that the moving café/teacher was visible on the physical phone a
 speech was audible, clear, and intelligible. The final suite, dependency audit, and all-files
 pre-commit gates pass, so every Milestone 9 acceptance row is closed.
 
+## Post-milestone JSON lesson catalog
+
+On 2026-10-22 the four hard-coded Python lesson definitions and duplicated Android selector were
+replaced by the strict JSON catalog in `assets/lesson-content`. Each lesson is a separate
+versioned JSON file. The immutable domain loader rejects malformed, oversized, incomplete,
+duplicate, or unsupported content; host startup additionally rejects any unknown closed scene
+template. The original scenario IDs, exercise content, renderer scene IDs, and progress keys are
+unchanged.
+
+The authenticated control contract now includes `lesson.catalog.request` and `lesson.catalog`.
+Android connects first, validates the host's ordered summary, then renders a scrollable dynamic
+selector and starts only a returned scenario ID. A new JSON lesson was verified through host
+catalog discovery, fake lesson startup, progress reporting, and reuse of the existing café scene
+without Python/Kotlin/Godot content constants. Release packaging copies the source catalog to
+`content/lessons`, the launcher passes that absolute directory to the host, and its doctor rejects
+a package with no lesson files. ADR-0013 and `docs/development/lesson-content.md` define the
+boundary and authoring procedure.
+
+Verification from the source checkout:
+
+- `./scripts/test.ps1 -Scope python`: verified passing; 184 tests plus Ruff, format, and mypy.
+- `./scripts/test.ps1 -Scope contracts`: verified passing; 29 schema fixtures/tests.
+- `./scripts/test.ps1 -Scope kotlin`: verified passing; 18 JVM tests across three suites.
+- `./scripts/build.ps1 -Target android`: verified passing; debug APK built successfully.
+- PowerShell parser check for both updated emulator smoke scripts: verified passing.
+- `./scripts/test.ps1 -Scope all`: verified passing; Python, Kotlin, 8 C# tests, 21 media tests,
+  Godot import/build/self-test, and Android debug assembly passed.
+- `uv run --frozen pre-commit run --all-files`: verified passing after fetching the pinned hook
+  environments; JSON/YAML, whitespace, line-ending, secret/size, Ruff, format, and contract hooks
+  all passed.
+
+No Android device was attached, so the updated selector and adjusted emulator smokes were not
+executed on an emulator in this change. No release package or physical-device acceptance was
+rerun; this does not alter or replace the recorded Milestone 9 evidence.
+
+### Live host-side lesson import amendment
+
+On 2026-10-22 the packaged Windows host gained `Manage-Lessons.cmd`, backed by a native Windows
+file picker and a local launcher command. It accepts one JSON lesson or a ZIP containing multiple
+JSON lessons, validates the entire bounded batch and combined catalog, rejects overwrites and
+unknown scene templates, and publishes canonical files into `content/lessons`. ZIP entries are
+read without extraction; traversal paths, encrypted/non-JSON entries, oversized compressed or
+expanded input, malformed definitions, and duplicate IDs are rejected. A failed batch leaves the
+installed files unchanged.
+
+The control host now watches the local lesson directory. It swaps only a fully valid immutable
+catalog and pushes the ordered `lesson.catalog` summary on every connected authenticated control
+socket. Android applies a pushed catalog without interrupting an active session; each active
+lesson retains its start-time catalog/service snapshot and a later lesson uses the new one. An
+invalid out-of-band edit retains the previous catalog and changes `/health`
+`lesson_catalog_status` to `reload_error`. No LAN upload or administration endpoint was added.
+
+Verification for this amendment:
+
+- Focused Ruff plus launcher/domain/host/distribution tests: verified passing, 48 tests including
+  the real launcher command, publish rollback, and excessive ZIP-entry rejection.
+- `./scripts/test.ps1 -Scope python`: verified passing as part of the final all-scope run; 200
+  tests, Ruff, format, strict mypy, and 85.28% combined coverage.
+- `./scripts/test.ps1 -Scope kotlin`: verified passing; 18 JVM tests across three suites.
+- `./scripts/build.ps1 -Target android`: verified passing. The Kotlin daemon could not create its
+  user-profile marker in the managed environment, then Gradle's supported in-process fallback
+  compiled and assembled the debug APK successfully.
+- `Import-Lessons.ps1` PowerShell parser check: verified passing.
+- `./scripts/test.ps1 -Scope all`: verified passing; 200 Python tests at 85.28% combined coverage,
+  Kotlin tests, 8 C# tests, 21 media tests, Godot import/build/self-test, and Android debug assembly.
+- `uv run --frozen pre-commit run --all-files`: verified passing; JSON/YAML, line-ending,
+  whitespace, secret/size, Ruff, format, and contract hooks all passed.
+- The live host test imported a lesson while a control WebSocket remained connected, received the
+  unsolicited replacement catalog, and started that imported lesson on the same connection.
+- The native file-picker dialog and resulting Android selector were not manually exercised in this
+  run. No emulator/device was attached, and no release package or physical acceptance was rerun.
+
 ADR-0003 now selects Godot 4.7.2 .NET as the only renderer. The earlier proof from the proprietary
 engine was removed completely, including source, project metadata, build scripts, and dependencies.
 Godot import, C# compilation, self-test, Windows export, local runtime, non-black shared-memory
@@ -175,9 +247,9 @@ performance regressions may still require revisiting it.
   connects outbound to a loopback-only control endpoint and accepts only six visual actions.
 - The emulator smoke deliberately exercises renderer-unavailable recovery before completing a
   teacher/learner/teacher turn, media reconnect, renderer reset, and process/network cleanup.
-- `packages/domain` defines café, supermarket, airport, and home lessons with three exercise types
-  each, committed vocabulary/examples/misunderstandings/Bulgarian explanations, and a pure
-  `TeachingEngine`. The LLM may classify intent but cannot award success or choose progression.
+- `assets/lesson-content` defines the café, supermarket, airport, and home lessons as strict JSON;
+  `packages/domain` loads them into immutable definitions and owns the pure `TeachingEngine`. The
+  LLM may classify intent but cannot award success or choose progression.
 - Two unsuccessful English attempts lower difficulty one level; two consecutive first-attempt
   successes raise it. `repeated_difficulty` and `consistent_first_try_success` are validated and
   visible to Android. Bulgarian/mixed assistance, questions, repetition, and no-speech do not count
@@ -195,10 +267,11 @@ performance regressions may still require revisiting it.
   capabilities, categorize provider failures, and retain actual-or-null timing semantics.
 - Provider keys are retrieved on demand from the current user's Windows Credential Manager.
   Interactive tooling sends a new key over standard input and never displays it.
-- `session.start` accepts a scenario, English accent, and review preference. Each host-generated
-  `teacher.turn` includes an additive progress snapshot. The host sends completed session teardown
-  only after the final audio playback acknowledgement.
-- Android exposes two visible rows for all four scenarios, GB/US selection, a spaced-review toggle,
+- Android requests the bounded startup lesson catalog, then `session.start` accepts a returned
+  scenario ID, English accent, and review preference. Each host-generated `teacher.turn` includes
+  an additive progress snapshot. The host sends completed session teardown only after the final
+  audio playback acknowledgement.
+- Android renders the host-provided lesson list, GB/US selection, a spaced-review toggle,
   progress/difficulty display, and an explanation when difficulty changes.
 - `apps/launcher` supplies `doctor`, model status/install, and release start commands. It uses an
   embedded Python runtime, persistent `%LOCALAPPDATA%\govor.ai` data, stable TLS identity,

@@ -18,17 +18,24 @@
 
 1. Android authenticates to the release LAN gateway and establishes signaling/control. The
    Milestone 2 emulator development path instead uses debug-only `adb reverse` to loopback.
-2. The gateway starts a WebRTC media session with the renderer/media service.
-3. The host produces a validated teacher response, synthesized audio, and optional timing data.
-4. The renderer receives only validated scene/avatar commands and media timing.
-5. Android receives video and teacher audio, then reports playback completion.
-6. Only in `awaiting_learner` may Android enter `recording`.
-7. Push-to-talk audio is sent as a bounded authenticated upload or WebRTC track.
-8. The host recognizes speech, classifies intent, applies lesson policy, and creates the next turn.
+2. Android requests `lesson.catalog`; the host returns the current ordered immutable summary.
+   Android selects only an ID from that response. A validated host-side import causes the host to
+   push the replacement summary on the same authenticated connection.
+3. The gateway starts a WebRTC media session with the renderer/media service.
+4. The host produces a validated teacher response, synthesized audio, and optional timing data.
+5. The renderer receives only validated scene/avatar commands and media timing.
+6. Android receives video and teacher audio, then reports playback completion.
+7. Only in `awaiting_learner` may Android enter `recording`.
+8. Push-to-talk audio is sent as a bounded authenticated upload or WebRTC track.
+9. The host recognizes speech, classifies intent, applies lesson policy, and creates the next turn.
 
-Android's `/v1/control` connection sends
-`session.start` with an allow-listed scenario, English accent, and spaced-review preference,
+Android's `/v1/control` connection first sends `lesson.catalog.request`, then sends
+`session.start` with a scenario from that catalog, English accent, and spaced-review preference,
 followed by playback completion, recording start/submission metadata, retry, and cancellation.
+`Manage-Lessons.cmd` is a separate local Windows path: its picker passes a selected JSON/ZIP to the
+launcher, which validates and additively publishes it into `content/lessons`. The control host
+notices that local directory change and sends a new `lesson.catalog`; no unauthenticated LAN
+administration endpoint is exposed. A running lesson keeps its prior immutable snapshot.
 The microphone itself remains on the WebRTC track. In `local` mode, recording start opens a single
 bounded capture in the media service; received frames are resampled to 16 kHz mono PCM. Submission
 closes the capture and returns an in-memory WAV over a loopback-only internal HTTP endpoint. The
@@ -43,7 +50,7 @@ selects the committed correction or next prompt and applies an explainable bound
 change when appropriate. Every `teacher.turn` carries the resulting progress snapshot. After a
 completed lesson's final audio finishes, the host ends the session with reason `completed`.
 
-The host also asks the pure scene planner for the selected scenario's deterministic scene
+The host also asks the pure scene planner for the selected lesson's allow-listed scene-template
 specification and includes it only with `session_started`. Godot validates the closed IDs and
 bounded transforms, builds the scene from cached procedural resources, fades from the previous
 environment, and queues the replaced node tree for cleanup. No generated `.tscn`, model file, or

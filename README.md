@@ -14,7 +14,11 @@ validated session skeleton, Milestone 3 integrated local bilingual recognition/d
 Milestone 4 completed Kokoro/Piper/eSpeak speech, accent-aware IPA, real alignment, synchronized
 subtitles, speed control, and word replay. Milestone 5 adds four guided scenarios, deterministic
 gentle correction and explainable difficulty adaptation, Android scenario/progress controls, and
-local SQLite resume/history without retaining recordings or complete transcripts. Milestone 6
+local SQLite resume/history without retaining recordings or complete transcripts. The default
+lessons now live in the JSON catalog under `assets/lesson-content`, and Android discovers the
+available list from the host. Packaged Windows users can add a local JSON lesson or multi-JSON ZIP
+through `Manage-Lessons.cmd`; the host validates and publishes the new catalog to connected clients
+without a restart. Milestone 6
 adds the animated procedural teacher, PCM/real-phoneme lip synchronization, and validated dynamic
 café, supermarket, airport, and home environments. Milestone 7 adds independently selectable,
 explicitly opt-in OpenAI-compatible providers while retaining a hard offline-only default and
@@ -47,6 +51,9 @@ requires explicit microphone-upload consent. See `docs/privacy/cloud-providers.m
 The exported renderer must exist before `dev.ps1` starts the combined development stack. See
 `docs/development/setup.md` and `docs/milestones/STATUS.md` for prerequisites, verified results,
 and exact resume commands.
+
+To add or edit guided lesson content without changing Python or Android code, see
+`docs/development/lesson-content.md`.
 
 ## Safety and privacy status
 

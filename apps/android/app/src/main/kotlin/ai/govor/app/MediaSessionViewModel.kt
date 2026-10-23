@@ -22,24 +22,19 @@ class MediaSessionViewModel(application: Application) : AndroidViewModel(applica
     private var connectionJob: Job? = null
     private var networkReconnectJob: Job? = null
     private var lastConnection: ConnectionRequest? = null
+    private var lastLesson: LessonSelection? = null
 
     fun connect(
         mediaHost: String,
         controlHost: String,
         pairingToken: String,
         certificateFingerprint: String,
-        scenarioId: String,
-        englishLocale: String,
-        spacedReviewEnabled: Boolean,
     ) {
         val request = ConnectionRequest(
             mediaHost = mediaHost,
             controlHost = controlHost,
             pairingToken = pairingToken,
             certificateFingerprint = certificateFingerprint,
-            scenarioId = scenarioId,
-            englishLocale = englishLocale,
-            spacedReviewEnabled = spacedReviewEnabled,
         )
         lastConnection = request
         reconnectPolicy.connectionRequested()
@@ -52,9 +47,9 @@ class MediaSessionViewModel(application: Application) : AndroidViewModel(applica
             session.connect(request.mediaHost, request.pairingToken)
             lesson.connect(
                 request.controlHost,
-                request.scenarioId,
-                request.englishLocale,
-                request.spacedReviewEnabled,
+                lastLesson?.scenarioId,
+                lastLesson?.englishLocale ?: "en-GB",
+                lastLesson?.spacedReviewEnabled ?: false,
             )
             return
         }
@@ -84,9 +79,9 @@ class MediaSessionViewModel(application: Application) : AndroidViewModel(applica
                 )
                 lesson.connect(
                     gateway.controlHost,
-                    request.scenarioId,
-                    request.englishLocale,
-                    request.spacedReviewEnabled,
+                    lastLesson?.scenarioId,
+                    lastLesson?.englishLocale ?: "en-GB",
+                    lastLesson?.spacedReviewEnabled ?: false,
                     secure = true,
                     deviceId = gateway.deviceId,
                     credential = gateway.credential,
@@ -96,6 +91,15 @@ class MediaSessionViewModel(application: Application) : AndroidViewModel(applica
                 mutablePairingError.value = error.message ?: "Pairing failed."
             }
         }
+    }
+
+    fun startLesson(
+        scenarioId: String,
+        englishLocale: String,
+        spacedReviewEnabled: Boolean,
+    ) {
+        lastLesson = LessonSelection(scenarioId, englishLocale, spacedReviewEnabled)
+        lesson.startLesson(scenarioId, englishLocale, spacedReviewEnabled)
     }
 
     fun enterBackground() {
@@ -147,6 +151,7 @@ class MediaSessionViewModel(application: Application) : AndroidViewModel(applica
         networkReconnectJob = null
         connectionJob?.cancel()
         connectionJob = null
+        lastLesson = null
         lesson.disconnect()
         session.disconnect()
     }
@@ -166,6 +171,9 @@ class MediaSessionViewModel(application: Application) : AndroidViewModel(applica
         val controlHost: String,
         val pairingToken: String,
         val certificateFingerprint: String,
+    )
+
+    private data class LessonSelection(
         val scenarioId: String,
         val englishLocale: String,
         val spacedReviewEnabled: Boolean,

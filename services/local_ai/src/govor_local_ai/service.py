@@ -17,13 +17,14 @@ from govor_domain import (
     DialoguePolicy,
     LearnerIntent,
     LearnerSettings,
+    LessonCatalog,
     LessonProgress,
     Recognition,
     TeachingEngine,
     TeachingOutcome,
     TeachingState,
     classify_explicit_intent,
-    get_scenario,
+    load_lesson_catalog,
 )
 from govor_provider_interfaces import (
     DialogueProvider,
@@ -55,6 +56,7 @@ class LocalAiSettings(Protocol):
     piper_bg_model: str
     piper_bg_config: str
     progress_database: str
+    lesson_directory: str
 
 
 class ProgressRepository(Protocol):
@@ -62,7 +64,11 @@ class ProgressRepository(Protocol):
 
     def update_settings(self, settings: LearnerSettings) -> None: ...
 
-    def load_or_start(self, scenario_id: str) -> tuple[TeachingState, bool]: ...
+    def load_or_start(
+        self,
+        scenario_id: str,
+        exercise_count: int,
+    ) -> tuple[TeachingState, bool]: ...
 
     def record_outcome(self, outcome: TeachingOutcome, state: TeachingState) -> None: ...
 
@@ -80,7 +86,9 @@ class EphemeralProgressRepository:
     def update_settings(self, settings: LearnerSettings) -> None:
         self.settings = settings
 
-    def load_or_start(self, scenario_id: str) -> tuple[TeachingState, bool]:
+    def load_or_start(self, scenario_id: str, exercise_count: int) -> tuple[TeachingState, bool]:
+        if not 1 <= exercise_count <= 64:
+            raise ValueError("exercise count must be between one and 64")
         state = self.states.get(scenario_id)
         if state is None or state.status.value == "completed":
             state = TeachingState(difficulty=self.settings.starting_difficulty)
@@ -124,6 +132,7 @@ class LocalLessonService:
         progress_repository: ProgressRepository | None = None,
         *,
         memory_turns: int = 8,
+        lesson_catalog: LessonCatalog | None = None,
     ) -> None:
         self.recognizer = recognizer
         self.dialogue = dialogue
@@ -131,7 +140,10 @@ class LocalLessonService:
         self.memory = ConversationMemory(max_turns=memory_turns)
         self.policy = DialoguePolicy()
         self.progress_repository = progress_repository or EphemeralProgressRepository()
-        self._engine = TeachingEngine(get_scenario("cafe-ordering"))
+        self.lesson_catalog = lesson_catalog or load_lesson_catalog("assets/lesson-content")
+        self._engine = TeachingEngine(
+            self.lesson_catalog.get(self.lesson_catalog.default_scenario_id)
+        )
 
     @property
     def progress(self) -> LessonProgress:
@@ -160,9 +172,13 @@ class LocalLessonService:
                 spaced_review_enabled=spaced_review_enabled,
             )
         )
-        state, resumed = self.progress_repository.load_or_start(scenario_id)
+        lesson = self.lesson_catalog.get(scenario_id)
+        state, resumed = self.progress_repository.load_or_start(
+            scenario_id,
+            len(lesson.exercises),
+        )
         self._engine = TeachingEngine(
-            get_scenario(scenario_id),
+            lesson,
             state,
             resumed=resumed,
             english_locale=english_locale,
@@ -238,6 +254,7 @@ def build_local_lesson_service(settings: LocalAiSettings) -> LocalLessonService:
         speech=build_local_speech_provider(settings),
         progress_repository=SQLiteProgressRepository(settings.progress_database),
         memory_turns=settings.conversation_memory_turns,
+        lesson_catalog=load_lesson_catalog(settings.lesson_directory),
     )
 
 

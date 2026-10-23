@@ -40,6 +40,25 @@ class ContractsTest {
     }
 
     @Test
+    fun `lesson catalog payload deserializes strictly`() {
+        val fixture = requireNotNull(
+            javaClass.classLoader.getResource("valid/control-lesson-catalog.json"),
+        ).readText()
+        val envelope = ControlContractCodec.decodeEnvelope(fixture)
+
+        val catalog = ControlContractCodec.decodePayload<LessonCatalogPayload>(
+            envelope,
+        ).validate()
+
+        assertEquals("cafe-ordering", catalog.default_scenario_id)
+        assertEquals(
+            listOf("cafe-ordering", "airport-travel"),
+            catalog.lessons.map { it.scenario_id },
+        )
+        assertEquals("Ordering at a café", catalog.lessons.first().title)
+    }
+
+    @Test
     fun `word replay request and audio fixtures deserialize strictly`() {
         val requestEnvelope = ControlContractCodec.decodeEnvelope(
             requireNotNull(

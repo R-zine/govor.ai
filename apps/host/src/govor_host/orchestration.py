@@ -19,6 +19,9 @@ from uuid import UUID, uuid4
 from govor_contracts import (
     AvatarAnimationPayload,
     LearnerTranscriptPayload,
+    LessonCatalogItemPayload,
+    LessonCatalogPayload,
+    LessonCatalogRequestPayload,
     LessonProgressPayload,
     MessageEnvelope,
     PhonemeAlignmentPayload,
@@ -47,12 +50,12 @@ from govor_contracts import (
 )
 from govor_domain import (
     InvalidTransition,
+    LessonCatalog,
     LessonProgress,
     LessonStatus,
     SessionEvent,
     SessionMachine,
     SessionState,
-    get_scenario,
 )
 from govor_provider_interfaces import LessonResult, TeacherTurn, UtteranceAudio
 from govor_scene_planner import (
@@ -114,6 +117,7 @@ class SessionRegistry:
 
 
 INBOUND_PAYLOADS: dict[str, type[BaseModel]] = {
+    "lesson.catalog.request": LessonCatalogRequestPayload,
     "session.start": SessionStartPayload,
     "teacher.playback_completed": TeacherPlaybackCompletedPayload,
     "teacher.word_replay_requested": TeacherWordReplayRequestPayload,
@@ -130,14 +134,18 @@ class ControlSession:
         *,
         send_json: SendJson,
         renderer: RendererControl,
-        lesson: LessonService,
+        lesson_factory: Callable[[LessonCatalog], LessonService],
+        lesson_catalog_provider: Callable[[], LessonCatalog],
         microphone: MicrophoneAudioSource,
         settings: Settings,
         registry: SessionRegistry,
     ) -> None:
         self._send_json = send_json
         self._renderer = renderer
-        self._lesson = lesson
+        self._lesson_factory = lesson_factory
+        self._lesson_catalog_provider = lesson_catalog_provider
+        self._lesson: LessonService | None = None
+        self._lesson_catalog: LessonCatalog | None = None
         self._microphone = microphone
         self._settings = settings
         self._registry = registry
@@ -204,7 +212,16 @@ class ControlSession:
         self._closed = True
         await self._cleanup_active_session(reason="disconnected", notify=False)
 
+    async def send_lesson_catalog_update(self) -> None:
+        """Push the latest catalog after a validated host-side import."""
+
+        await self._send_lesson_catalog(uuid4())
+
     async def _dispatch(self, envelope: MessageEnvelope, payload: BaseModel) -> None:
+        if envelope.message_type == "lesson.catalog.request":
+            _require(payload, LessonCatalogRequestPayload)
+            await self._send_lesson_catalog(envelope.correlation_id)
+            return
         if envelope.message_type == "session.start":
             await self._start(envelope.correlation_id, _require(payload, SessionStartPayload))
             return
@@ -246,7 +263,10 @@ class ControlSession:
             )
             return
 
-        get_scenario(payload.scenario_id)
+        lesson_catalog = self._lesson_catalog_provider()
+        lesson_definition = lesson_catalog.get(payload.scenario_id)
+        self._lesson_catalog = lesson_catalog
+        self._lesson = self._lesson_factory(lesson_catalog)
         self._machine = SessionMachine()
         self._session_id = uuid4()
         self._client_id = payload.client_id
@@ -261,7 +281,7 @@ class ControlSession:
         ):
             self._machine.apply(event, uuid4())
         self._machine.apply(SessionEvent.CONNECTED, correlation_id)
-        scene = self._scene_planner.plan(payload.scenario_id)
+        scene = self._scene_planner.plan(lesson_definition.scene_template_id)
         await self._renderer_command(
             "session_started",
             correlation_id,
@@ -273,7 +293,7 @@ class ControlSession:
     async def _prepare_initial_turn(self, correlation_id: UUID) -> None:
         try:
             async with asyncio.timeout(self._settings.provider_timeout_seconds):
-                turn = await self._lesson.initial_turn(
+                turn = await self._require_lesson().initial_turn(
                     self._scenario_id,
                     english_locale=self._english_locale,
                     spaced_review_enabled=self._spaced_review_enabled,
@@ -287,6 +307,25 @@ class ControlSession:
                 code=_operation_error_code(error),
                 message="The lesson provider did not produce a turn.",
             )
+
+    async def _send_lesson_catalog(self, correlation_id: UUID) -> None:
+        catalog = self._lesson_catalog_provider()
+        await self._send(
+            "lesson.catalog",
+            correlation_id,
+            LessonCatalogPayload(
+                default_scenario_id=catalog.default_scenario_id,
+                lessons=[
+                    LessonCatalogItemPayload(
+                        scenario_id=lesson.scenario_id,
+                        title=lesson.title,
+                        description=lesson.description,
+                        display_order=lesson.display_order,
+                    )
+                    for lesson in catalog.lessons
+                ],
+            ),
+        )
 
     async def _playback_completed(
         self,
@@ -349,7 +388,7 @@ class ControlSession:
         self._cancel_deadline()
         try:
             async with asyncio.timeout(self._settings.provider_timeout_seconds):
-                replay = await self._lesson.replay_word(
+                replay = await self._require_lesson().replay_word(
                     pronunciation.word,
                     pronunciation.locale,
                     speed=payload.playback_rate,
@@ -411,7 +450,7 @@ class ControlSession:
                     payload.utterance_id,
                     payload.duration_us,
                 )
-                result = await self._lesson.respond(audio)
+                result = await self._require_lesson().respond(audio)
             session_id = self._require_active_session()
             if result.transcript is not None:
                 await self._send(
@@ -444,7 +483,7 @@ class ControlSession:
     ) -> None:
         self._turn_id = uuid4()
         self._active_turn = turn
-        progress = self._lesson.progress
+        progress = self._require_lesson().progress
         self._lesson_completed = progress.status is LessonStatus.COMPLETED
         await self._renderer_command(
             "teacher_speaking",
@@ -523,7 +562,11 @@ class ControlSession:
         await self._renderer_command(
             "session_started",
             correlation_id,
-            scene=_scene_specification_payload(self._scene_planner.plan(self._scenario_id)),
+            scene=_scene_specification_payload(
+                self._scene_planner.plan(
+                    self._require_active_catalog().get(self._scenario_id).scene_template_id
+                )
+            ),
         )
         await self._send_state(correlation_id)
         self._start_work(self._prepare_initial_turn(correlation_id))
@@ -692,6 +735,8 @@ class ControlSession:
         self._active_turn = None
         self._lesson_completed = False
         self._utterance_id = None
+        self._lesson = None
+        self._lesson_catalog = None
         self._machine = SessionMachine()
 
     def _require_session(self, session_id: UUID) -> None:
@@ -702,6 +747,16 @@ class ControlSession:
         if self._session_id is None:
             raise ValueError("no active session")
         return self._session_id
+
+    def _require_lesson(self) -> LessonService:
+        if self._lesson is None:
+            raise ValueError("no active lesson")
+        return self._lesson
+
+    def _require_active_catalog(self) -> LessonCatalog:
+        if self._lesson_catalog is None:
+            raise ValueError("no active lesson catalog")
+        return self._lesson_catalog
 
     @staticmethod
     def _consume_task_result(task: asyncio.Task[None]) -> None:

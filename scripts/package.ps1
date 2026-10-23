@@ -104,6 +104,8 @@ foreach ($relative in $sourceDirectories) {
     Copy-Item -LiteralPath $source -Destination $destination -Recurse
 }
 Copy-Item -LiteralPath (Join-Path $script:RepositoryRoot 'apps\renderer\Builds\Windows') -Destination (Join-Path $stage 'renderer') -Recurse
+New-Item -ItemType Directory -Force -Path (Join-Path $stage 'content') | Out-Null
+Copy-Item -LiteralPath (Join-Path $script:RepositoryRoot 'assets\lesson-content') -Destination (Join-Path $stage 'content\lessons') -Recurse
 Copy-Item -LiteralPath (Join-Path $script:ToolsRoot "llama.cpp\$($script:LlamaCppBuild)") -Destination (Join-Path $runtimeRoot 'llama.cpp') -Recurse
 Copy-Item -LiteralPath (Join-Path $script:ToolsRoot "whisper.cpp\$($script:WhisperCppBuild)") -Destination (Join-Path $runtimeRoot 'whisper.cpp') -Recurse
 New-Item -ItemType Directory -Force -Path (Join-Path $stage 'config') | Out-Null
@@ -112,6 +114,8 @@ Copy-Item -LiteralPath (Join-Path $script:RepositoryRoot 'config\release-sources
 Copy-Item -LiteralPath (Join-Path $script:RepositoryRoot 'config\release-notices.json') -Destination (Join-Path $stage 'config\release-notices.json')
 Copy-Item -LiteralPath (Join-Path $script:RepositoryRoot 'distribution\windows\Start-Govor.cmd') -Destination $stage
 Copy-Item -LiteralPath (Join-Path $script:RepositoryRoot 'distribution\windows\Setup-Govor.cmd') -Destination $stage
+Copy-Item -LiteralPath (Join-Path $script:RepositoryRoot 'distribution\windows\Manage-Lessons.cmd') -Destination $stage
+Copy-Item -LiteralPath (Join-Path $script:RepositoryRoot 'distribution\windows\Import-Lessons.ps1') -Destination $stage
 Copy-Item -LiteralPath (Join-Path $script:RepositoryRoot 'distribution\windows\Install-Prerequisites.ps1') -Destination $stage
 
 $documentation = Join-Path $stage 'documentation'

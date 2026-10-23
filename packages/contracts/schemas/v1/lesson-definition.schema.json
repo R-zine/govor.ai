@@ -1,0 +1,141 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://govor.ai/contracts/v1/lesson-definition.schema.json",
+  "title": "govor.ai guided lesson definition",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "scenario_id",
+    "title",
+    "description",
+    "display_order",
+    "scene_template_id",
+    "objectives",
+    "target_vocabulary",
+    "difficulty_descriptions",
+    "examples",
+    "common_misunderstandings",
+    "exercises",
+    "completion_condition"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "scenario_id": { "$ref": "#/$defs/slug" },
+    "title": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "description": { "type": "string", "minLength": 1, "maxLength": 512 },
+    "display_order": { "type": "integer", "minimum": 0, "maximum": 9999 },
+    "scene_template_id": { "enum": ["cafe", "supermarket", "airport", "home"] },
+    "objectives": { "$ref": "#/$defs/textList16" },
+    "target_vocabulary": { "$ref": "#/$defs/textList64" },
+    "difficulty_descriptions": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": { "$ref": "#/$defs/text" }
+    },
+    "examples": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 16,
+      "items": { "$ref": "#/$defs/example" }
+    },
+    "common_misunderstandings": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 32,
+      "items": { "$ref": "#/$defs/misunderstanding" }
+    },
+    "exercises": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "items": { "$ref": "#/$defs/exercise" }
+    },
+    "completion_condition": { "$ref": "#/$defs/text" }
+  },
+  "$defs": {
+    "slug": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{2,63}$",
+      "maxLength": 64
+    },
+    "text": { "type": "string", "minLength": 1, "maxLength": 1024 },
+    "shortText": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "textList16": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 16,
+      "items": { "$ref": "#/$defs/text" }
+    },
+    "textList64": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "items": { "$ref": "#/$defs/shortText" }
+    },
+    "example": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["teacher", "learner"],
+      "properties": {
+        "teacher": { "$ref": "#/$defs/text" },
+        "learner": { "$ref": "#/$defs/text" }
+      }
+    },
+    "misunderstanding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pattern", "correction", "explanation_bg"],
+      "properties": {
+        "pattern": { "$ref": "#/$defs/text" },
+        "correction": { "$ref": "#/$defs/text" },
+        "explanation_bg": { "$ref": "#/$defs/text" }
+      }
+    },
+    "pattern": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 16,
+      "items": { "$ref": "#/$defs/shortText" }
+    },
+    "exercise": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "exercise_id",
+        "exercise_type",
+        "goal",
+        "expected_intent",
+        "prompts",
+        "accepted_patterns",
+        "target_vocabulary",
+        "gentle_correction",
+        "explanation_bg"
+      ],
+      "properties": {
+        "exercise_id": { "$ref": "#/$defs/slug" },
+        "exercise_type": {
+          "enum": ["guided_response", "vocabulary", "comprehension", "role_play"]
+        },
+        "goal": { "$ref": "#/$defs/text" },
+        "expected_intent": { "$ref": "#/$defs/text" },
+        "prompts": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "items": { "$ref": "#/$defs/text" }
+        },
+        "accepted_patterns": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 32,
+          "items": { "$ref": "#/$defs/pattern" }
+        },
+        "target_vocabulary": { "$ref": "#/$defs/textList64" },
+        "gentle_correction": { "$ref": "#/$defs/text" },
+        "explanation_bg": { "$ref": "#/$defs/text" }
+      }
+    }
+  }
+}

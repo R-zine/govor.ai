@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 from govor_domain import (
-    SCENARIOS,
     DetectedLanguage,
     Difficulty,
     DifficultyChangeReason,
@@ -10,18 +11,21 @@ from govor_domain import (
     LessonStatus,
     TeachingEngine,
     TeachingState,
-    get_scenario,
+    load_lesson_catalog,
 )
+
+ROOT = Path(__file__).resolve().parents[3]
+CATALOG = load_lesson_catalog(ROOT / "assets" / "lesson-content")
 
 
 def test_four_scenarios_define_complete_guidance() -> None:
-    assert set(SCENARIOS) == {
+    assert {lesson.scenario_id for lesson in CATALOG.lessons} == {
         "cafe-ordering",
         "supermarket-shopping",
         "airport-travel",
         "home-conversation",
     }
-    for lesson in SCENARIOS.values():
+    for lesson in CATALOG.lessons:
         assert len(lesson.exercises) >= 3
         assert len(lesson.difficulty_descriptions) == 3
         assert lesson.objectives
@@ -34,7 +38,7 @@ def test_four_scenarios_define_complete_guidance() -> None:
 
 
 def test_help_and_bulgarian_production_do_not_advance() -> None:
-    engine = TeachingEngine(get_scenario("cafe-ordering"))
+    engine = TeachingEngine(CATALOG.get("cafe-ordering"))
 
     help_outcome = engine.evaluate(
         "Какво означава order?",
@@ -55,7 +59,7 @@ def test_help_and_bulgarian_production_do_not_advance() -> None:
 
 
 def test_repeated_difficulty_lowers_level_with_an_explainable_reason() -> None:
-    engine = TeachingEngine(get_scenario("cafe-ordering"))
+    engine = TeachingEngine(CATALOG.get("cafe-ordering"))
 
     first = engine.evaluate("Coffee.", DetectedLanguage.ENGLISH, LearnerIntent.ENGLISH_ANSWER)
     second = engine.evaluate("Coffee.", DetectedLanguage.ENGLISH, LearnerIntent.ENGLISH_ANSWER)
@@ -71,7 +75,7 @@ def test_repeated_difficulty_lowers_level_with_an_explainable_reason() -> None:
 
 def test_consistent_first_try_success_raises_difficulty() -> None:
     engine = TeachingEngine(
-        get_scenario("cafe-ordering"),
+        CATALOG.get("cafe-ordering"),
         TeachingState(difficulty=Difficulty.BEGINNER),
     )
 
@@ -134,7 +138,7 @@ def test_complete_guided_lesson_finishes_every_scenario(
     scenario_id: str,
     answers: tuple[str, str, str],
 ) -> None:
-    engine = TeachingEngine(get_scenario(scenario_id))
+    engine = TeachingEngine(CATALOG.get(scenario_id))
 
     outcomes = [
         engine.evaluate(answer, DetectedLanguage.ENGLISH, LearnerIntent.ENGLISH_ANSWER)
@@ -151,4 +155,4 @@ def test_complete_guided_lesson_finishes_every_scenario(
 
 def test_unknown_scenario_is_rejected() -> None:
     with pytest.raises(ValueError, match="unknown guided scenario"):
-        get_scenario("not-a-scenario")
+        CATALOG.get("not-a-scenario")

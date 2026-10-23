@@ -14,9 +14,10 @@ from .conversation import (
     classify_explicit_intent,
     detect_language,
 )
+from .lesson_catalog import LessonCatalog, lesson_definition_from_mapping, load_lesson_catalog
+from .lesson_import import IMPORT_LOCK_NAME, ImportedLesson, import_lesson_bundle
 from .session import InvalidTransition, SessionEvent, SessionMachine, SessionState
 from .teaching import (
-    SCENARIOS,
     CommonMisunderstanding,
     Difficulty,
     DifficultyChangeReason,
@@ -30,7 +31,6 @@ from .teaching import (
     TeachingEngine,
     TeachingOutcome,
     TeachingState,
-    get_scenario,
 )
 
 __all__ = [
@@ -47,8 +47,11 @@ __all__ = [
     "ExampleInteraction",
     "ExerciseType",
     "InvalidTransition",
+    "IMPORT_LOCK_NAME",
+    "ImportedLesson",
     "LearnerIntent",
     "LessonContext",
+    "LessonCatalog",
     "LessonDefinition",
     "LessonExercise",
     "LessonProgress",
@@ -58,11 +61,12 @@ __all__ = [
     "SessionEvent",
     "SessionMachine",
     "SessionState",
-    "SCENARIOS",
     "TeachingEngine",
     "TeachingOutcome",
     "TeachingState",
     "classify_explicit_intent",
     "detect_language",
-    "get_scenario",
+    "lesson_definition_from_mapping",
+    "import_lesson_bundle",
+    "load_lesson_catalog",
 ]

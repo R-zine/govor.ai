@@ -1,0 +1,136 @@
+{
+  "schema_version": 1,
+  "scenario_id": "home-conversation",
+  "title": "Everyday conversation at home",
+  "description": "Describe a routine.",
+  "display_order": 4,
+  "scene_template_id": "home",
+  "objectives": [
+    "Describe a routine.",
+    "Make a polite request for help.",
+    "Discuss an evening plan."
+  ],
+  "target_vocabulary": [
+    "usually",
+    "could you",
+    "help me",
+    "this evening"
+  ],
+  "difficulty_descriptions": [
+    "Modelled home phrases.",
+    "Everyday questions with light cues.",
+    "Open but goal-directed home conversation."
+  ],
+  "examples": [
+    {
+      "teacher": "What do you do in the morning?",
+      "learner": "I usually make breakfast."
+    },
+    {
+      "teacher": "What shall we do this evening?",
+      "learner": "Let's watch a film."
+    }
+  ],
+  "common_misunderstandings": [
+    {
+      "pattern": "I usually am make breakfast",
+      "correction": "Use the simple present: ‘I usually make breakfast.’",
+      "explanation_bg": "След ‘usually’ тук използвайте сегашно просто време без ‘am’."
+    }
+  ],
+  "exercises": [
+    {
+      "exercise_id": "morning-routine",
+      "exercise_type": "role_play",
+      "goal": "Describe one morning habit.",
+      "expected_intent": "describe_routine",
+      "prompts": [
+        "Say: I usually make breakfast in the morning.",
+        "What do you usually do in the morning?",
+        "Tell me about one part of your normal morning routine."
+      ],
+      "accepted_patterns": [
+        [
+          "usually",
+          "morning"
+        ],
+        [
+          "every morning"
+        ],
+        [
+          "in the morning"
+        ]
+      ],
+      "target_vocabulary": [
+        "usually",
+        "morning"
+      ],
+      "gentle_correction": "Use the simple present to describe a regular habit.",
+      "explanation_bg": "За навик използвайте сегашно просто време, например ‘I usually make ...’."
+    },
+    {
+      "exercise_id": "request-help",
+      "exercise_type": "guided_response",
+      "goal": "Make a polite request at home.",
+      "expected_intent": "request_help",
+      "prompts": [
+        "Say: Could you help me with dinner, please?",
+        "Ask me politely to help with dinner.",
+        "Dinner is not ready and you need help. What do you say?"
+      ],
+      "accepted_patterns": [
+        [
+          "could you",
+          "help"
+        ],
+        [
+          "can you",
+          "help"
+        ],
+        [
+          "help me",
+          "please"
+        ]
+      ],
+      "target_vocabulary": [
+        "could you",
+        "help me",
+        "dinner"
+      ],
+      "gentle_correction": "Use ‘could you’ or ‘can you’ plus the help you need.",
+      "explanation_bg": "‘Could you help me ...?’ е учтива молба за помощ."
+    },
+    {
+      "exercise_id": "evening-plan",
+      "exercise_type": "comprehension",
+      "goal": "Suggest an evening activity.",
+      "expected_intent": "suggest_activity",
+      "prompts": [
+        "Say: Let's watch a film this evening.",
+        "What would you like to do this evening?",
+        "We have no plans after dinner. Suggest something we can do together."
+      ],
+      "accepted_patterns": [
+        [
+          "let's"
+        ],
+        [
+          "this evening"
+        ],
+        [
+          "we could"
+        ],
+        [
+          "i would like"
+        ]
+      ],
+      "target_vocabulary": [
+        "this evening",
+        "let's"
+      ],
+      "gentle_correction": "Make one clear suggestion for the evening.",
+      "explanation_bg": "‘Let’s ...’ се използва, когато предлагате общо занимание."
+    }
+  ],
+  "completion_condition": "Complete the routine, request, and planning exchanges in English."
+}

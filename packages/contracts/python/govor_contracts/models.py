@@ -87,6 +87,37 @@ class SessionStartPayload(StrictModel):
     spaced_review_enabled: bool = False
 
 
+class LessonCatalogRequestPayload(StrictModel):
+    pass
+
+
+class LessonCatalogItemPayload(StrictModel):
+    scenario_id: str = Field(pattern=r"^[a-z][a-z0-9-]{2,63}$", max_length=64)
+    title: str = Field(min_length=1, max_length=128)
+    description: str = Field(min_length=1, max_length=512)
+    display_order: int = Field(ge=0, le=9_999)
+
+
+class LessonCatalogPayload(StrictModel):
+    default_scenario_id: str = Field(pattern=r"^[a-z][a-z0-9-]{2,63}$", max_length=64)
+    lessons: list[LessonCatalogItemPayload] = Field(min_length=1, max_length=64)
+
+    @model_validator(mode="after")
+    def validate_catalog(self) -> LessonCatalogPayload:
+        scenario_ids = [lesson.scenario_id for lesson in self.lessons]
+        if len(scenario_ids) != len(set(scenario_ids)):
+            raise ValueError("lesson catalog scenario IDs must be unique")
+        if self.default_scenario_id not in scenario_ids:
+            raise ValueError("default lesson must be present in the catalog")
+        expected = sorted(
+            self.lessons,
+            key=lambda item: (item.display_order, item.title, item.scenario_id),
+        )
+        if self.lessons != expected:
+            raise ValueError("lesson catalog must use display order")
+        return self
+
+
 class SessionScopedPayload(StrictModel):
     session_id: UUID
 

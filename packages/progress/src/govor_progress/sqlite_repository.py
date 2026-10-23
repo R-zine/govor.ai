@@ -20,7 +20,6 @@ from govor_domain import (
     LessonStatus,
     TeachingOutcome,
     TeachingState,
-    get_scenario,
 )
 
 
@@ -67,8 +66,9 @@ class SQLiteProgressRepository:
                 ),
             )
 
-    def load_or_start(self, scenario_id: str) -> tuple[TeachingState, bool]:
-        lesson = get_scenario(scenario_id)
+    def load_or_start(self, scenario_id: str, exercise_count: int) -> tuple[TeachingState, bool]:
+        if not 1 <= exercise_count <= 64:
+            raise ValueError("exercise count must be between one and 64")
         settings = self.get_settings()
         with self._connect() as connection:
             row = connection.execute(
@@ -89,7 +89,7 @@ class SQLiteProgressRepository:
                         else None
                     ),
                 )
-                if state.exercise_index < len(lesson.exercises):
+                if state.exercise_index < exercise_count:
                     return state, True
 
             now = self._timestamp()

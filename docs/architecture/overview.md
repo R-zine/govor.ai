@@ -61,12 +61,14 @@ playback. Godot and the domain do not depend on a speech SDK. See ADR-0007.
 
 ## Scene and avatar boundary
 
-`packages/scene_planner` maps the four committed lesson scenario IDs to deterministic scene
-specifications. The shared renderer contract permits only closed environment, camera, lighting,
-transition, and asset identifiers plus bounded transforms. Godot assembles those specifications
-entirely in memory from a procedural catalog, reuses cached mesh/material resources, and releases
-the prior scene tree. Unknown wire asset IDs are rejected; an internal missing catalog
-implementation produces a predictable magenta fallback.
+`packages/scene_planner` maps four closed scene-template IDs to deterministic scene
+specifications. A validated lesson selects one of those templates independently of its scenario
+ID, so additional lesson content can reuse an environment without changing renderer code. The
+shared renderer contract permits only closed environment, camera, lighting, transition, and asset
+identifiers plus bounded transforms. Godot assembles those specifications entirely in memory from
+a procedural catalog, reuses cached mesh/material resources, and releases the prior scene tree.
+Unknown wire asset IDs are rejected; an internal missing catalog implementation produces a
+predictable magenta fallback.
 
 The active teacher is a repository-owned CC0 stylized procedural avatar. It animates idle,
 speaking, listening, thinking, gestures, and basic expressions. The host derives a bounded energy
@@ -95,15 +97,25 @@ and memory window are configurable without changing domain code. See ADR-0006.
 
 ## Teaching and progress boundary
 
-`packages/domain` contains four committed guided lesson definitions and the deterministic
-`TeachingEngine`. The active local dialogue model may classify or phrase a conversational turn,
+`assets/lesson-content` contains the versioned JSON lesson definitions. At startup,
+`packages/domain` strictly loads the complete directory into an immutable ordered catalog; the
+packaged copy and additive user imports live under `content/lessons`. Invalid or duplicate content
+fails startup. `Manage-Lessons.cmd` opens a native Windows picker and passes one local `.json` or
+`.zip` to the launcher importer. That boundary validates all entries, the combined catalog, and
+closed scene IDs before publishing files under an import lock. The host polls the directory,
+atomically swaps only a complete valid snapshot, and pushes its bounded summary over existing
+authenticated control connections. Android updates its selector without reconnecting. Active
+lessons retain their original catalog/service snapshot; subsequent lessons use the replacement.
+Invalid out-of-band edits leave the last valid catalog active and mark health as `reload_error`.
+There is no runtime network download. The deterministic `TeachingEngine` consumes the selected
+definition. The active local dialogue model may classify or phrase a conversational turn,
 but it cannot award progress. Only recognized English production that satisfies the active guided
 exercise can advance. Bulgarian/mixed assistance, vocabulary questions, repetition, slower-speech
 requests, ambiguity, and recognition failure retain the exercise.
 
 Two failed English attempts lower difficulty by one level; two consecutive first-attempt successes
-raise it by one. A closed reason enum accompanies each change. The Android client selects the
-café, supermarket, airport, or home scenario and displays the host-owned progress snapshot.
+raise it by one. A closed reason enum accompanies each change. The Android client selects a lesson
+advertised by the host and displays the host-owned progress snapshot.
 
 `packages/progress` is the replaceable SQLite adapter. It persists structured settings, exercise
 counters, vocabulary outcomes/review dates, completion, and difficulty history. Its schema has no

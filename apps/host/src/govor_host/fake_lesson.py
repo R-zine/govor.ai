@@ -16,9 +16,10 @@ from govor_contracts import ProviderCapabilities
 from govor_domain import (
     DetectedLanguage,
     LearnerIntent,
+    LessonCatalog,
     LessonProgress,
     TeachingEngine,
-    get_scenario,
+    load_lesson_catalog,
 )
 from govor_provider_interfaces import LessonResult, TeacherTurn, Transcript, UtteranceAudio
 
@@ -92,11 +93,14 @@ class FakeLessonService:
         recognizer: FakeSpeechRecognizer | None = None,
         dialogue: FakeDialogueProvider | None = None,
         speech: FakeSpeechProvider | None = None,
+        *,
+        catalog: LessonCatalog | None = None,
     ) -> None:
         self.recognizer = recognizer or FakeSpeechRecognizer()
         self.dialogue = dialogue or FakeDialogueProvider()
         self.speech = speech or FakeSpeechProvider()
-        self._engine = TeachingEngine(get_scenario("cafe-ordering"))
+        self.catalog = catalog or load_lesson_catalog("assets/lesson-content")
+        self._engine = TeachingEngine(self.catalog.get(self.catalog.default_scenario_id))
 
     @property
     def progress(self) -> LessonProgress:
@@ -119,7 +123,7 @@ class FakeLessonService:
     ) -> TeacherTurn:
         _ = spaced_review_enabled
         self._engine = TeachingEngine(
-            get_scenario(scenario_id),
+            self.catalog.get(scenario_id),
             english_locale=english_locale,
         )
         return await self.speech.synthesize(

@@ -146,25 +146,35 @@ try {
     & $adb -s $serial shell input keyevent 4
     Start-Sleep -Milliseconds 250
     $entryUi = Get-EmulatorUiDocument
-    $connectText = $entryUi.SelectNodes('//node') | Where-Object { $_.text -eq 'Connect' } |
+    $connectText = $entryUi.SelectNodes('//node') |
+        Where-Object { $_.text -eq 'Connect and load lessons' } |
         Select-Object -First 1
     if (-not $connectText) {
-        throw 'The disconnected UI did not expose the Connect button.'
+        throw 'The disconnected UI did not expose the lesson-catalog connection button.'
     }
     $connectCenter = Get-NodeCenter -Node $connectText
     & $adb -s $serial shell input tap $connectCenter[0] $connectCenter[1]
 
     $connectedUi = $null
-    for ($attempt = 0; $attempt -lt 20; $attempt++) {
+    for ($attempt = 0; $attempt -lt 40; $attempt++) {
         $candidate = Get-EmulatorUiDocument
-        if ($candidate.SelectNodes('//node') | Where-Object { $_.text -like 'media: connected*' }) {
+        $mediaConnected = $candidate.SelectNodes('//node') |
+            Where-Object { $_.text -like 'media: connected*' }
+        $startLesson = $candidate.SelectNodes('//node') |
+            Where-Object { $_.text -eq 'Start lesson' } | Select-Object -First 1
+        if ($mediaConnected -and $startLesson) {
             $connectedUi = $candidate
             break
         }
+        Start-Sleep -Milliseconds 250
     }
     if (-not $connectedUi) {
-        throw "The emulator did not reach connected state. See $serverStderr."
+        throw "The emulator did not load the host lesson catalog. See $controlStderr."
     }
+    $startLesson = $connectedUi.SelectNodes('//node') |
+        Where-Object { $_.text -eq 'Start lesson' } | Select-Object -First 1
+    $startCenter = Get-NodeCenter -Node $startLesson
+    & $adb -s $serial shell input tap $startCenter[0] $startCenter[1]
 
     $rendererProcess = Start-Process -FilePath $renderer -ArgumentList @(
         '--log-file', $rendererRuntimeLog, '--', '--mute-local-audio',
@@ -305,7 +315,8 @@ try {
     $reconnectUi = $null
     for ($attempt = 0; $attempt -lt 20; $attempt++) {
         $candidate = Get-EmulatorUiDocument
-        if ($candidate.SelectNodes('//node') | Where-Object { $_.text -eq 'Connect' }) {
+        if ($candidate.SelectNodes('//node') |
+            Where-Object { $_.text -eq 'Connect and load lessons' }) {
             $reconnectUi = $candidate
             break
         }
@@ -315,22 +326,30 @@ try {
         throw 'The emulator did not return to disconnected state for the reconnect check.'
     }
     $connectText = $reconnectUi.SelectNodes('//node') |
-        Where-Object { $_.text -eq 'Connect' } | Select-Object -First 1
+        Where-Object { $_.text -eq 'Connect and load lessons' } | Select-Object -First 1
     $connectCenter = Get-NodeCenter -Node $connectText
     & $adb -s $serial shell input tap $connectCenter[0] $connectCenter[1]
 
     $reconnectedUi = $null
-    for ($attempt = 0; $attempt -lt 30; $attempt++) {
+    for ($attempt = 0; $attempt -lt 40; $attempt++) {
         $candidate = Get-EmulatorUiDocument
-        if ($candidate.SelectNodes('//node') | Where-Object { $_.text -like 'media: connected*' }) {
+        $mediaConnected = $candidate.SelectNodes('//node') |
+            Where-Object { $_.text -like 'media: connected*' }
+        $startLesson = $candidate.SelectNodes('//node') |
+            Where-Object { $_.text -eq 'Start lesson' } | Select-Object -First 1
+        if ($mediaConnected -and $startLesson) {
             $reconnectedUi = $candidate
             break
         }
         Start-Sleep -Milliseconds 250
     }
     if (-not $reconnectedUi) {
-        throw 'The emulator did not reconnect while the Godot renderer remained active.'
+        throw 'The emulator did not reload lessons while the Godot renderer remained active.'
     }
+    $startLesson = $reconnectedUi.SelectNodes('//node') |
+        Where-Object { $_.text -eq 'Start lesson' } | Select-Object -First 1
+    $startCenter = Get-NodeCenter -Node $startLesson
+    & $adb -s $serial shell input tap $startCenter[0] $startCenter[1]
 
     for ($attempt = 0; $attempt -lt 50; $attempt++) {
         $serverLog = (Get-Content -LiteralPath $serverStdout -Raw -ErrorAction SilentlyContinue) +

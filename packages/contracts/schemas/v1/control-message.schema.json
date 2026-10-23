@@ -10,6 +10,8 @@
     "message_type": {
       "enum": [
         "session.start",
+        "lesson.catalog.request",
+        "lesson.catalog",
         "session.state",
         "session.cancel",
         "session.retry",
@@ -31,6 +33,14 @@
     "payload": { "type": "object" }
   },
   "allOf": [
+    {
+      "if": { "properties": { "message_type": { "const": "lesson.catalog.request" } } },
+      "then": { "properties": { "payload": { "$ref": "#/$defs/lessonCatalogRequest" } } }
+    },
+    {
+      "if": { "properties": { "message_type": { "const": "lesson.catalog" } } },
+      "then": { "properties": { "payload": { "$ref": "#/$defs/lessonCatalog" } } }
+    },
     {
       "if": { "properties": { "message_type": { "const": "session.start" } } },
       "then": { "properties": { "payload": { "$ref": "#/$defs/sessionStart" } } }
@@ -114,6 +124,44 @@
       "additionalProperties": false,
       "required": ["session_id"],
       "properties": { "session_id": { "$ref": "#/$defs/uuid" } }
+    },
+    "lessonCatalogRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "maxProperties": 0
+    },
+    "lessonCatalogItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scenario_id", "title", "description", "display_order"],
+      "properties": {
+        "scenario_id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]{2,63}$",
+          "maxLength": 64
+        },
+        "title": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "description": { "type": "string", "minLength": 1, "maxLength": 512 },
+        "display_order": { "type": "integer", "minimum": 0, "maximum": 9999 }
+      }
+    },
+    "lessonCatalog": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["default_scenario_id", "lessons"],
+      "properties": {
+        "default_scenario_id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]{2,63}$",
+          "maxLength": 64
+        },
+        "lessons": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "items": { "$ref": "#/$defs/lessonCatalogItem" }
+        }
+      }
     },
     "sessionStart": {
       "type": "object",

@@ -52,12 +52,23 @@ class ExampleInteraction:
     teacher: str
     learner: str
 
+    def __post_init__(self) -> None:
+        if any(not value or len(value) > 1_024 for value in (self.teacher, self.learner)):
+            raise ValueError("example interaction text must be non-empty and bounded")
+
 
 @dataclass(frozen=True, slots=True)
 class CommonMisunderstanding:
     pattern: str
     correction: str
     explanation_bg: str
+
+    def __post_init__(self) -> None:
+        if any(
+            not value or len(value) > 1_024
+            for value in (self.pattern, self.correction, self.explanation_bg)
+        ):
+            raise ValueError("misunderstanding text must be non-empty and bounded")
 
 
 @dataclass(frozen=True, slots=True)
@@ -73,6 +84,8 @@ class LessonExercise:
     explanation_bg: str
 
     def __post_init__(self) -> None:
+        if not re.fullmatch(r"[a-z][a-z0-9-]{1,63}", self.exercise_id):
+            raise ValueError("exercise id must be a bounded slug")
         values = (
             self.exercise_id,
             self.goal,
@@ -85,6 +98,14 @@ class LessonExercise:
             raise ValueError("exercise text must be non-empty and bounded")
         if not self.accepted_patterns or any(not pattern for pattern in self.accepted_patterns):
             raise ValueError("exercise requires at least one non-empty accepted pattern")
+        if any(
+            not value or len(value) > 128 for pattern in self.accepted_patterns for value in pattern
+        ):
+            raise ValueError("accepted pattern values must be non-empty and bounded")
+        if not self.target_vocabulary or any(
+            not value or len(value) > 128 for value in self.target_vocabulary
+        ):
+            raise ValueError("exercise vocabulary must be non-empty and bounded")
 
     def prompt_for(self, difficulty: Difficulty) -> str:
         return self.prompts[_DIFFICULTIES.index(difficulty)]
@@ -101,6 +122,9 @@ class LessonExercise:
 class LessonDefinition:
     scenario_id: str
     title: str
+    description: str
+    display_order: int
+    scene_template_id: str
     objectives: tuple[str, ...]
     target_vocabulary: tuple[str, ...]
     difficulty_descriptions: tuple[str, str, str]
@@ -112,10 +136,22 @@ class LessonDefinition:
     def __post_init__(self) -> None:
         if not re.fullmatch(r"[a-z][a-z0-9-]{2,63}", self.scenario_id):
             raise ValueError("scenario id must be a bounded slug")
-        if not self.title or not self.objectives or not self.target_vocabulary:
+        if not re.fullmatch(r"[a-z][a-z0-9-]{2,63}", self.scene_template_id):
+            raise ValueError("scene template id must be a bounded slug")
+        if not 0 <= self.display_order <= 9_999:
+            raise ValueError("lesson display order must be between 0 and 9999")
+        if not self.title or len(self.title) > 128:
+            raise ValueError("lesson title must be non-empty and bounded")
+        if not self.description or len(self.description) > 512:
+            raise ValueError("lesson description must be non-empty and bounded")
+        if not self.objectives or not self.target_vocabulary:
             raise ValueError("lesson metadata must not be empty")
+        if len(self.difficulty_descriptions) != len(_DIFFICULTIES):
+            raise ValueError("lesson requires one description per difficulty")
         if not self.examples or not self.common_misunderstandings or not self.exercises:
             raise ValueError("lesson guidance must not be empty")
+        if not self.completion_condition or len(self.completion_condition) > 1_024:
+            raise ValueError("lesson completion condition must be non-empty and bounded")
         exercise_ids = {exercise.exercise_id for exercise in self.exercises}
         if len(exercise_ids) != len(self.exercises):
             raise ValueError("exercise ids must be unique within a scenario")
@@ -352,310 +388,3 @@ def _raise(value: Difficulty) -> Difficulty:
 
 def _normalize(text: str) -> str:
     return " ".join(re.findall(r"[a-z0-9']+", text.casefold().replace("’", "'")))
-
-
-SCENARIOS: dict[str, LessonDefinition] = {
-    "cafe-ordering": LessonDefinition(
-        scenario_id="cafe-ordering",
-        title="Ordering at a café",
-        objectives=(
-            "Make a polite drink order.",
-            "Respond to follow-up questions.",
-            "Choose between drinking in and takeaway.",
-        ),
-        target_vocabulary=("would like", "please", "anything else", "for here", "to go"),
-        difficulty_descriptions=(
-            "Modelled phrases and a named item.",
-            "Short service questions with light cues.",
-            "Natural role-play with minimal prompting.",
-        ),
-        examples=(
-            ExampleInteraction("What would you like?", "I would like a coffee, please."),
-            ExampleInteraction("For here or to go?", "For here, please."),
-        ),
-        common_misunderstandings=(
-            CommonMisunderstanding(
-                "I want coffee",
-                "Use ‘I would like’ for a gentler request.",
-                "‘I would like’ звучи по-учтиво от директното ‘I want’.",
-            ),
-        ),
-        exercises=(
-            LessonExercise(
-                "order-drink",
-                ExerciseType.GUIDED_RESPONSE,
-                "Order a drink politely.",
-                "order_drink",
-                (
-                    "Say: I would like a coffee, please.",
-                    "What would you like to drink?",
-                    "Welcome to the café. May I take your order?",
-                ),
-                (("would like", "coffee"), ("can i have", "coffee"), ("coffee", "please")),
-                ("would like", "coffee", "please"),
-                "A polite order needs the item and a courteous request.",
-                "Кажете какво искате с учтивата фраза ‘I would like ... please’.",
-            ),
-            LessonExercise(
-                "finish-order",
-                ExerciseType.VOCABULARY,
-                "Finish an order after a follow-up question.",
-                "finish_order",
-                (
-                    "Say: That is all, thank you.",
-                    "Would you like anything else?",
-                    "Anything else for you today?",
-                ),
-                (("that's all",), ("that is all",), ("nothing else",)),
-                ("anything else", "that's all", "thank you"),
-                "Use a complete phrase to show that the order is finished.",
-                "‘That is all’ означава, че не желаете нищо допълнително.",
-            ),
-            LessonExercise(
-                "here-or-go",
-                ExerciseType.COMPREHENSION,
-                "Understand and answer the dine-in or takeaway question.",
-                "choose_service",
-                (
-                    "Answer: For here, please.",
-                    "Is that for here or to go?",
-                    "Will you be having that here, or taking it away?",
-                ),
-                (("for here",), ("to go",), ("take away",), ("takeaway",)),
-                ("for here", "to go"),
-                "Choose either eating here or taking the order away.",
-                "‘For here’ е за консумация на място, а ‘to go’ е за вкъщи.",
-            ),
-        ),
-        completion_condition="Complete all three café exchanges with English production.",
-    ),
-    "supermarket-shopping": LessonDefinition(
-        scenario_id="supermarket-shopping",
-        title="Shopping in a supermarket",
-        objectives=(
-            "Ask where an item is.",
-            "Request a quantity.",
-            "Respond at the checkout.",
-        ),
-        target_vocabulary=("where can I find", "a kilo of", "checkout", "bag"),
-        difficulty_descriptions=(
-            "Named products and complete models.",
-            "Short shopping questions.",
-            "Natural supermarket role-play.",
-        ),
-        examples=(
-            ExampleInteraction("Can I help you?", "Where can I find the milk?"),
-            ExampleInteraction("Would you like a bag?", "Yes, please."),
-        ),
-        common_misunderstandings=(
-            CommonMisunderstanding(
-                "Where is milks?",
-                "Milk is normally uncountable: say ‘the milk’.",
-                "‘Milk’ обикновено е неброимо и не получава окончание -s.",
-            ),
-        ),
-        exercises=(
-            LessonExercise(
-                "find-milk",
-                ExerciseType.GUIDED_RESPONSE,
-                "Ask where a product is.",
-                "locate_product",
-                (
-                    "Say: Where can I find the milk?",
-                    "Ask me where the milk is.",
-                    "You cannot see the dairy section. Ask an employee for help.",
-                ),
-                (("where", "milk"), ("find", "milk")),
-                ("where", "find", "milk"),
-                "Make it a clear question and name the product.",
-                "Използвайте ‘Where can I find ...?’ за да попитате къде е продуктът.",
-            ),
-            LessonExercise(
-                "buy-apples",
-                ExerciseType.VOCABULARY,
-                "Request a quantity of produce.",
-                "request_quantity",
-                (
-                    "Say: I would like a kilo of apples, please.",
-                    "How many apples would you like?",
-                    "Tell the assistant the quantity of apples you need.",
-                ),
-                (("kilo", "apple"), ("kilogram", "apple")),
-                ("kilo", "apples"),
-                "Include both the amount and the product.",
-                "‘A kilo of apples’ означава един килограм ябълки.",
-            ),
-            LessonExercise(
-                "checkout-bag",
-                ExerciseType.COMPREHENSION,
-                "Answer a checkout question.",
-                "choose_bag",
-                (
-                    "Answer: Yes, I would like a bag, please.",
-                    "Would you like a bag?",
-                    "At the checkout I ask whether you need a bag. Respond naturally.",
-                ),
-                (("yes", "bag"), ("no", "bag"), ("no thank",)),
-                ("checkout", "bag"),
-                "Say clearly whether you need a bag.",
-                "‘Would you like a bag?’ пита дали желаете торбичка.",
-            ),
-        ),
-        completion_condition="Complete all three supermarket exchanges in English.",
-    ),
-    "airport-travel": LessonDefinition(
-        scenario_id="airport-travel",
-        title="Traveling through an airport",
-        objectives=(
-            "State a destination at check-in.",
-            "Describe hand luggage.",
-            "Understand a boarding-gate direction.",
-        ),
-        target_vocabulary=("check in", "boarding pass", "hand luggage", "gate"),
-        difficulty_descriptions=(
-            "Modelled airport phrases.",
-            "Common check-in questions.",
-            "Natural airport role-play and directions.",
-        ),
-        examples=(
-            ExampleInteraction("Where are you flying today?", "I am flying to London."),
-            ExampleInteraction("Do you have hand luggage?", "Yes, I have one small bag."),
-        ),
-        common_misunderstandings=(
-            CommonMisunderstanding(
-                "I fly in London",
-                "Use ‘fly to’ before a destination.",
-                "За посока се използва ‘fly to’, а не ‘fly in’.",
-            ),
-        ),
-        exercises=(
-            LessonExercise(
-                "state-destination",
-                ExerciseType.GUIDED_RESPONSE,
-                "State a flight destination.",
-                "state_destination",
-                (
-                    "Say: I am flying to London.",
-                    "Where are you flying today?",
-                    "Good morning. What is your destination?",
-                ),
-                (("flying to", "london"), ("flight to", "london"), ("going to", "london")),
-                ("flying", "destination", "London"),
-                "Use ‘to’ before the destination.",
-                "Кажете ‘flying to’ и след това града, към който пътувате.",
-            ),
-            LessonExercise(
-                "hand-luggage",
-                ExerciseType.VOCABULARY,
-                "Describe cabin baggage.",
-                "describe_luggage",
-                (
-                    "Say: I have one small bag as hand luggage.",
-                    "Do you have any hand luggage?",
-                    "Tell the check-in agent what you will take into the cabin.",
-                ),
-                (("hand luggage",), ("carry on",), ("small bag",)),
-                ("hand luggage", "small bag"),
-                "Name the bag that stays with you in the cabin.",
-                "‘Hand luggage’ е багажът, който вземате със себе си в самолета.",
-            ),
-            LessonExercise(
-                "find-gate",
-                ExerciseType.COMPREHENSION,
-                "Ask for the boarding gate.",
-                "locate_gate",
-                (
-                    "Ask: Where is gate twelve, please?",
-                    "Your boarding pass says gate twelve. Ask for directions.",
-                    "Boarding starts soon and you cannot find gate twelve. What do you ask?",
-                ),
-                (("where", "gate"), ("find", "gate")),
-                ("boarding pass", "gate"),
-                "Ask where the gate is and include its number if you know it.",
-                "‘Gate’ е изходът за качване. Попитайте ‘Where is gate ...?’.",
-            ),
-        ),
-        completion_condition="Complete check-in, luggage, and gate tasks in English.",
-    ),
-    "home-conversation": LessonDefinition(
-        scenario_id="home-conversation",
-        title="Everyday conversation at home",
-        objectives=(
-            "Describe a routine.",
-            "Make a polite request for help.",
-            "Discuss an evening plan.",
-        ),
-        target_vocabulary=("usually", "could you", "help me", "this evening"),
-        difficulty_descriptions=(
-            "Modelled home phrases.",
-            "Everyday questions with light cues.",
-            "Open but goal-directed home conversation.",
-        ),
-        examples=(
-            ExampleInteraction("What do you do in the morning?", "I usually make breakfast."),
-            ExampleInteraction("What shall we do this evening?", "Let's watch a film."),
-        ),
-        common_misunderstandings=(
-            CommonMisunderstanding(
-                "I usually am make breakfast",
-                "Use the simple present: ‘I usually make breakfast.’",
-                "След ‘usually’ тук използвайте сегашно просто време без ‘am’.",
-            ),
-        ),
-        exercises=(
-            LessonExercise(
-                "morning-routine",
-                ExerciseType.ROLE_PLAY,
-                "Describe one morning habit.",
-                "describe_routine",
-                (
-                    "Say: I usually make breakfast in the morning.",
-                    "What do you usually do in the morning?",
-                    "Tell me about one part of your normal morning routine.",
-                ),
-                (("usually", "morning"), ("every morning",), ("in the morning",)),
-                ("usually", "morning"),
-                "Use the simple present to describe a regular habit.",
-                "За навик използвайте сегашно просто време, например ‘I usually make ...’.",
-            ),
-            LessonExercise(
-                "request-help",
-                ExerciseType.GUIDED_RESPONSE,
-                "Make a polite request at home.",
-                "request_help",
-                (
-                    "Say: Could you help me with dinner, please?",
-                    "Ask me politely to help with dinner.",
-                    "Dinner is not ready and you need help. What do you say?",
-                ),
-                (("could you", "help"), ("can you", "help"), ("help me", "please")),
-                ("could you", "help me", "dinner"),
-                "Use ‘could you’ or ‘can you’ plus the help you need.",
-                "‘Could you help me ...?’ е учтива молба за помощ.",
-            ),
-            LessonExercise(
-                "evening-plan",
-                ExerciseType.COMPREHENSION,
-                "Suggest an evening activity.",
-                "suggest_activity",
-                (
-                    "Say: Let's watch a film this evening.",
-                    "What would you like to do this evening?",
-                    "We have no plans after dinner. Suggest something we can do together.",
-                ),
-                (("let's",), ("this evening",), ("we could",), ("i would like",)),
-                ("this evening", "let's"),
-                "Make one clear suggestion for the evening.",
-                "‘Let’s ...’ се използва, когато предлагате общо занимание.",
-            ),
-        ),
-        completion_condition="Complete the routine, request, and planning exchanges in English.",
-    ),
-}
-
-
-def get_scenario(scenario_id: str) -> LessonDefinition:
-    try:
-        return SCENARIOS[scenario_id]
-    except KeyError as error:
-        raise ValueError("unknown guided scenario") from error

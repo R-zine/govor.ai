@@ -46,6 +46,19 @@ inside the extracted version directory.
 The pairing code is single use. A successfully paired Android installation keeps a random device
 credential and normally needs only the same PC address/ports on later starts.
 
+## Add lessons
+
+1. Double-click `Manage-Lessons.cmd` in the extracted Windows package.
+2. Choose one `.json` lesson or one `.zip` bundle containing one or more JSON lessons.
+3. Wait for the confirmation dialog. If govor.ai is running, connected Android clients update
+   their lesson list automatically; no host restart or phone reconnect is required. A lesson
+   already in progress is not changed and the new catalog applies to the next lesson.
+
+Imports are local, additive, and offline. Existing scenario IDs are never overwritten. A rejected
+or partially invalid bundle installs nothing; correct the content and select it again. The package
+stores imported files under `content\lessons`. Keep a copy of custom lesson files before replacing
+the extracted version directory during an update, then import them into the new version.
+
 ## Update
 
 1. Stop the old launcher completely.

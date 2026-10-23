@@ -16,6 +16,8 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.text.ClickableText
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -34,6 +36,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -105,6 +108,8 @@ private fun GovorApp(model: MediaSessionViewModel = viewModel()) {
     val playbackRate by model.lesson.playbackRate.collectAsStateWithLifecycle()
     val transcript by model.lesson.transcript.collectAsStateWithLifecycle()
     val lessonProgress by model.lesson.lessonProgress.collectAsStateWithLifecycle()
+    val lessonCatalog by model.lesson.lessonCatalog.collectAsStateWithLifecycle()
+    val lessonActive by model.lesson.lessonActive.collectAsStateWithLifecycle()
     // Debug emulator defaults use adb reverse for control 8765 and media 8766.
     var mediaHost by rememberSaveable {
         mutableStateOf(if (BuildConfig.DEBUG) "127.0.0.1:8766" else "")
@@ -114,9 +119,14 @@ private fun GovorApp(model: MediaSessionViewModel = viewModel()) {
     }
     var token by rememberSaveable { mutableStateOf("") }
     var certificateFingerprint by rememberSaveable { mutableStateOf("") }
-    var scenarioId by rememberSaveable { mutableStateOf("cafe-ordering") }
+    var scenarioId by rememberSaveable { mutableStateOf("") }
     var englishLocale by rememberSaveable { mutableStateOf("en-GB") }
     var spacedReviewEnabled by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(lessonCatalog) {
+        if (lessonCatalog.none { it.scenario_id == scenarioId }) {
+            scenarioId = lessonCatalog.firstOrNull()?.scenario_id.orEmpty()
+        }
+    }
     val context = LocalContext.current
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
@@ -127,9 +137,6 @@ private fun GovorApp(model: MediaSessionViewModel = viewModel()) {
                 controlHost,
                 token,
                 certificateFingerprint,
-                scenarioId,
-                englishLocale,
-                spacedReviewEnabled,
             )
         }
     }
@@ -167,64 +174,82 @@ private fun GovorApp(model: MediaSessionViewModel = viewModel()) {
 
                 if (
                     status == MediaConnectionStatus.DISCONNECTED ||
-                    status == MediaConnectionStatus.FAILED
+                    status == MediaConnectionStatus.FAILED ||
+                    lessonCatalog.isEmpty() ||
+                    !lessonActive
                 ) {
                     Column(
                         modifier = Modifier
                             .align(Alignment.Center)
-                            .fillMaxWidth()
+                            .fillMaxSize()
                             .padding(24.dp)
                             .background(Color(0xE610201D), MaterialTheme.shapes.large)
+                            .verticalScroll(rememberScrollState())
                             .padding(20.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         Text("govor.ai session", color = Color.White, fontSize = 22.sp)
-                        OutlinedTextField(
-                            value = mediaHost,
-                            onValueChange = { mediaHost = it },
-                            singleLine = true,
-                            label = { Text("Media host:port") },
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                        OutlinedTextField(
-                            value = controlHost,
-                            onValueChange = { controlHost = it },
-                            singleLine = true,
-                            label = { Text("Control host:port") },
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                        OutlinedTextField(
-                            value = token,
-                            onValueChange = { token = it },
-                            singleLine = true,
-                            label = {
-                                Text(if (BuildConfig.DEBUG) "Development token" else "Pairing code")
-                            },
-                            visualTransformation = PasswordVisualTransformation(),
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                        if (!BuildConfig.DEBUG) {
+                        if (lessonCatalog.isEmpty()) {
                             OutlinedTextField(
-                                value = certificateFingerprint,
-                                onValueChange = { certificateFingerprint = it },
+                                value = mediaHost,
+                                onValueChange = { mediaHost = it },
                                 singleLine = true,
-                                label = { Text("PC certificate SHA-256") },
+                                label = { Text("Media host:port") },
                                 modifier = Modifier.fillMaxWidth(),
                             )
-                        }
-                        Text("Guided scenario", color = Color.White)
-                        GUIDED_SCENARIOS.chunked(2).forEach { scenarioRow ->
-                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                scenarioRow.forEach { scenario ->
-                                    Button(onClick = { scenarioId = scenario.first }) {
-                                        Text(
-                                            if (scenarioId == scenario.first) {
-                                                "${scenario.second} ✓"
-                                            } else {
-                                                scenario.second
-                                            },
-                                        )
-                                    }
+                            OutlinedTextField(
+                                value = controlHost,
+                                onValueChange = { controlHost = it },
+                                singleLine = true,
+                                label = { Text("Control host:port") },
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                            OutlinedTextField(
+                                value = token,
+                                onValueChange = { token = it },
+                                singleLine = true,
+                                label = {
+                                    Text(
+                                        if (BuildConfig.DEBUG) {
+                                            "Development token"
+                                        } else {
+                                            "Pairing code"
+                                        },
+                                    )
+                                },
+                                visualTransformation = PasswordVisualTransformation(),
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                            if (!BuildConfig.DEBUG) {
+                                OutlinedTextField(
+                                    value = certificateFingerprint,
+                                    onValueChange = { certificateFingerprint = it },
+                                    singleLine = true,
+                                    label = { Text("PC certificate SHA-256") },
+                                    modifier = Modifier.fillMaxWidth(),
+                                )
+                            }
+                            Text(
+                                "Connect to load guided lessons from the Windows PC.",
+                                color = Color.White,
+                            )
+                        } else {
+                            Text("Guided lesson", color = Color.White)
+                            lessonCatalog.forEach { lesson ->
+                                Button(
+                                    onClick = { scenarioId = lesson.scenario_id },
+                                    modifier = Modifier.fillMaxWidth(),
+                                ) {
+                                    Text(
+                                        if (scenarioId == lesson.scenario_id) {
+                                            "${lesson.title} ✓"
+                                        } else {
+                                            lesson.title
+                                        },
+                                    )
+                                }
+                                if (scenarioId == lesson.scenario_id) {
+                                    Text(lesson.description, color = Color(0xFFB8D9D1))
                                 }
                             }
                         }
@@ -242,29 +267,46 @@ private fun GovorApp(model: MediaSessionViewModel = viewModel()) {
                             )
                             Text("Enable spaced vocabulary review", color = Color.White)
                         }
-                        Button(
-                            onClick = {
-                                val microphonePermission = ContextCompat.checkSelfPermission(
-                                    context,
-                                    Manifest.permission.RECORD_AUDIO,
-                                )
-                                if (microphonePermission == PackageManager.PERMISSION_GRANTED) {
-                                    model.connect(
-                                        mediaHost,
-                                        controlHost,
-                                        token,
-                                        certificateFingerprint,
+                        if (lessonCatalog.isEmpty()) {
+                            Button(
+                                onClick = {
+                                    val microphonePermission = ContextCompat.checkSelfPermission(
+                                        context,
+                                        Manifest.permission.RECORD_AUDIO,
+                                    )
+                                    if (
+                                        microphonePermission ==
+                                        PackageManager.PERMISSION_GRANTED
+                                    ) {
+                                        model.connect(
+                                            mediaHost,
+                                            controlHost,
+                                            token,
+                                            certificateFingerprint,
+                                        )
+                                    } else {
+                                        permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                                    }
+                                },
+                                enabled = lessonState != SessionState.CONNECTING,
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text("Connect and load lessons")
+                            }
+                        } else {
+                            Button(
+                                onClick = {
+                                    model.startLesson(
                                         scenarioId,
                                         englishLocale,
                                         spacedReviewEnabled,
                                     )
-                                } else {
-                                    permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-                                }
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Text("Connect")
+                                },
+                                enabled = scenarioId.isNotEmpty(),
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text("Start lesson")
+                            }
                         }
                         mediaError?.let { Text(it, color = Color(0xFFFFB4AB)) }
                         lessonError?.let { Text(it, color = Color(0xFFFFB4AB)) }
@@ -433,13 +475,6 @@ private fun GovorApp(model: MediaSessionViewModel = viewModel()) {
         }
     }
 }
-
-private val GUIDED_SCENARIOS = listOf(
-    "cafe-ordering" to "Café",
-    "supermarket-shopping" to "Supermarket",
-    "airport-travel" to "Airport",
-    "home-conversation" to "Home",
-)
 
 private fun statusColor(status: MediaConnectionStatus): Color = when (status) {
     MediaConnectionStatus.CONNECTED -> Color(0xFF83F8DA)

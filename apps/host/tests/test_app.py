@@ -1,14 +1,18 @@
 from __future__ import annotations
 
 import asyncio
+import json
+import shutil
+import time
 from dataclasses import dataclass, field, replace
+from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
 from govor_contracts import RendererCommandPayload
-from govor_domain import DetectedLanguage, LearnerIntent
+from govor_domain import DetectedLanguage, LearnerIntent, import_lesson_bundle
 from govor_gateway_security import PairingAuthority
 from govor_host.app import create_app
 from govor_host.config import Settings
@@ -138,6 +142,8 @@ def test_health_identifies_fake_mode() -> None:
         "network_scope": "loopback",
         "renderer_connected": True,
         "active_sessions": 0,
+        "lesson_count": 4,
+        "lesson_catalog_status": "ready",
         "providers": [
             {
                 "provider_id": "fake-scripted-stt",
@@ -159,6 +165,157 @@ def test_health_identifies_fake_mode() -> None:
             },
         ],
     }
+
+
+def test_control_returns_the_startup_lesson_catalog() -> None:
+    app = create_app(Settings(mode="fake"), renderer=FakeRendererControl())
+
+    with TestClient(app).websocket_connect("/v1/control") as socket:
+        socket.send_json(envelope("lesson.catalog.request", {}))
+        catalog = socket.receive_json()
+
+    assert catalog["message_type"] == "lesson.catalog"
+    assert catalog["payload"]["default_scenario_id"] == "cafe-ordering"
+    assert [item["scenario_id"] for item in catalog["payload"]["lessons"]] == [
+        "cafe-ordering",
+        "supermarket-shopping",
+        "airport-travel",
+        "home-conversation",
+    ]
+
+
+def test_external_lesson_is_advertised_and_startable(tmp_path: Path) -> None:
+    source = (
+        Path(__file__).resolve().parents[3] / "assets" / "lesson-content" / "cafe-ordering.json"
+    )
+    lesson = json.loads(source.read_text(encoding="utf-8"))
+    lesson.update(
+        {
+            "scenario_id": "hotel-check-in",
+            "title": "Checking into a hotel",
+            "description": "Practice a hotel check-in using the café scene template.",
+            "display_order": 10,
+        }
+    )
+    (tmp_path / "hotel-check-in.json").write_text(
+        json.dumps(lesson, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    renderer = FakeRendererControl()
+    app = create_app(
+        Settings(mode="fake", lesson_directory=str(tmp_path)),
+        renderer=renderer,
+    )
+
+    with TestClient(app).websocket_connect("/v1/control") as socket:
+        socket.send_json(envelope("lesson.catalog.request", {}))
+        catalog = socket.receive_json()
+        socket.send_json(
+            envelope(
+                "session.start",
+                {
+                    "client_id": str(uuid4()),
+                    "scenario_id": "hotel-check-in",
+                },
+            )
+        )
+        ready = socket.receive_json()
+        turn = socket.receive_json()
+
+    assert [item["scenario_id"] for item in catalog["payload"]["lessons"]] == ["hotel-check-in"]
+    assert ready["payload"]["state"] == "ready"
+    assert turn["payload"]["lesson_progress"]["scenario_id"] == "hotel-check-in"
+    assert renderer.commands[0].scene is not None
+    assert renderer.commands[0].scene.scene_id == "cafe-ordering-v1"
+
+
+def test_imported_lesson_is_pushed_and_startable_without_reconnect(tmp_path: Path) -> None:
+    source_directory = Path(__file__).resolve().parents[3] / "assets" / "lesson-content"
+    lesson_directory = tmp_path / "lessons"
+    shutil.copytree(source_directory, lesson_directory)
+    source = tmp_path / "hotel.json"
+    lesson = json.loads((source_directory / "cafe-ordering.json").read_text(encoding="utf-8"))
+    lesson.update(
+        {
+            "scenario_id": "hotel-check-in",
+            "title": "Hotel check-in",
+            "display_order": 10,
+        }
+    )
+    source.write_text(json.dumps(lesson), encoding="utf-8")
+    renderer = FakeRendererControl()
+    app = create_app(
+        Settings(mode="fake", lesson_directory=str(lesson_directory)),
+        renderer=renderer,
+    )
+
+    with (
+        TestClient(app) as client,
+        client.websocket_connect("/v1/control") as socket,
+    ):
+        socket.send_json(envelope("lesson.catalog.request", {}))
+        initial = socket.receive_json()
+        assert len(initial["payload"]["lessons"]) == 4
+
+        import_lesson_bundle(
+            source,
+            lesson_directory,
+            allowed_scene_templates={"cafe", "supermarket", "airport", "home"},
+        )
+        updated = socket.receive_json()
+        assert updated["message_type"] == "lesson.catalog"
+        assert updated["payload"]["lessons"][-1]["scenario_id"] == "hotel-check-in"
+
+        socket.send_json(
+            envelope(
+                "session.start",
+                {
+                    "client_id": str(uuid4()),
+                    "scenario_id": "hotel-check-in",
+                },
+            )
+        )
+        ready = socket.receive_json()
+        turn = socket.receive_json()
+
+    assert ready["payload"]["state"] == "ready"
+    assert turn["payload"]["lesson_progress"]["scenario_id"] == "hotel-check-in"
+
+
+def test_invalid_live_edit_keeps_last_valid_catalog(tmp_path: Path) -> None:
+    source_directory = Path(__file__).resolve().parents[3] / "assets" / "lesson-content"
+    lesson_directory = tmp_path / "lessons"
+    shutil.copytree(source_directory, lesson_directory)
+    app = create_app(
+        Settings(mode="fake", lesson_directory=str(lesson_directory)),
+        renderer=FakeRendererControl(),
+    )
+
+    with TestClient(app) as client:
+        (lesson_directory / "broken.json").write_text("not JSON", encoding="utf-8")
+        deadline = time.monotonic() + 3
+        health = client.get("/health").json()
+        while health["lesson_catalog_status"] != "reload_error" and time.monotonic() < deadline:
+            time.sleep(0.1)
+            health = client.get("/health").json()
+
+    assert health["lesson_catalog_status"] == "reload_error"
+    assert health["lesson_count"] == 4
+
+
+def test_unknown_lesson_scene_template_stops_host_startup(tmp_path: Path) -> None:
+    source = (
+        Path(__file__).resolve().parents[3] / "assets" / "lesson-content" / "cafe-ordering.json"
+    )
+    lesson = json.loads(source.read_text(encoding="utf-8"))
+    lesson["scene_template_id"] = "library"
+    (tmp_path / "invalid-scene.json").write_text(
+        json.dumps(lesson),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="scene_template_id is not allow-listed"):
+        create_app(Settings(mode="fake", lesson_directory=str(tmp_path)))
 
 
 def test_release_pairing_and_control_authentication(tmp_path) -> None:

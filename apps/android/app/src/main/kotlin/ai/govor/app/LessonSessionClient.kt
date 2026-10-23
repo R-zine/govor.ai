@@ -2,6 +2,9 @@ package ai.govor.app
 
 import ai.govor.core.ControlContractCodec
 import ai.govor.core.LearnerTranscriptPayload
+import ai.govor.core.LessonCatalogItemPayload
+import ai.govor.core.LessonCatalogPayload
+import ai.govor.core.LessonCatalogRequestPayload
 import ai.govor.core.LessonProgressPayload
 import ai.govor.core.MessageEnvelope
 import ai.govor.core.RecordingStartedPayload
@@ -59,7 +62,7 @@ class LessonSessionClient {
     private var playbackJob: Job? = null
     @Volatile private var activeTrack: AudioTrack? = null
     private var activeTurn: TeacherTurnPayload? = null
-    private var selectedScenarioId = "cafe-ordering"
+    private var selectedScenarioId = ""
     private var selectedEnglishLocale = "en-GB"
     private var selectedSpacedReview = false
 
@@ -90,22 +93,31 @@ class LessonSessionClient {
     private val mutableLessonProgress = MutableStateFlow<LessonProgressPayload?>(null)
     val lessonProgress: StateFlow<LessonProgressPayload?> = mutableLessonProgress
 
+    private val mutableLessonCatalog = MutableStateFlow<List<LessonCatalogItemPayload>>(emptyList())
+    val lessonCatalog: StateFlow<List<LessonCatalogItemPayload>> = mutableLessonCatalog
+
+    private val mutableLessonActive = MutableStateFlow(false)
+    val lessonActive: StateFlow<Boolean> = mutableLessonActive
+
+    private var pendingStart: LessonSelection? = null
+
     fun connect(
         host: String,
-        scenarioId: String,
-        englishLocale: String,
-        spacedReviewEnabled: Boolean,
+        scenarioId: String? = null,
+        englishLocale: String = "en-GB",
+        spacedReviewEnabled: Boolean = false,
         secure: Boolean = false,
         deviceId: String? = null,
         credential: String? = null,
         certificateFingerprint: String? = null,
     ) {
         closeSocket(notifyHost = false)
-        require(scenarioId in SUPPORTED_SCENARIOS)
+        require(scenarioId == null || scenarioId.matches(Regex("^[a-z][a-z0-9-]{2,63}$")))
         require(englishLocale in setOf("en-GB", "en-US"))
-        selectedScenarioId = scenarioId
-        selectedEnglishLocale = englishLocale
-        selectedSpacedReview = spacedReviewEnabled
+        pendingStart = scenarioId?.let {
+            LessonSelection(it, englishLocale, spacedReviewEnabled)
+        }
+        mutableLessonCatalog.value = emptyList()
         if (secure && (deviceId == null || credential == null || certificateFingerprint == null)) {
             fail("Secure pairing information is incomplete.")
             return
@@ -134,6 +146,25 @@ class LessonSessionClient {
             request,
             ControlListener(deviceId, credential),
         )
+    }
+
+    fun startLesson(
+        scenarioId: String,
+        englishLocale: String,
+        spacedReviewEnabled: Boolean,
+    ) {
+        require(socket != null) { "Control connection is not open" }
+        require(sessionId == null) { "A lesson is already active" }
+        require(englishLocale in setOf("en-GB", "en-US"))
+        require(mutableLessonCatalog.value.any { it.scenario_id == scenarioId }) {
+            "Lesson is not present in the host catalog"
+        }
+        selectedScenarioId = scenarioId
+        selectedEnglishLocale = englishLocale
+        selectedSpacedReview = spacedReviewEnabled
+        mutableLessonActive.value = true
+        mutableState.value = SessionState.CONNECTING
+        sendSessionStart()
     }
 
     fun beginRecording() {
@@ -218,10 +249,13 @@ class LessonSessionClient {
         runCatching {
             val envelope = ControlContractCodec.decodeEnvelope(text)
             when (envelope.message_type) {
+                "lesson.catalog" -> applyLessonCatalog(
+                    ControlContractCodec.decodePayload<LessonCatalogPayload>(envelope),
+                )
                 "session.state" -> applyState(
                     ControlContractCodec.decodePayload<SessionStatePayload>(envelope),
                 )
-                "auth.ok" -> sendSessionStart()
+                "auth.ok" -> requestLessonCatalog()
                 "teacher.turn" -> playTeacherTurn(
                     ControlContractCodec.decodePayload<TeacherTurnPayload>(envelope),
                 )
@@ -241,6 +275,26 @@ class LessonSessionClient {
             }
         }.onFailure {
             fail("Invalid control response from the Windows host.")
+        }
+    }
+
+    private fun applyLessonCatalog(payload: LessonCatalogPayload) {
+        payload.validate()
+        mutableLessonCatalog.value = payload.lessons
+        val selection = pendingStart
+        if (selection != null) {
+            pendingStart = null
+            if (payload.lessons.any { it.scenario_id == selection.scenarioId }) {
+                startLesson(
+                    selection.scenarioId,
+                    selection.englishLocale,
+                    selection.spacedReviewEnabled,
+                )
+            } else {
+                fail("The previously selected lesson is no longer available.")
+            }
+        } else if (!mutableLessonActive.value) {
+            mutableState.value = SessionState.READY
         }
     }
 
@@ -367,6 +421,7 @@ class LessonSessionClient {
         activeTurn = null
         utteranceId = null
         clearSpeechUi()
+        mutableLessonActive.value = false
         mutableState.value = SessionState.DISCONNECTED
     }
 
@@ -411,6 +466,9 @@ class LessonSessionClient {
         turnId = null
         activeTurn = null
         utteranceId = null
+        pendingStart = null
+        mutableLessonCatalog.value = emptyList()
+        mutableLessonActive.value = false
         clearSpeechUi()
         mutableState.value = SessionState.DISCONNECTED
     }
@@ -445,6 +503,10 @@ class LessonSessionClient {
         )
     }
 
+    private fun requestLessonCatalog() {
+        send("lesson.catalog.request", LessonCatalogRequestPayload())
+    }
+
     private inner class ControlListener(
         private val deviceId: String?,
         private val credential: String?,
@@ -452,7 +514,7 @@ class LessonSessionClient {
         override fun onOpen(webSocket: WebSocket, response: Response) {
             if (socket !== webSocket) return
             if (deviceId == null || credential == null) {
-                sendSessionStart()
+                requestLessonCatalog()
             } else {
                 webSocket.send(
                     JSONObject()
@@ -475,11 +537,22 @@ class LessonSessionClient {
         }
 
         override fun onFailure(webSocket: WebSocket, throwable: Throwable, response: Response?) {
-            if (socket === webSocket) fail("Control connection failed.")
+            if (socket === webSocket) {
+                socket = null
+                pendingStart = null
+                mutableLessonCatalog.value = emptyList()
+                mutableLessonActive.value = false
+                mutableError.value = "Control connection failed."
+                mutableState.value = SessionState.DISCONNECTED
+            }
         }
 
         override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
-            if (socket === webSocket && mutableState.value != SessionState.RECOVERABLE_ERROR) {
+            if (socket === webSocket) {
+                socket = null
+                pendingStart = null
+                mutableLessonCatalog.value = emptyList()
+                mutableLessonActive.value = false
                 mutableState.value = SessionState.DISCONNECTED
             }
         }
@@ -488,6 +561,12 @@ class LessonSessionClient {
     private data class WavPcm(val sampleRateHz: Int, val pcm: ByteArray) {
         val durationUs: Long = pcm.size.toLong() / 2 * 1_000_000 / sampleRateHz
     }
+
+    private data class LessonSelection(
+        val scenarioId: String,
+        val englishLocale: String,
+        val spacedReviewEnabled: Boolean,
+    )
 
     private fun decodeWav(bytes: ByteArray): WavPcm {
         require(bytes.size in 44..1_500_044)
@@ -549,11 +628,5 @@ class LessonSessionClient {
 
     private companion object {
         const val LOG_TAG = "GovorSpeech"
-        val SUPPORTED_SCENARIOS = setOf(
-            "cafe-ordering",
-            "supermarket-shopping",
-            "airport-travel",
-            "home-conversation",
-        )
     }
 }

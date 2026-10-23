@@ -92,12 +92,28 @@ acknowledges commands. This loopback connection relies on the trusted desktop-us
 not a LAN authentication mechanism.
 
 Milestone 6 scene commands add only closed environment, camera, lighting, transition, and asset
-IDs with bounded transforms. The host derives the specification from a committed scenario
-allow-list; neither dialogue output nor learner text supplies an asset. Godot's procedural catalog
+IDs with bounded transforms. Startup-loaded lesson JSON may select only one of the four closed
+scene-template IDs; the host resolves that template through the planner allow-list. Neither
+dialogue output nor learner text supplies an asset. Godot's procedural catalog
 does not accept paths, URLs, resource names, scripts, or downloads. Unknown wire IDs are rejected,
 and the predictable internal fallback is reachable only when an allow-listed catalog entry is
 missing from the renderer implementation. Avatar commands contain bounded PCM energy summaries
 and actual-or-empty viseme cues, not the audio or transcript.
+
+Lesson JSON is local content but is still treated as untrusted input at the process boundary. The
+loader limits the directory to 64 files and each file to 256 KiB, requires exact fields and bounded
+strings/lists, rejects duplicate scenario/exercise IDs and unsupported schema versions, and
+constructs immutable domain values before use. The Windows importer accepts only a selected local
+JSON or a ZIP of at most 64 JSON entries/4 MiB expanded data. It rejects encrypted entries,
+non-JSON members, traversal names, oversized input, existing scenario IDs, and unknown closed scene
+templates; it reads entries directly and never extracts archive paths. Files are additive and are
+published under a local import lock only after validating the complete combined catalog.
+
+Invalid content fails startup. During runtime, an invalid out-of-band edit is never installed as a
+partial catalog: the host keeps its last valid immutable snapshot, reports `reload_error` in local
+health, and sends no update. The importer and watcher are local filesystem features; there is no
+new LAN endpoint. Lesson data cannot become a path, URL, script, command, or renderer asset ID.
+Catalog messages expose only ID, title, description, and display order.
 
 ## Required controls
 

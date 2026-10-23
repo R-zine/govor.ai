@@ -795,9 +795,10 @@ A change to Android UI must not require repackaging the Windows backend.
 
 A change to a provider adapter must not require building unrelated modules.
 
-Restarting applications or processes after changes is acceptable.
+Restarting applications or processes after code changes is acceptable.
 
-Automatic hot reloading is optional.
+General development hot reloading is optional. Validated lesson imports are the exception: they
+must update the running host catalog and connected Android selector without a restart.
 
 Use lockfiles and pinned toolchain versions.
 
@@ -1197,6 +1198,21 @@ Each scenario should define:
 - Common misunderstandings.
 - Completion conditions.
 - Appropriate Bulgarian explanations.
+
+Default lesson definitions must live as versioned, human-editable JSON under
+`assets/lesson-content`, not as Python or Android constants. The host must load and strictly
+validate the complete catalog at startup, then advertise its ordered lesson summary to Android so
+adding a lesson does not require rebuilding either client. A lesson may select only an
+allow-listed renderer scene template. Invalid files, duplicate scenario IDs, unsupported schema
+versions, and unknown scene templates must stop host startup rather than being partially ignored.
+The packaged Windows host must provide a local file-picker UI for additive `.json` or `.zip`
+imports. ZIPs may contain multiple JSON lessons, must never be extracted as paths, and must be
+bounded against traversal and decompression abuse. The import must validate the complete candidate
+catalog before publishing files. A running host must atomically replace its immutable catalog
+snapshot and push the new summary to connected Android clients without a restart. An active lesson
+continues on its original snapshot; a later lesson uses the new catalog. Invalid live filesystem
+changes retain the last valid snapshot and surface a degraded catalog status. Network-downloaded
+lesson content remains out of scope.
 
 ### Acceptance criteria
 

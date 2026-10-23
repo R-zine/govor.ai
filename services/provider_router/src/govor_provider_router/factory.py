@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Literal, Protocol
 
+from govor_domain import LessonCatalog, load_lesson_catalog
 from govor_local_ai.llama_cpp import LlamaCppDialogueProvider
 from govor_local_ai.service import LocalLessonService
 from govor_local_ai.whisper_cpp import WhisperCppRecognizer
@@ -38,6 +39,7 @@ class ProviderSettings(Protocol):
     piper_bg_model: str
     piper_bg_config: str
     progress_database: str
+    lesson_directory: str
     cloud_dialogue_base_url: str
     cloud_dialogue_model: str
     cloud_dialogue_credential_target: str
@@ -54,6 +56,7 @@ def build_configured_lesson_service(
     settings: ProviderSettings,
     *,
     credentials: CredentialStore | None = None,
+    lesson_catalog: LessonCatalog | None = None,
 ) -> LocalLessonService:
     """Build one pipeline without coupling the three provider choices."""
 
@@ -119,6 +122,7 @@ def build_configured_lesson_service(
         speech=speech,
         progress_repository=SQLiteProgressRepository(settings.progress_database),
         memory_turns=settings.conversation_memory_turns,
+        lesson_catalog=lesson_catalog or load_lesson_catalog(settings.lesson_directory),
     )
 
 

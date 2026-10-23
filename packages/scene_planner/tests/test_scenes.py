@@ -26,16 +26,11 @@ def _wav(samples: list[int], sample_rate: int = 16_000) -> bytes:
     return output.getvalue()
 
 
-def test_all_guided_scenarios_have_distinct_validated_scenes() -> None:
+def test_all_scene_templates_are_distinct_and_validated() -> None:
     planner = ScenePlanner()
-    scenes = [planner.plan(scenario_id) for scenario_id in planner.supported_scenarios]
+    scenes = [planner.plan(template_id) for template_id in planner.supported_templates]
 
-    assert planner.supported_scenarios == (
-        "cafe-ordering",
-        "supermarket-shopping",
-        "airport-travel",
-        "home-conversation",
-    )
+    assert planner.supported_templates == ("cafe", "supermarket", "airport", "home")
     assert {scene.environment_id for scene in scenes} == {
         "cafe",
         "supermarket",
@@ -47,8 +42,8 @@ def test_all_guided_scenarios_have_distinct_validated_scenes() -> None:
     assert all(item.asset_id in ALLOWED_ASSET_IDS for scene in scenes for item in scene.objects)
 
 
-def test_unknown_scenario_and_asset_are_rejected() -> None:
-    with pytest.raises(ValueError, match="allow-listed scene"):
+def test_unknown_template_and_asset_are_rejected() -> None:
+    with pytest.raises(ValueError, match="not allow-listed"):
         ScenePlanner().plan("model-selected-path")
     with pytest.raises(ValueError, match="allow-listed"):
         SceneObject("unsafe", "../../arbitrary.glb", (0.0, 0.0, 0.0))

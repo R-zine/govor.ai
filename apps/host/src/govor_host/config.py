@@ -46,6 +46,7 @@ class Settings(BaseSettings):
     piper_bg_model: str = ".tools/models/speech/bg_BG-dimitar-medium.onnx"
     piper_bg_config: str = ".tools/models/speech/bg_BG-dimitar-medium.onnx.json"
     progress_database: str = "data/progress.sqlite3"
+    lesson_directory: str = "assets/lesson-content"
     cloud_dialogue_base_url: str = "https://api.openai.com/v1"
     cloud_dialogue_model: str = "gpt-4.1-mini"
     cloud_dialogue_credential_target: str = Field(

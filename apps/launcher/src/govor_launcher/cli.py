@@ -35,6 +35,8 @@ def main(arguments: Sequence[str] | None = None) -> int:
     subparsers.add_parser("doctor")
     subparsers.add_parser("model-status")
     subparsers.add_parser("install-models")
+    lesson_import = subparsers.add_parser("import-lessons")
+    lesson_import.add_argument("--source", type=Path, required=True)
     start = subparsers.add_parser("start")
     start.add_argument("--smoke-seconds", type=float)
     options = parser.parse_args(arguments)
@@ -49,6 +51,8 @@ def main(arguments: Sequence[str] | None = None) -> int:
         return _print_model_status(paths)
     if options.command == "install-models":
         return _install_models(paths)
+    if options.command == "import-lessons":
+        return _import_lessons(paths, options.source)
     if options.command == "start":
         return _start(paths, smoke_seconds=options.smoke_seconds)
     raise AssertionError("unreachable command")
@@ -64,6 +68,7 @@ class ReleasePaths:
         self.llama = install_root / "runtime" / "llama.cpp" / "llama-server.exe"
         self.whisper = install_root / "runtime" / "whisper.cpp" / "Release" / "whisper-cli.exe"
         self.renderer = install_root / "renderer" / "GovorRenderer.exe"
+        self.lessons = install_root / "content" / "lessons"
         self.credentials = data_root / "security" / "gateway-credentials.json"
         self.progress = data_root / "progress" / "progress.sqlite3"
         self.logs = data_root / "logs"
@@ -90,6 +95,8 @@ def _doctor(paths: ReleasePaths, *, require_models: bool) -> None:
     missing = [str(path) for path in required if not path.is_file()]
     if missing:
         raise RuntimeError("package is incomplete: " + ", ".join(missing))
+    if not paths.lessons.is_dir() or not any(paths.lessons.glob("*.json")):
+        raise RuntimeError("package contains no guided lesson definitions")
     if require_models:
         unavailable = [
             artifact.display_name
@@ -129,6 +136,25 @@ def _install_models(paths: ReleasePaths) -> int:
         install_artifact(paths.model_root, artifact)
         print(f"Verified SHA-256: {artifact.sha256}")
     print("All required models passed integrity verification.")
+    return 0
+
+
+def _import_lessons(paths: ReleasePaths, source: Path) -> int:
+    from govor_domain import import_lesson_bundle
+    from govor_scene_planner import ScenePlanner
+
+    try:
+        imported = import_lesson_bundle(
+            source,
+            paths.lessons,
+            allowed_scene_templates=set(ScenePlanner().supported_templates),
+        )
+    except (OSError, ValueError) as error:
+        print(f"Lesson import failed: {error}", file=sys.stderr)
+        return 2
+    for lesson in imported:
+        print(f"Imported: {lesson.title} ({lesson.scenario_id})")
+    print("Lesson import completed. Running clients will receive the updated catalog.")
     return 0
 
 
@@ -308,6 +334,7 @@ def _release_environment(paths: ReleasePaths, certificate: Path) -> dict[str, st
             "GOVOR_MEDIA_CAPTURE_TLS_CA": str(certificate),
             "GOVOR_MEDIA_SOURCE": "renderer",
             "GOVOR_PROGRESS_DATABASE": str(paths.progress),
+            "GOVOR_LESSON_DIRECTORY": str(paths.lessons),
             "GOVOR_OFFLINE_ONLY": "true",
         }
     )

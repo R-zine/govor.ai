@@ -4,6 +4,10 @@
 - Date: 2026-10-12
 - Milestone: 5
 
+ADR-0013 amends only the storage and discovery mechanism: definitions are now strict external
+JSON loaded into the same framework-independent domain model, and Android discovers the catalog
+from the host. The deterministic teaching and persistence decisions below remain in force.
+
 ## Context
 
 The bilingual dialogue model can produce natural wording, but it is not a reliable authority for
