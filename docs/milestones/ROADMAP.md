@@ -36,6 +36,9 @@ updates while preserving active-session snapshots. This work is not a new milest
 revise earlier physical acceptance evidence. See ADR-0013 and the current status handoff.
 The 2026-10-23 environment amendment adds bounded data-only procedural ZIPs, live planner swaps,
 and dynamic creator choices under ADR-0015; it does not allow application/Godot code patches.
+The Android audio-routing maintenance amendment defaults active lessons to the built-in
+loudspeaker and restores the prior phone route at teardown; it does not reopen completed physical
+acceptance, which predates this application change.
 
 ## Milestone 2 acceptance tracking
 

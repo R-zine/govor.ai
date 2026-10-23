@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 from cryptography.hazmat.primitives.asymmetric import rsa
-from govor_launcher.application_patch import create_patch, verify_patch
+from govor_launcher.application_patch import create_patch, validate_relative_path, verify_patch
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
 SIGNER_DIGEST = "ab" * 32
@@ -106,12 +106,22 @@ def test_create_and_verify_patch_covers_host_operations_and_android(
 ) -> None:
     base, target, private, public, apk = patch_fixture
     output = tmp_path / "update.govorpatch"
+    runtime_library = target / "runtime" / "python" / "Lib" / "site-packages" / "av.libs"
+    runtime_library.mkdir(parents=True)
+    (runtime_library / "libstdc++-fixture.dll").write_bytes(b"runtime library")
+    voice = target / "runtime" / "voices" / "!v"
+    voice.mkdir(parents=True)
+    (voice / "Mr serious").write_text("voice fixture\n", encoding="utf-8")
 
     manifest = create_patch(base, target, output, private, android_apk=apk)
     verified = verify_patch(output, public)
 
     assert verified.manifest == manifest
     assert {item["action"] for item in manifest["files"]} == {"add", "replace", "delete"}
+    assert {
+        "runtime/python/Lib/site-packages/av.libs/libstdc++-fixture.dll",
+        "runtime/voices/!v/Mr serious",
+    }.issubset({item["path"] for item in manifest["files"]})
     assert manifest["android"] == {
         "path": "android/govor.ai-1.1.0-android-release.apk",
         "application_id": "ai.govor.app",
@@ -152,6 +162,20 @@ def test_verifier_rejects_a_different_signing_identity(
 
     with pytest.raises(ValueError, match="signature is invalid"):
         verify_patch(output, unrelated_public)
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "runtime/CON.txt",
+        "runtime/com1/config.json",
+        "runtime/name. ",
+        "runtime/name.",
+    ],
+)
+def test_path_validation_rejects_windows_aliases_and_normalization_collisions(path: str) -> None:
+    with pytest.raises(ValueError, match="unsafe patch path"):
+        validate_relative_path(path)
 
 
 def test_creator_refuses_to_replace_the_bootstrap_or_trust_key(
@@ -219,6 +243,12 @@ def test_windows_updater_applies_a_signed_patch_and_preserves_untracked_content(
     patch_fixture: tuple[Path, Path, Path, Path, Path], tmp_path: Path
 ) -> None:
     base, target, private, _, apk = patch_fixture
+    runtime_library = target / "runtime" / "python" / "Lib" / "site-packages" / "av.libs"
+    runtime_library.mkdir(parents=True)
+    (runtime_library / "libstdc++-fixture.dll").write_bytes(b"runtime library")
+    voice = target / "runtime" / "voices" / "!v"
+    voice.mkdir(parents=True)
+    (voice / "Mr serious").write_text("voice fixture\n", encoding="utf-8")
     output = tmp_path / "update.govorpatch"
     create_patch(base, target, output, private, android_apk=apk)
     custom = base / "content" / "lessons" / "my-local-lesson.json"
@@ -250,6 +280,12 @@ def test_windows_updater_applies_a_signed_patch_and_preserves_untracked_content(
     assert result.returncode == 0, result.stdout + result.stderr
     assert (base / "app" / "replace.txt").read_text(encoding="utf-8") == "new\n"
     assert (base / "app" / "add.txt").read_text(encoding="utf-8") == "added\n"
+    assert (base / runtime_library.relative_to(target) / "libstdc++-fixture.dll").read_bytes() == (
+        b"runtime library"
+    )
+    assert (base / voice.relative_to(target) / "Mr serious").read_text(encoding="utf-8") == (
+        "voice fixture\n"
+    )
     assert not (base / "app" / "delete.txt").exists()
     assert custom.is_file()
     assert json.loads((base / "config" / "release.json").read_text())["version"] == "1.1.0"

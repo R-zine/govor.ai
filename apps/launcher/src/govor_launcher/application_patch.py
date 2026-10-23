@@ -34,7 +34,8 @@ PROTECTED_PATHS = frozenset(
 
 _SEMVER_PATTERN = re.compile(r"^\d+\.\d+\.\d+(?:-[a-z0-9.-]+)?$")
 _SHA256_PATTERN = re.compile(r"^[0-9a-f]{64}$")
-_RELATIVE_PATH_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._/-]{0,239}$")
+_RELATIVE_PATH_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._+! /-]{0,239}$")
+_WINDOWS_RESERVED_NAME_PATTERN = re.compile(r"^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])$", re.I)
 _ANDROID_APPLICATION_ID_PATTERN = re.compile(r"^[a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]*)+$")
 
 
@@ -208,7 +209,12 @@ def validate_relative_path(value: object) -> str:
     ):
         raise ValueError(f"unsafe patch path: {path!r}")
     parts = PurePosixPath(path).parts
-    if any(part in {"", ".", ".."} for part in parts):
+    if any(
+        part in {"", ".", ".."}
+        or part.endswith((" ", "."))
+        or _WINDOWS_RESERVED_NAME_PATTERN.fullmatch(part.split(".", 1)[0]) is not None
+        for part in parts
+    ):
         raise ValueError(f"unsafe patch path: {path!r}")
     return path
 

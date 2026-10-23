@@ -18,9 +18,11 @@ uses per-step timeouts, and returns generic validation errors that do not echo u
 The fake recording submission contains only an ephemeral WebRTC reference and duration, not raw
 microphone bytes.
 
-Android declares only Internet/network-state and microphone permissions. The release manifest
-disables cleartext. A debug-only manifest enables it for trusted-LAN development experiments,
-and the client requests microphone permission in context before hold-to-talk.
+Android declares only Internet/network-state, microphone, and normal audio-settings permissions.
+The audio-settings permission selects the built-in loudspeaker for an active lesson and does not
+change system volume. The prior communication route is restored when the session stops. The
+release manifest disables cleartext. A debug-only manifest enables it for trusted-LAN development
+experiments, and the client requests microphone permission in context before hold-to-talk.
 
 `scripts/media-dev.ps1` requires an explicit insecure-LAN switch and a pre-shared token of at least
 32 characters. The WebSocket authenticator uses constant-time comparison and enforces a 1 MiB

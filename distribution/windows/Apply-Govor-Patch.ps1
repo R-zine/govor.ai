@@ -66,11 +66,16 @@ function Assert-IntegerRange {
 
 function Resolve-InstallPath {
     param([Parameter(Mandatory = $true)] [string] $RelativePath)
+    $parts = @($RelativePath.Split('/'))
+    $unsafeParts = @($parts | Where-Object {
+        $_ -eq '' -or $_ -eq '.' -or $_ -eq '..' -or
+        $_.EndsWith(' ') -or $_.EndsWith('.') -or
+        $_.Split('.')[0] -match '^(con|prn|aux|nul|com[1-9]|lpt[1-9])$'
+    })
     if ($RelativePath.Length -gt 240 -or
-        $RelativePath -cnotmatch '^[A-Za-z0-9][A-Za-z0-9._/-]{0,239}$' -or
+        $RelativePath -cnotmatch '^[A-Za-z0-9][A-Za-z0-9._+! /-]{0,239}$' -or
         $RelativePath.Contains('\') -or $RelativePath.Contains(':') -or
-        $RelativePath.StartsWith('/') -or
-        @($RelativePath.Split('/') | Where-Object { $_ -eq '' -or $_ -eq '.' -or $_ -eq '..' }).Count -ne 0) {
+        $RelativePath.StartsWith('/') -or $unsafeParts.Count -ne 0) {
         throw "Unsafe application patch path: $RelativePath"
     }
     $candidate = [IO.Path]::GetFullPath((Join-Path $script:resolvedInstallRoot ($RelativePath.Replace('/', '\'))))

@@ -1,6 +1,6 @@
 # Current verified status
 
-Last updated: 2026-10-22
+Last updated: 2026-10-23
 
 ## Outcome
 
@@ -881,8 +881,61 @@ Exact next release workflow:
 
 Before sending a real patch, apply it to an exact copy of the supported base and run the resulting
 host. When it contains Android changes, install that APK on the intended test phone and record the
-platform result separately. No milestone was reopened and no commit was created for this
-post-milestone feature.
+platform result separately. No milestone was reopened. The completed environment/application patch
+work is recorded in focused commit `f293cac`.
+
+## Post-milestone Android loudspeaker default
+
+The 2026-10-23 Android maintenance change defaults an active lesson to the phone's built-in main
+loudspeaker rather than the quiet call earpiece. The WebRTC session captures the pre-session audio
+mode and route, selects `TYPE_BUILTIN_SPEAKER` through Android's communication-device API on API
+31+, and uses the speakerphone compatibility API on supported API 26-30 devices. It reasserts the
+route when the peer connects and when the remote audio track arrives. Disconnect, background
+teardown, signaling/media failure, and release restore the captured route and audio mode. The
+normal `MODIFY_AUDIO_SETTINGS` manifest permission permits routing but does not change volume.
+
+Verification and limits:
+
+- `./scripts/test.ps1 -Scope kotlin`: verified passing; 22 JVM tests include four new route-
+  lifecycle tests for repeated activation, reconnect recapture, failed-selection retry, and
+  capture failure. The managed environment denied the external Kotlin daemon marker, and Gradle's
+  supported in-process fallback completed successfully.
+- `./scripts/build.ps1 -Target android`: verified passing; API 34 compilation and debug APK
+  assembly succeeded. The resulting APK is 58,803,854 bytes.
+- Final selected `uv run --frozen pre-commit run --files ...`: verified passing; hygiene, JSON
+  contracts, PowerShell syntax, and the path-aware complete software gate passed.
+- The first two `0.1.13` signed-package attempts reached release compilation but the workspace-
+  local Gradle transform cache denied Java access to one readable AndroidX JAR. Repeating the
+  exact build with the existing user Gradle cache and `-GradleOffline` passed: Godot export,
+  signed APK verification, embedded runtime/source staging, imports, prerequisites, and all
+  packaged wrapper doctors completed.
+- The first real package-to-package patch-authoring attempt exposed that the new path allow-list
+  did not admit existing package-owned `libstdc++`, eSpeak `!v`, and space-containing filenames.
+  Authoring stopped before producing an archive. Python, JSON Schema, and PowerShell validation
+  now admit only those additional bounded characters while continuing to reject traversal,
+  separators/drive syntax, trailing-dot/space aliases, and Windows reserved device names. The
+  focused patch/contract run passed 48 tests; the official Python gate passed 258 tests at 85.11%
+  coverage with strict mypy, and the contract gate passed 39 tests.
+- `./scripts/create-application-patch.ps1` then produced the signed 33,629,262-byte
+  `.cache/dist/govor.ai-0.1.12-to-0.1.13.govorpatch`, SHA-256
+  `00808e65312027857f06090c5e86f9a20dab69110062bd01418c4b1c0b4b4dff`, with 536 host
+  operations and the target APK. The installed 0.1.12 updater applied it to a disposable exact
+  base copy, committed version 0.1.13, matched the target Android source hashes, and staged an
+  exact APK hash. The disposable host/data copies were removed afterward.
+- The signed `0.1.13`/code-14 APK is 55,441,597 bytes with SHA-256
+  `e43ab76a2d638a301bb404468b5a859915de3b950d716dde4a5903bfb1fffd1e` and the retained signer
+  SHA-256 `b7022cb8bbcc0a4828cf73e5ef958e1b431ccce697020577c4a502a66ec59843`.
+- The `0.1.13` incremental target deliberately retains the protected 0.1.12 updater bootstrap;
+  the broader package-filename compatibility change cannot replace that bootstrap through a
+  patch and must enter the next full release. The audio change itself uses only paths accepted by
+  0.1.12 and its real transaction passed.
+- Elevated `adb devices -l`: no Android device or emulator was attached. Actual earpiece-versus-
+  loudspeaker routing, volume, and acoustics are therefore **not executed** for this maintenance
+  change and are not inferred from compilation or the earlier Milestone 9 release evidence.
+- No emulator run or physical-phone installation was executed. Before distribution, a direct
+  handset check should install the staged code-14 APK and confirm main-loudspeaker playback plus
+  route restoration after disconnect/background. This handoff is part of the feature's focused
+  commit.
 
 ## Renderer evidence and limitations
 

@@ -59,6 +59,11 @@ model-derived word/phoneme alignment. Android owns `AudioTrack` playout, media-t
 0.75×/1×/1.25× speed, full replay, word selection, IPA/explanation display, and isolated-word
 playback. Godot and the domain do not depend on a speech SDK. See ADR-0007.
 
+While the WebRTC lesson session is connected, Android selects the built-in loudspeaker as the
+communication device and reasserts that selection when the remote audio track starts. Android 12+
+uses the communication-device API; Android 8-11 uses the speakerphone compatibility API. The
+pre-session route and audio mode are restored on disconnect, background teardown, or failure.
+
 ## Scene and avatar boundary
 
 `packages/scene_planner` combines four built-in templates with strictly validated local recipes

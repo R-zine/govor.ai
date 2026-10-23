@@ -50,6 +50,12 @@ the alignment time base. The supported full-turn rates are 0.75×, 1×, and 1.25
 local and cannot advance the host state. Selecting a word sends only its validated turn/index and
 rate; the host synthesizes that isolated word while leaving the lesson in `awaiting_learner`.
 
+The connected Android lesson routes communication audio to the built-in loudspeaker instead of
+the call earpiece. Android 12 and later select `TYPE_BUILTIN_SPEAKER` through the communication-
+device API; Android 8 through 11 use the speakerphone compatibility API. Repeated WebRTC callbacks
+reassert the route without overwriting the captured pre-session state, and disconnect, failure, or
+background teardown restores the prior device and audio mode.
+
 Version 1 `teacher.turn` now contains sample rate, pronunciations, nullable word/phoneme alignment,
 and a fallback flag. `teacher.word_replay_requested` and `teacher.word_audio` are closed bounded
 messages. WAV payloads are limited to 1,500,044 decoded bytes and 30 seconds.

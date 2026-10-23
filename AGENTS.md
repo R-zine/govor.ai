@@ -22,8 +22,9 @@ git -c safe.directory='C:/Users/PC/Documents/GitHub/govor.ai' status --short --b
 ```
 
 Preserve unrelated user changes. Never use destructive Git commands. Do not commit incomplete
-work unless the user explicitly asks. A completed milestone must be committed as described under
-Milestone handoff.
+work. Completing a feature, maintenance item, or milestone is ongoing authorization to create its
+focused commit after implementation, verification, and handoff documentation are current; do not
+wait for a separate commit request.
 
 ## Engineering rules
 
@@ -118,6 +119,7 @@ implemented), blockers, and exact next commands in `docs/milestones/STATUS.md`. 
 and ADRs at the same time. Continue only when prerequisites are genuinely satisfied. Never infer
 Milestone 9 physical-hardware acceptance from Milestone 1 emulator evidence.
 
-After every milestone is genuinely complete and its handoff documentation is current, create one
-focused milestone commit. Exclude unrelated user changes. If milestone changes cannot be separated
-safely from unrelated work, stop and ask rather than committing unrelated files.
+After every feature, maintenance item, or milestone is genuinely complete and its handoff
+documentation is current, create one focused commit. Exclude unrelated user changes. If the
+completed work cannot be separated safely from unrelated work, stop and ask rather than committing
+unrelated files.

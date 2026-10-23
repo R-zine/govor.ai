@@ -279,6 +279,10 @@ Avoid clutter.
 
 The phone should feel like the learning experience itself, not a remote-control dashboard.
 
+Teacher and streamed application audio must default to the phone's built-in loudspeaker rather
+than the quiet call earpiece. The Android client must restore the device's prior communication
+audio route when the lesson disconnects or moves to the background.
+
 ### 2.8 Progress tracking
 
 Track learning progress locally in SQLite.

@@ -24,7 +24,9 @@
 3. The gateway starts a WebRTC media session with the renderer/media service.
 4. The host produces a validated teacher response, synthesized audio, and optional timing data.
 5. The renderer receives only validated scene/avatar commands and media timing.
-6. Android receives video and teacher audio, then reports playback completion.
+6. Android selects its built-in loudspeaker for the connected lesson, receives video and teacher
+   audio, then reports playback completion. Disconnect/background teardown restores the prior
+   communication-audio route.
 7. Only in `awaiting_learner` may Android enter `recording`.
 8. Push-to-talk audio is sent as a bounded authenticated upload or WebRTC track.
 9. The host recognizes speech, classifies intent, applies lesson policy, and creates the next turn.

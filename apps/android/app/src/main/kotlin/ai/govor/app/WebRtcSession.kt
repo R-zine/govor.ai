@@ -1,6 +1,8 @@
 package ai.govor.app
 
 import android.content.Context
+import android.util.Log
+import ai.govor.core.LoudspeakerRouteController
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import okhttp3.OkHttpClient
@@ -42,6 +44,9 @@ enum class MediaConnectionStatus {
 class WebRtcSession(private val context: Context) : PeerConnection.Observer {
     private val eglBase = EglBase.create()
     private val audioDeviceModule = JavaAudioDeviceModule.builder(context).createAudioDeviceModule()
+    private val loudspeakerRoute = LoudspeakerRouteController(
+        AndroidLoudspeakerRoutePlatform(context),
+    )
     private val factory: PeerConnectionFactory
     private var httpClient: OkHttpClient? = null
 
@@ -95,6 +100,7 @@ class WebRtcSession(private val context: Context) : PeerConnection.Observer {
             fail("Enter the Windows host address.")
             return
         }
+        selectLoudspeaker()
 
         val rtcConfiguration = PeerConnection.RTCConfiguration(emptyList()).apply {
             sdpSemantics = PeerConnection.SdpSemantics.UNIFIED_PLAN
@@ -167,6 +173,7 @@ class WebRtcSession(private val context: Context) : PeerConnection.Observer {
         httpClient?.dispatcher?.executorService?.shutdown()
         httpClient?.connectionPool?.evictAll()
         httpClient = null
+        loudspeakerRoute.deactivate()
         mutableStatus.value = MediaConnectionStatus.DISCONNECTED
     }
 
@@ -220,6 +227,7 @@ class WebRtcSession(private val context: Context) : PeerConnection.Observer {
         .toString()
 
     private fun fail(message: String) {
+        loudspeakerRoute.deactivate()
         mutableError.value = message
         mutableStatus.value = MediaConnectionStatus.FAILED
     }
@@ -253,6 +261,7 @@ class WebRtcSession(private val context: Context) : PeerConnection.Observer {
         }
 
         override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
+            loudspeakerRoute.deactivate()
             if (mutableStatus.value != MediaConnectionStatus.FAILED) {
                 mutableStatus.value = MediaConnectionStatus.DISCONNECTED
             }
@@ -265,9 +274,17 @@ class WebRtcSession(private val context: Context) : PeerConnection.Observer {
 
     override fun onConnectionChange(state: PeerConnection.PeerConnectionState) {
         when (state) {
-            PeerConnection.PeerConnectionState.CONNECTED -> mutableStatus.value = MediaConnectionStatus.CONNECTED
-            PeerConnection.PeerConnectionState.FAILED -> fail("WebRTC connection failed.")
-            PeerConnection.PeerConnectionState.CLOSED -> mutableStatus.value = MediaConnectionStatus.DISCONNECTED
+            PeerConnection.PeerConnectionState.CONNECTED -> {
+                selectLoudspeaker()
+                mutableStatus.value = MediaConnectionStatus.CONNECTED
+            }
+            PeerConnection.PeerConnectionState.FAILED -> {
+                fail("WebRTC connection failed.")
+            }
+            PeerConnection.PeerConnectionState.CLOSED -> {
+                loudspeakerRoute.deactivate()
+                mutableStatus.value = MediaConnectionStatus.DISCONNECTED
+            }
             else -> Unit
         }
     }
@@ -276,7 +293,16 @@ class WebRtcSession(private val context: Context) : PeerConnection.Observer {
         val track = transceiver.receiver.track()
         when (track) {
             is VideoTrack -> renderer?.let(track::addSink)
-            is AudioTrack -> track.setEnabled(true)
+            is AudioTrack -> {
+                track.setEnabled(true)
+                selectLoudspeaker()
+            }
+        }
+    }
+
+    private fun selectLoudspeaker() {
+        if (!loudspeakerRoute.activate()) {
+            Log.w(AUDIO_ROUTE_LOG_TAG, "The built-in loudspeaker route is unavailable.")
         }
     }
 
@@ -290,6 +316,10 @@ class WebRtcSession(private val context: Context) : PeerConnection.Observer {
     override fun onDataChannel(channel: DataChannel) = Unit
     override fun onRenegotiationNeeded() = Unit
     override fun onAddTrack(receiver: RtpReceiver, mediaStreams: Array<out MediaStream>) = Unit
+
+    private companion object {
+        const val AUDIO_ROUTE_LOG_TAG = "GovorAudioRoute"
+    }
 }
 
 private open class SimpleSdpObserver : SdpObserver {

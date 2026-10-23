@@ -44,6 +44,9 @@ same media/control addresses and leave the code/fingerprint blank to reuse that 
 
 ## Lesson controls and microphone
 
+- Teacher and environment audio plays through the phone's main loudspeaker by default, not the
+  quiet call earpiece. Use the phone's volume buttons to adjust it. govor.ai restores the
+  previous communication-audio route after disconnecting or moving to the background.
 - Hold **Hold to talk** for the entire learner response and release it when finished.
 - Do not start another recording while the app shows `processing` or the teacher is speaking.
 - **Replay** repeats the last teacher audio locally without advancing the lesson.
