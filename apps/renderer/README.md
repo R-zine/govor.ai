@@ -3,15 +3,19 @@
 `apps/renderer` is the active Godot 4.7.2 .NET renderer. Unity is not part of the stack.
 
 The runtime owns a 1280x720, 30 fps `SubViewport`, a repository-owned CC0 stylized teacher, and
-four deterministic procedural environments: café, supermarket, airport, and home. The avatar has
+four built-in procedural environments (café, supermarket, airport, and home) plus validated
+data-only custom environments. The avatar has
 idle, speaking, listening, and thinking behavior, simple expressions, PCM-energy mouth motion, and
 six viseme shapes. Scene specifications and animation timelines arrive through the validated
 loopback renderer-control contract; no command can name a path, URL, download, or script.
 
 The scene catalog caches reusable primitive meshes/materials and assembles each environment
-entirely in memory. Replaced scene trees are queued for cleanup. Unknown wire assets are rejected;
-an internal missing implementation has a deterministic magenta fallback. See
-`Assets/Teacher/README.md` and ADR-0009 for the asset/license and boundary decisions.
+entirely in memory. Built-ins use closed asset IDs; custom recipes contain only bounded colored
+box/cylinder/sphere primitives. Replaced scene trees are queued for cleanup. Unknown wire assets
+are rejected; an internal missing implementation has a deterministic magenta fallback. No custom
+bundle is loaded by Godot and no recipe can name a resource path or script: the host sends the
+validated primitive payload over the existing control connection. See `Assets/Teacher/README.md`,
+ADR-0009, and ADR-0015.
 
 Godot publishes top-to-bottom RGBA frames and bounded PCM blocks through renderer-neutral Windows
 named memory mappings. Video uses two alternating latest-frame slots so a complete frame remains

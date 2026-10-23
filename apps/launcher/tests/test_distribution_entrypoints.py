@@ -50,6 +50,51 @@ def test_lesson_creator_uses_the_loopback_backend_and_is_packaged() -> None:
     assert "Invoke-WebRequest" not in creator
     assert "Create-Lesson.cmd" in packager
     assert "Create-Lesson.ps1" in packager
+    assert "list-environments --json" in creator
+
+
+def test_environment_manager_uses_a_zip_picker_and_local_import_command() -> None:
+    command = (REPOSITORY_ROOT / "distribution" / "windows" / "Manage-Environments.cmd").read_text(
+        encoding="utf-8"
+    )
+    picker = (REPOSITORY_ROOT / "distribution" / "windows" / "Import-Environments.ps1").read_text(
+        encoding="utf-8"
+    )
+    packager = (REPOSITORY_ROOT / "scripts" / "package.ps1").read_text(encoding="utf-8")
+
+    assert "Import-Environments.ps1" in command
+    assert "Windows.Forms.OpenFileDialog" in picker
+    assert "*.zip" in picker
+    assert "import-environments --source $dialog.FileName" in picker
+    assert "Invoke-WebRequest" not in picker
+    assert "Manage-Environments.cmd" in packager
+    assert "Import-Environments.ps1" in packager
+
+
+def test_application_patch_entrypoint_uses_the_installed_signed_updater() -> None:
+    command = (REPOSITORY_ROOT / "distribution" / "windows" / "Apply-Govor-Patch.cmd").read_text(
+        encoding="utf-8"
+    )
+    updater = (REPOSITORY_ROOT / "distribution" / "windows" / "Apply-Govor-Patch.ps1").read_text(
+        encoding="utf-8"
+    )
+    packager = (REPOSITORY_ROOT / "scripts" / "package.ps1").read_text(encoding="utf-8")
+
+    assert "Apply-Govor-Patch.ps1" in command
+    assert "--doctor-only" in command
+    assert "-DoctorOnly" in command
+    assert "RSACryptoServiceProvider" in updater
+    assert "VerifyData" in updater
+    assert "old_sha256" in updater
+    assert "Required base file was locally changed" in updater
+    assert "File]::Replace" in updater
+    assert "rolled back" in updater
+    assert "Start-Process" not in updater
+    assert "Invoke-WebRequest" not in updater
+    assert "Apply-Govor-Patch.cmd" in packager
+    assert "Apply-Govor-Patch.ps1" in packager
+    assert "update-signing-public.xml" in packager
+    assert "Apply-Govor-Patch.cmd'), '--doctor-only'" in packager
 
 
 def test_start_entrypoint_forwards_bounded_smoke_arguments() -> None:

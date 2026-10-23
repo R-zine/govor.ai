@@ -47,6 +47,40 @@ internal static class RendererSelfTest
             scene.Validate();
         }
 
+        var customScene = new SceneSpecificationPayload(
+            "hotel-lobby-v1",
+            "hotel-lobby",
+            "wide",
+            "warm",
+            "cut",
+            new Vector3Payload(0, 0, -0.5),
+            0,
+            [
+                new SceneObjectPayload(
+                    "front-desk",
+                    null,
+                    new Vector3Payload(0, 0.55, 1),
+                    0,
+                    1,
+                    new PrimitivePayload("box", new Vector3Payload(4, 1.1, 0.8), "#70452A")),
+            ]);
+        customScene.Validate();
+        Node3D primitive = ProceduralSceneAssetCatalog.CreatePrimitive(customScene.Objects[0].Primitive!);
+        primitive.Free();
+        Node3D sphere = ProceduralSceneAssetCatalog.CreatePrimitive(
+            new PrimitivePayload("sphere", new Vector3Payload(2, 3, 2), "#4B8F8C"));
+        try
+        {
+            if (sphere.GetChild<MeshInstance3D>(0).Scale != new Vector3(2, 3, 2))
+            {
+                throw new InvalidOperationException("Custom sphere dimensions were not preserved.");
+            }
+        }
+        finally
+        {
+            sphere.Free();
+        }
+
         Node3D fallback = ProceduralSceneAssetCatalog.Create("missing-self-test", out bool usedFallback);
         try
         {

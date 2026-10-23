@@ -114,6 +114,8 @@ omit = [
   "apps/launcher/src/govor_launcher/cli.py",
   "apps/launcher/src/govor_launcher/processes.py",
   "apps/launcher/src/govor_launcher/security.py",
+  # Developer-only patch authoring plus the PowerShell transaction have dedicated integration tests.
+  "apps/launcher/src/govor_launcher/application_patch.py",
   # Executed only in a child process; the parent integration test verifies its WAV result.
   "services/speech/src/govor_speech/espeak_worker.py",
   # Thin Win32 FFI is verified by the Milestone 7 real Credential Manager smoke.

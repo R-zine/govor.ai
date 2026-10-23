@@ -34,9 +34,10 @@ clients. An active lesson keeps the snapshot from `session.start`; the next less
 snapshot. Direct invalid edits retain the last valid runtime catalog. Network downloads are not
 supported and no LAN administration endpoint is added.
 
-Each lesson names one closed `scene_template_id`: `cafe`, `supermarket`, `airport`, or `home`.
-Multiple lessons may reuse a template. Adding a new environment still requires an explicit scene
-planner, renderer catalog, contract, and test change.
+Each lesson names one `scene_template_id` that must exist in the current validated scene planner.
+The four built-ins remain `cafe`, `supermarket`, `airport`, and `home`; ADR-0015 defines additive
+local environment bundles. Multiple lessons may reuse a template. A lesson import is rejected
+unless its referenced built-in or custom environment is already installed.
 
 Scenario IDs are persistent-data keys and should remain stable once shipped. Exercise counts are
 provided by the active definition to progress restoration; incompatible edits must be reviewed as

@@ -73,6 +73,9 @@ Milestone handoff.
 ./scripts/progress.ps1 -Action Delete -ConfirmDelete
 ./scripts/progress.ps1 -Action DeleteAll -ConfirmDelete
 ./scripts/provider-credentials.ps1 -Action Status -Target '<credential-target>'
+./scripts/initialize-release-signing.ps1
+./scripts/package.ps1 -Version '<semver>' -VersionCode '<higher-integer>' -NoArchive
+./scripts/create-application-patch.ps1 -BasePackagePath '<base>' -TargetPackagePath '<target>' -OutputPath '<patch>'
 ./scripts/m8-vm.ps1 -Action Prerequisites -IsoPath '<windows-11-x64-iso>'
 ./scripts/m8-vm.ps1 -Action Provision -IsoPath '<windows-11-x64-iso>' -IsoSha256 '<recorded-sha256>'
 ./scripts/m8-vm.ps1 -Action Start

@@ -41,6 +41,27 @@ sends the bounded topic and resolved content settings to loopback llama.cpp, val
 structured response, adds application-owned IDs/order/scene fields, and hands the complete JSON to
 the same importer. The creator does not call a network-facing host route, and the existing watcher
 provides the same live Android update.
+`Manage-Environments.cmd` is a third same-PC path. Its native picker accepts one ZIP, and the
+launcher reads (without extracting) only bounded environment JSON entries. After whole-batch and
+combined-catalog validation, it publishes recipes into `content/environments`. The host swaps to
+a new immutable planner snapshot on the next poll. The lesson importer/creator then allow the new
+environment ID, and the next `session_started` command carries its validated primitive recipe to
+the already-running Godot renderer.
+
+## Offline application update
+
+1. The application is stopped and `Apply-Govor-Patch.cmd` selects a local `.govorpatch`/ZIP.
+2. The installed, non-patchable bootstrap reads the package-pinned RSA public key and verifies the
+   detached signature over the exact manifest bytes before trusting any operation.
+3. It checks the source version, exact member set, bounded paths/sizes, old host file hashes, and
+   all new payload hashes, then stages the complete payload below the per-user data root.
+4. Host operations commit with backups and the target `release.json` last. A later failure restores
+   already committed paths. Unlisted imported content and progress/model/credential/TLS state are
+   untouched.
+5. If present, the verified APK is retained in the per-user updates directory. The user transfers
+   and opens it on Android, where the OS checks application/signing/update compatibility and asks
+   for confirmation. No patch bytes or administration command cross the lesson LAN gateway.
+
 The microphone itself remains on the WebRTC track. In `local` mode, recording start opens a single
 bounded capture in the media service; received frames are resampled to 16 kHz mono PCM. Submission
 closes the capture and returns an in-memory WAV over a loopback-only internal HTTP endpoint. The
@@ -55,11 +76,12 @@ selects the committed correction or next prompt and applies an explainable bound
 change when appropriate. Every `teacher.turn` carries the resulting progress snapshot. After a
 completed lesson's final audio finishes, the host ends the session with reason `completed`.
 
-The host also asks the pure scene planner for the selected lesson's allow-listed scene-template
-specification and includes it only with `session_started`. Godot validates the closed IDs and
-bounded transforms, builds the scene from cached procedural resources, fades from the previous
-environment, and queues the replaced node tree for cleanup. No generated `.tscn`, model file, or
-other 3D file is written at runtime.
+The host also asks the pure scene planner for the selected lesson's validated scene-template
+specification and includes it only with `session_started`. Godot validates either closed built-in
+asset IDs or closed primitive shapes with bounded colors, dimensions, and transforms, builds the
+scene from cached procedural resources, fades from the previous environment, and queues the
+replaced node tree for cleanup. No generated `.tscn`, model file, texture, script, or other 3D
+resource is loaded or written at runtime.
 
 The local dialogue adapter sends the recognized utterance, lesson context, deterministic intent
 hint, and at most the configured number of recent turns to llama.cpp. Closed structured output is

@@ -218,6 +218,53 @@ claim that this new form was clicked. Completed Milestone 8/9 VM and physical ac
 rerun because this feature changes neither Android, media, rendering, network gateways, nor device
 behavior.
 
+### Patchable procedural environment bundles
+
+On 2026-10-23 the four built-in Godot environments were extended with additive, local data-only
+environment bundles. `Manage-Environments.cmd` opens a native Windows ZIP picker. The launcher
+reads one to 32 JSON entries without extracting paths, rejects encrypted/non-JSON/traversal or
+oversized input, protects built-in and installed IDs, validates the complete result, and publishes
+canonical recipes under `content/environments` using an import lock. Failed batches roll back.
+
+The version 1 recipe has closed camera/lighting/transition and box/cylinder/sphere choices,
+bounded finite dimensions/colors/transforms, and at most 64 objects. It has no field for a Godot
+scene/resource, model, texture, shader, path, URL, script, command, or assembly. Python, JSON
+Schema, and C# enforce the translated renderer boundary. Godot constructs the primitives in memory
+through the existing cache; it never opens the bundle.
+
+The host watches the environment directory and swaps only a complete valid immutable planner
+snapshot. Invalid edits retain the prior planner and set `environment_catalog_status` to
+`reload_error`. Lesson imports and generated lessons validate against installed environments, and
+the creator form obtains current display names from the launcher. A valid addition is therefore
+usable by a later lesson without restarting the host or renderer. ADR-0015 and
+`docs/development/environment-content.md` define the format and authoring path.
+
+Verification to date:
+
+- Focused scene-planner, contract, launcher, distribution, and host-registry tests: verified
+  passing. The live host test installed an environment, observed the planner refresh, imported a
+  referencing lesson, and started it on the same control connection; its renderer command carried
+  the custom primitive.
+- `./scripts/test.ps1 -Scope contracts`: verified passing, 36 schema/model/fixture tests.
+- `./scripts/test.ps1 -Scope python`: verified passing, 241 tests at 85.11% combined branch
+  coverage plus Ruff, format, and strict mypy.
+- `./scripts/test.ps1 -Scope csharp`: verified passing, 9 tests.
+- `./scripts/test.ps1 -Scope godot`: verified passing; Godot imported the project, compiled the
+  C# consumer, preserved custom sphere dimensions, and printed `GOVOR_GODOT_SELF_TEST_PASS`.
+- PowerShell parsing for `Import-Environments.ps1`, dynamic `Create-Lesson.ps1`, and
+  `package.ps1`: verified passing.
+- `./scripts/test.ps1 -Scope all`: verified passing; the Python results above, Kotlin/JVM tests,
+  9 C# tests, 21 real media tests, Godot import/build/self-test, and Android debug assembly passed.
+  Godot emitted only the existing restricted-environment certificate-store/NuGet feed warnings.
+- `uv run --frozen pip-audit`: verified passing; no known vulnerabilities found.
+- `uv run --frozen pre-commit run --all-files`: verified passing; JSON/YAML, endings,
+  whitespace, secret/size, Ruff/format, 36 contract tests, PowerShell syntax, and the affected-app
+  software gate all passed. Final selected-file reruns also passed after the documentation and
+  ASCII-safe environment-list JSON output edits.
+- No portable release package, Windows picker click, Android/emulator run, or physical-device run
+  has been executed for this maintenance feature. Prior milestone hardware evidence is not reused
+  as proof of the new UI.
+
 ### Path-aware pre-commit software gate
 
 On 2026-10-23 pre-commit gained a staged-path dispatcher in
@@ -258,12 +305,14 @@ performance regressions may still require revisiting it.
 
 ## Current implementation
 
-- `apps/renderer` is a Godot 4.7.2 .NET project with a stylized adult teacher, four dynamic
-  procedural environments, a dedicated 1280x720 `SubViewport`, and the bounded media-test tone.
-- `packages/scene_planner` owns deterministic scene recipes and actual-PCM/provider-timing avatar
-  plans without depending on Godot, FastAPI, Android, or provider implementations.
-- The version 1 renderer contract accepts only closed asset/environment/camera/lighting/transition
-  IDs and bounded transforms. It rejects arbitrary paths, URLs, scripts, and unknown fields.
+- `apps/renderer` is a Godot 4.7.2 .NET project with a stylized adult teacher, four built-in plus
+  validated data-only procedural environments, a dedicated 1280x720 `SubViewport`, and the
+  bounded media-test tone.
+- `packages/scene_planner` owns built-in and installed immutable scene recipes plus actual-PCM/
+  provider-timing avatar plans without depending on Godot, FastAPI, Android, or providers.
+- The version 1 renderer contract accepts bounded environment IDs, closed presets, and exactly one
+  built-in asset or bounded procedural primitive per object. It rejects arbitrary paths, URLs,
+  scripts, resources, and unknown fields.
 - Godot caches 68 mesh/material resources, queues replaced scene trees for cleanup, supplies a
   predictable internal missing-asset fallback, and writes no generated 3D files at runtime.
 - The teacher blinks/breathes when idle, gestures while speaking, listens/records, thinks during
@@ -749,6 +798,91 @@ The learner confirmed the moving phone picture and clear, intelligible phone spe
 2026-10-22. The release package, physical app, services, and every temporary generated utterance
 were stopped or deleted after the bounded follow-up. Milestone 9 has no remaining blocker and is
 closed by this focused handoff commit.
+
+## Post-milestone signed application patch handoff
+
+The 2026-10-23 maintenance implementation is complete at the software/package boundary. It adds a
+dedicated ACL-protected RSA-3072 application-update identity, `config/release.json`, a signed
+version 1 `.govorpatch` manifest, a developer diff/signing command, and packaged
+`Apply-Govor-Patch.cmd`/`.ps1` picker/verifier. The host transaction authenticates the manifest,
+requires the exact source release and old hashes, validates all paths/members/sizes/new hashes,
+stages before mutation, commits the target release marker last, and restores earlier operations if
+a later write fails. Its bootstrap and public trust key are intentionally non-patchable. Unlisted
+files and `%LOCALAPPDATA%` models/progress/security state are preserved.
+
+An optional Android APK is bound into the same signed manifest and retained under the per-user
+updates directory. Actual phone installation remains a separate explicit platform action: the user
+must copy/open the APK and approve Android's update dialog. No ADB, silent install, unknown-source
+bypass, or LAN update endpoint was added. No physical phone update was executed in this change, so
+the generated/staged APK is not Android runtime evidence. Existing 0.1.11 installations need one
+full updater-capable package replacement before incremental patches can be used. ADR-0016 records
+the decision and `docs/development/application-patches.md` records authoring commands.
+
+Verification and failures:
+
+- `./scripts/initialize-update-signing.ps1`: passed, then a repeat retained the same key. The
+  ignored private/public pair is RSA-3072 and Python confirmed the public half matches; private key
+  bytes were not printed or packaged.
+- Focused patch tests: 9 passed. They cover manifest/payload authentication, key mismatch, protected
+  bootstrap/trust files, Android signer continuity, the PowerShell authoring wrapper, a real
+  add/replace/delete/APK transaction, preservation of an unlisted lesson, tamper rejection before
+  mutation, and automatic rollback after a deliberately late filesystem failure.
+- The first sandboxed package attempt stalled after successful Godot export because the sandbox
+  denied certificate-store access; it was interrupted and not counted. Outside that restriction,
+  the first package attempt found the staged import smoke still used repository-relative lesson
+  paths. `scripts/package.ps1` was corrected to map staged lesson/environment directories.
+- The first full suite after adding the authoring module ran 254 tests successfully but failed the
+  85% runtime coverage gate at 83.93%. The developer-only patch authoring module and shipped
+  PowerShell transaction now have dedicated integration tests and are classified with the existing
+  Windows launcher/orchestration coverage exclusions; runtime coverage remains enforced.
+- Final `./scripts/test.ps1 -Scope all`: passed. It ran 254 Python/contract/integration tests at
+  85.11% application-runtime coverage, Kotlin tests, 9 C# tests, 21 real media tests, Godot
+  import/C# build/headless self-test, and Android debug assembly.
+- Final `uv run --frozen pip-audit`: passed with no known vulnerabilities after the expected
+  sandbox-network failure was repeated with network access.
+- Final `uv run --frozen pre-commit run --all-files`: passed every configured hook, including
+  private-key detection, JSON contracts, PowerShell parsing, Ruff, and the affected full suite.
+  A later documentation-only repeat could not read the pre-commit environment created outside the
+  sandbox when run inside it; repeating at the same access boundary passed.
+- PowerShell syntax passed for the updater, both signing scripts, patch creator, and packager.
+- Final `./scripts/package.ps1 -Version 0.1.12 -VersionCode 13 -NoArchive`: passed outside the
+  certificate-store sandbox. Godot export, stable signed APK verification, embedded runtime/source
+  staging, imports, doctor, and all three Windows wrapper doctor smokes passed.
+- The final ignored candidate directory contains the updater, public key, and version metadata but
+  no `.secrets` directory/private exponent. Its updater SHA-256 is
+  `4b99a01fb576df5f0406d8f071f98a7549de6d18d97c584cf888625dd69e7fd3`.
+- Candidate APK `.cache/dist/govor.ai-0.1.12-android-release.apk` is 55,425,173 bytes with SHA-256
+  `bedb0cf2cecdf67773d368db819ce0fea1d2edf159ead8ebb80e5b0dd714d4ab`; apksigner verified its
+  stable certificate SHA-256
+  `b7022cb8bbcc0a4828cf73e5ef958e1b431ccce697020577c4a502a66ec59843`.
+
+Acceptance status:
+
+| Criterion | Status | Evidence / limitation |
+| --- | --- | --- |
+| Exact-base signed host patch | verified passing | Real PowerShell add/replace/delete transaction from a generated RSA-signed patch |
+| Tamper/wrong-key/unsafe bootstrap rejection | verified passing | Python signature/integrity tests plus packaged PowerShell payload-tamper rejection |
+| Partial-write rollback | verified passing | Late parent-file collision restored replace/delete/add operations and retained source release metadata |
+| Preserve unlisted local content/per-user state | verified passing | Unlisted lesson survived; updater operates only on signed install-root paths and stages below the update directory |
+| Optional Android APK binding/staging | verified passing | APK metadata/hash is signed and the Windows transaction retained exact fixture bytes |
+| Android update accepted/runs on phone | not executed | Requires explicit transfer/open/install on a physical phone; no claim is inferred from package creation |
+| Pre-updater 0.1.11 incremental upgrade | not supported by design | Install one full updater-capable release first |
+
+Exact next release workflow:
+
+```powershell
+./scripts/package.ps1 -Version '<next-version>' -VersionCode '<higher-code>' -NoArchive
+./scripts/create-application-patch.ps1 `
+  -BasePackagePath '<retained-updater-capable-base-directory>' `
+  -TargetPackagePath '<new-package-directory>' `
+  -AndroidApkPath '<new-signed-release.apk>' `
+  -OutputPath '<base-to-target.govorpatch>'
+```
+
+Before sending a real patch, apply it to an exact copy of the supported base and run the resulting
+host. When it contains Android changes, install that APK on the intended test phone and record the
+platform result separately. No milestone was reopened and no commit was created for this
+post-milestone feature.
 
 ## Renderer evidence and limitations
 

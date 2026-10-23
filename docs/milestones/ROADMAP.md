@@ -29,11 +29,13 @@ physical target-hardware bundle.
 
 On 2026-10-22 guided lesson definitions moved from Python/Android constants to strict versioned
 JSON in `assets/lesson-content`. The host loads immutable catalog snapshots, Android discovers the
-ordered list over the authenticated control contract, and lessons choose one of four closed
-reusable scene templates. A later maintenance amendment adds a packaged Windows JSON/ZIP picker,
+ordered list over the authenticated control contract, and lessons choose a validated reusable
+scene template (initially four built-ins). A later maintenance amendment adds a packaged Windows JSON/ZIP picker,
 bounded additive import, live whole-catalog replacement, and same-connection Android catalog
 updates while preserving active-session snapshots. This work is not a new milestone and does not
 revise earlier physical acceptance evidence. See ADR-0013 and the current status handoff.
+The 2026-10-23 environment amendment adds bounded data-only procedural ZIPs, live planner swaps,
+and dynamic creator choices under ADR-0015; it does not allow application/Godot code patches.
 
 ## Milestone 2 acceptance tracking
 
@@ -327,7 +329,7 @@ intended Wi-Fi execution; emulator results do not satisfy or replace them.
 
 The next maintenance feature adds a packaged host-side lesson creator without reopening any
 completed milestone. `Create-Lesson.cmd` accepts a required topic plus optional content difficulty,
-closed scene environment, and one-to-eight exercise length. Omitted values are resolved
+validated installed environment, and one-to-eight exercise length. Omitted values are resolved
 deterministically. The existing loopback Qwen/llama.cpp backend generates only the bounded lesson
 content; application code owns IDs, ordering, scene selection, final lesson validation, and locked
 additive publication. The existing catalog watcher makes the new lesson available to connected
@@ -338,3 +340,39 @@ default tests, real importer publication, contract fixtures, launcher/distributi
 PowerShell parsing, one bounded real local-model smoke when the installed model is available, and
 the normal software/pre-commit gates. It does not require rerunning completed physical-device or
 clean-VM acceptance unless those paths change.
+
+## Post-milestone patchable environments
+
+The 2026-10-23 maintenance feature makes 3D environments local data patches without reopening completed
+milestones. A packaged `Manage-Environments.cmd` ZIP picker installs one or more strict version 1
+JSON recipes into `content/environments`. Recipes are deliberately limited to validated colored
+box/cylinder/sphere primitives plus closed camera, lighting, and transition presets; they cannot
+patch Godot/application code or name models, textures, paths, URLs, scripts, or assemblies. The
+host swaps immutable planner snapshots, the lesson importer/creator discovers installed IDs, and
+the next lesson sends the primitive recipe to the running Godot renderer. ADR-0015 defines this
+boundary.
+
+Acceptance passed through atomic/bounded ZIP security tests, schema and cross-language renderer-contract
+tests, live host-registry tests, dynamic lesson-creator choices, package/UI checks, Godot
+import/build/self-test, PowerShell parsing, and the normal software/pre-commit gates. This local
+content feature does not change or require repetition of completed clean-VM or physical-device
+acceptance.
+
+## Post-milestone signed application patches
+
+The 2026-10-23 maintenance feature adds offline updates for host/application changes without
+weakening the data-only lesson/environment boundaries. Updater-capable full releases pin a
+dedicated RSA-3072 public key and carry a stable `Apply-Govor-Patch.cmd` bootstrap. A signed
+`.govorpatch` binds one exact base/target pair, old/new size and SHA-256 values for closed
+add/replace/delete operations, and an optional signed-release APK. The installed verifier rejects
+tampering, unsafe/extra/colliding paths, wrong bases, local conflicts, active services, and changes
+to its own bootstrap/trust key; it stages before mutation, commits the release marker last, rolls
+back partial failure, and preserves unlisted imported content plus per-user state. ADR-0016 defines
+the boundary.
+
+Android payload handling stops at a verified APK saved on Windows. The learner must transfer/open
+it and approve Android's normal update prompt; this feature does not add ADB, silent installation,
+unknown-source bypass, or a LAN update endpoint. The historical 0.1.11 acceptance package predates
+the trust root and needs one complete updater-capable release replacement. Focused tests and a real
+0.1.12 package build verify the new Windows transaction and packaging path; no physical-phone
+update was executed, so prior Milestone 9 evidence is neither replaced nor extended.

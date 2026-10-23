@@ -226,7 +226,9 @@ For example, a café scene could contain a counter, cups, tables, chairs, and a 
 
 Do not attempt to generate arbitrary high-quality 3D meshes with an LLM on every lesson turn.
 
-Instead, use a validated scene-description contract and an extensible asset library.
+Instead, use a validated scene-description contract and an extensible asset library. Scene objects
+may be known built-in assets or bounded declarative box, cylinder, and sphere primitives with
+validated dimensions, color, placement, rotation, and scale.
 
 The scene-generation system may decide:
 
@@ -242,6 +244,16 @@ The scene-generation system may decide:
 All scene descriptions must be validated against known assets and allowed parameter ranges.
 
 Runtime scenes should be assembled and kept in PC memory. Persist source assets, configuration, and optional deterministic scene recipes on disk, but do not require exporting generated scenes to standalone 3D files.
+
+The packaged Windows host must provide a local file-picker UI for additive environment ZIP
+bundles. A bundle contains one or more versioned JSON scene recipes and becomes available to the
+scene planner and lesson creator without restarting the host. Imports must be bounded, validate
+the complete batch and resulting catalog, reject collisions, and publish canonical files only
+after validation. ZIP paths must never be extracted. Version 1 environment data must not contain
+Godot scenes, scripts, assemblies, model/texture files, filesystem paths, URLs, or arbitrary
+resource identifiers. Invalid live changes retain the last valid planner snapshot and surface a
+degraded environment-catalog status. Richer reviewed asset formats may be added later through a
+new versioned contract; they must not weaken this data-only boundary.
 
 ### 2.7 Android interface
 
@@ -1267,7 +1279,7 @@ Build the immersive teaching environment.
 - Add memory cleanup.
 - Add visual fallbacks.
 
-Use deterministic asset IDs.
+Use deterministic asset IDs for built-ins and closed primitive types for installed recipes.
 
 Never allow the LLM to choose arbitrary file paths, remote downloads, or executable scripts.
 
@@ -1282,6 +1294,8 @@ Never allow the LLM to choose arbitrary file paths, remote downloads, or executa
 - Scene changes do not leak significant GPU memory.
 - Runtime scene data remains in memory without requiring generated 3D files on disk.
 - Rendering remains usable alongside local inference.
+- A validated local environment ZIP can be installed through the packaged UI and selected by a
+  new lesson without restarting the host.
 
 ### Performance tests
 
@@ -1379,12 +1393,24 @@ Create a simple launcher that:
 5. Shows model and connectivity status.
 6. Stops child processes cleanly when exiting.
 
+Support offline incremental application patches after an updater-capable full release is
+installed. A patch must be authenticated by a package-pinned public key, bind the source/target
+versions and exact old/new hashes, reject unsafe or unlisted paths, stage before mutation, roll
+back partial changes, preserve unlisted learner content and `%LOCALAPPDATA%` state, and never
+execute archive-supplied code before verification. The updater and trust key require a full
+release to replace.
+
 Do not require the Godot editor or a development Python environment for normal use; package the
 exported renderer runtime.
 
 ### Android
 
 Produce a signed release APK.
+
+An application patch may carry the corresponding signed APK. The Windows host must verify and
+stage it, but Android installation remains explicit and subject to the platform's application ID,
+version-code, signing-certificate, and user-confirmation checks. Do not silently install it or
+weaken unknown-source policy.
 
 Document:
 
@@ -1406,6 +1432,8 @@ Document:
 - Signing keys remain private.
 - Required model downloads have integrity checks.
 - Internet access is not necessary during normal lessons.
+- A signed patch updates an exact supported host release transactionally and preserves unlisted
+  imported content; tampered, wrong-base, or locally conflicting patches fail before mutation.
 
 ---
 

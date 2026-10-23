@@ -39,6 +39,7 @@ if ((Test-Path -LiteralPath $resolvedKeystore) -and (Test-Path -LiteralPath $res
     Protect-GovorSigningDirectory -Path $secretRoot
     Write-Output "Existing release signing identity retained: $resolvedKeystore"
     Write-Output 'Back up the entire .secrets directory securely; losing it prevents compatible updates.'
+    & (Join-Path $PSScriptRoot 'initialize-update-signing.ps1')
     exit 0
 }
 
@@ -83,3 +84,4 @@ Protect-GovorSigningDirectory -Path $secretRoot
 Write-Output "Release signing identity created: $resolvedKeystore"
 Write-Output "Gradle signing properties created: $resolvedProperties"
 Write-Output 'Back up the entire .secrets directory securely; losing it prevents compatible updates.'
+& (Join-Path $PSScriptRoot 'initialize-update-signing.ps1')

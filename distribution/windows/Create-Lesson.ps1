@@ -20,6 +20,40 @@ if (-not (Test-Path -LiteralPath $python -PathType Leaf)) {
     exit 2
 }
 
+$sourceRoots = @(
+    'apps\launcher\src',
+    'packages\domain\src',
+    'packages\gateway_security\src',
+    'packages\provider_interfaces\src',
+    'packages\scene_planner\src',
+    'packages\contracts\python',
+    'services\local_ai\src'
+) | ForEach-Object { Join-Path (Join-Path $resolvedRoot 'app') $_ }
+$previousPythonPath = $env:PYTHONPATH
+$env:PYTHONPATH = $sourceRoots -join [IO.Path]::PathSeparator
+$previousErrorActionPreference = $ErrorActionPreference
+try {
+    $ErrorActionPreference = 'Continue'
+    $environmentOutput = & $python -m govor_launcher.cli --install-root $resolvedRoot list-environments --json 2>&1
+    $environmentExitCode = $LASTEXITCODE
+}
+finally {
+    $ErrorActionPreference = $previousErrorActionPreference
+    $env:PYTHONPATH = $previousPythonPath
+}
+if ($environmentExitCode -ne 0) {
+    [Windows.Forms.MessageBox]::Show(
+        (($environmentOutput | Out-String).Trim()),
+        'Environment catalog unavailable',
+        [Windows.Forms.MessageBoxButtons]::OK,
+        [Windows.Forms.MessageBoxIcon]::Error
+    ) | Out-Null
+    exit $environmentExitCode
+}
+$environmentChoices = @(($environmentOutput | Out-String) | ConvertFrom-Json)
+$environmentLabels = @('Automatic') + @($environmentChoices | ForEach-Object { $_.display_name })
+$environmentValues = @('') + @($environmentChoices | ForEach-Object { $_.environment_id })
+
 $form = New-Object Windows.Forms.Form
 $form.Text = 'Create a lesson with govor.ai'
 $form.StartPosition = [Windows.Forms.FormStartPosition]::CenterScreen
@@ -72,7 +106,7 @@ $environmentBox = New-Object Windows.Forms.ComboBox
 $environmentBox.Location = New-Object Drawing.Point(287, 220)
 $environmentBox.Size = New-Object Drawing.Size(235, 24)
 $environmentBox.DropDownStyle = [Windows.Forms.ComboBoxStyle]::DropDownList
-[void]$environmentBox.Items.AddRange(@('Automatic', 'Cafe', 'Supermarket', 'Airport', 'Home'))
+[void]$environmentBox.Items.AddRange([object[]]$environmentLabels)
 $environmentBox.SelectedIndex = 0
 $form.Controls.Add($environmentBox)
 
@@ -136,15 +170,6 @@ if (-not $topic) {
     exit 2
 }
 
-$sourceRoots = @(
-    'apps\launcher\src',
-    'packages\domain\src',
-    'packages\gateway_security\src',
-    'packages\provider_interfaces\src',
-    'packages\scene_planner\src',
-    'packages\contracts\python',
-    'services\local_ai\src'
-) | ForEach-Object { Join-Path (Join-Path $resolvedRoot 'app') $_ }
 $arguments = @(
     '-m', 'govor_launcher.cli', '--install-root', $resolvedRoot,
     'create-lesson', '--topic', $topic
@@ -153,7 +178,6 @@ $difficultyValues = @('', 'beginner', 'intermediate', 'advanced')
 if ($difficultyBox.SelectedIndex -gt 0) {
     $arguments += @('--difficulty', $difficultyValues[$difficultyBox.SelectedIndex])
 }
-$environmentValues = @('', 'cafe', 'supermarket', 'airport', 'home')
 if ($environmentBox.SelectedIndex -gt 0) {
     $arguments += @('--environment', $environmentValues[$environmentBox.SelectedIndex])
 }

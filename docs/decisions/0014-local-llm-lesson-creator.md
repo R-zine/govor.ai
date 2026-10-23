@@ -21,7 +21,9 @@ partial or invalid catalog.
 Package `Create-Lesson.cmd` with a native Windows form. The topic is required. Difficulty,
 environment, and exercise count are optional; deterministic application code resolves omissions
 to intermediate difficulty, five exercises, and an allow-listed scene selected from topic
-keywords or a stable topic hash. Supported explicit lengths are one through eight exercises.
+keywords or a stable topic hash. ADR-0015 makes the allow-list include validated installed
+environments, and the form obtains current display names from the launcher. Supported explicit
+lengths are one through eight exercises.
 
 The creator sends one bounded structured request to the existing loopback-only llama.cpp server.
 The response must match the versioned `local-ai-lesson-content` schema and is independently parsed
@@ -30,7 +32,7 @@ the resulting lesson still includes beginner/intermediate/advanced prompts so th
 adaptive teaching engine remains authoritative.
 
 Application code creates unique slug IDs, display order, exercise IDs, schema version, and the
-closed scene-template field. It then validates the complete `lesson-definition` and publishes it
+validated scene-template field. It then validates the complete `lesson-definition` and publishes it
 through the same locked additive importer introduced by ADR-0013. The host's existing catalog
 watcher sends the replacement summary to connected Android clients. An active lesson is unchanged.
 

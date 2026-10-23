@@ -4,6 +4,7 @@ import asyncio
 import json
 import shutil
 import time
+import zipfile
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any
@@ -23,6 +24,7 @@ from govor_provider_router import (
     InMemoryCredentialStore,
     OpenAiCompatibleSpeechProvider,
 )
+from govor_scene_planner import ScenePlanner, import_environment_bundle
 from starlette.websockets import WebSocketDisconnect
 
 
@@ -144,6 +146,8 @@ def test_health_identifies_fake_mode() -> None:
         "active_sessions": 0,
         "lesson_count": 4,
         "lesson_catalog_status": "ready",
+        "environment_count": 4,
+        "environment_catalog_status": "ready",
         "providers": [
             {
                 "provider_id": "fake-scripted-stt",
@@ -280,6 +284,80 @@ def test_imported_lesson_is_pushed_and_startable_without_reconnect(tmp_path: Pat
 
     assert ready["payload"]["state"] == "ready"
     assert turn["payload"]["lesson_progress"]["scenario_id"] == "hotel-check-in"
+
+
+def test_imported_environment_and_lesson_are_startable_without_host_restart(tmp_path: Path) -> None:
+    repository_root = Path(__file__).resolve().parents[3]
+    lesson_directory = tmp_path / "lessons"
+    environment_directory = tmp_path / "environments"
+    shutil.copytree(repository_root / "assets/lesson-content", lesson_directory)
+    environment_directory.mkdir()
+    bundle = tmp_path / "hotel-environment.zip"
+    with zipfile.ZipFile(bundle, "w") as archive:
+        archive.writestr(
+            "hotel.json",
+            (
+                repository_root / "tests/fixtures/contracts/valid/environment-hotel-lobby.json"
+            ).read_bytes(),
+        )
+    renderer = FakeRendererControl()
+    app = create_app(
+        Settings(
+            mode="fake",
+            lesson_directory=str(lesson_directory),
+            environment_directory=str(environment_directory),
+        ),
+        renderer=renderer,
+    )
+
+    with TestClient(app) as client, client.websocket_connect("/v1/control") as socket:
+        socket.send_json(envelope("lesson.catalog.request", {}))
+        socket.receive_json()
+        import_environment_bundle(bundle, environment_directory)
+        deadline = time.monotonic() + 3
+        health = client.get("/health").json()
+        while health["environment_count"] != 5 and time.monotonic() < deadline:
+            time.sleep(0.1)
+            health = client.get("/health").json()
+        assert health["environment_catalog_status"] == "ready"
+        assert health["environment_count"] == 5
+
+        lesson = json.loads(
+            (repository_root / "assets/lesson-content/cafe-ordering.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        lesson.update(
+            {
+                "scenario_id": "hotel-check-in",
+                "title": "Hotel check-in",
+                "display_order": 10,
+                "scene_template_id": "hotel-lobby",
+            }
+        )
+        lesson_source = tmp_path / "hotel-lesson.json"
+        lesson_source.write_text(json.dumps(lesson), encoding="utf-8")
+        import_lesson_bundle(
+            lesson_source,
+            lesson_directory,
+            allowed_scene_templates=set(ScenePlanner(environment_directory).supported_templates),
+        )
+        updated = socket.receive_json()
+        assert updated["payload"]["lessons"][-1]["scenario_id"] == "hotel-check-in"
+
+        socket.send_json(
+            envelope(
+                "session.start",
+                {"client_id": str(uuid4()), "scenario_id": "hotel-check-in"},
+            )
+        )
+        socket.receive_json()
+        socket.receive_json()
+
+    scene = renderer.commands[0].scene
+    assert scene is not None
+    assert scene.environment_id == "hotel-lobby"
+    assert scene.objects[0].primitive is not None
 
 
 def test_invalid_live_edit_keeps_last_valid_catalog(tmp_path: Path) -> None:

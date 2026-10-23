@@ -1,4 +1,5 @@
 using Godot;
+using Govor.Contracts;
 
 namespace Govor.Renderer;
 
@@ -46,6 +47,27 @@ internal static class ProceduralSceneAssetCatalog
             "fallback-magenta",
             new Color(0.92f, 0.08f, 0.66f)));
         return fallback;
+    }
+
+    public static Node3D CreatePrimitive(PrimitivePayload primitive)
+    {
+        primitive.Validate();
+        var size = new Vector3(
+            (float)primitive.Size.X,
+            (float)primitive.Size.Y,
+            (float)primitive.Size.Z);
+        Color color = Color.FromHtml(primitive.Color);
+        string key = $"custom-{primitive.Shape}-{primitive.Color}";
+        Node3D geometry = primitive.Shape switch
+        {
+            "box" => Box("Primitive", size, Vector3.Zero, key, color),
+            "cylinder" => Cylinder("Primitive", size.X / 2, size.Y, Vector3.Zero, key, color),
+            "sphere" => Sphere("Primitive", size, Vector3.Zero, key, color),
+            _ => throw new InvalidDataException("Unsupported scene primitive."),
+        };
+        var root = new Node3D { Name = "PrimitiveRoot" };
+        root.AddChild(geometry);
+        return root;
     }
 
     public static Node3D CreateEnvironment(string environmentId)

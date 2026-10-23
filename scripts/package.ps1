@@ -4,6 +4,7 @@ param(
     [ValidateRange(1, 2100000000)]
     [int]$VersionCode = 1,
     [string]$SigningPropertiesPath = '.secrets/android-signing.properties',
+    [string]$PatchPublicKeyPath = '.secrets/update-signing-public.xml',
     [string]$GradleUserHome = '',
     [switch]$GradleOffline,
     [switch]$NoArchive
@@ -37,6 +38,10 @@ $signingProperties = [IO.Path]::GetFullPath((Join-Path $script:RepositoryRoot $S
 if (-not (Test-Path -LiteralPath $signingProperties)) {
     throw 'Release signing is not initialized. Run ./scripts/initialize-release-signing.ps1 first.'
 }
+$patchPublicKey = [IO.Path]::GetFullPath((Join-Path $script:RepositoryRoot $PatchPublicKeyPath))
+if (-not (Test-Path -LiteralPath $patchPublicKey -PathType Leaf)) {
+    throw 'Application update signing is not initialized. Run ./scripts/initialize-update-signing.ps1 first.'
+}
 
 Write-Output 'Exporting the Godot release renderer...'
 & (Join-Path $PSScriptRoot 'build.ps1') -Target renderer
@@ -65,7 +70,12 @@ $androidSdk = Get-GovorAndroidSdk
 $apkSigner = Get-ChildItem -LiteralPath (Join-Path $androidSdk 'build-tools') -Filter 'apksigner.bat' -Recurse |
     Sort-Object FullName -Descending | Select-Object -First 1 -ExpandProperty FullName
 if (-not $apkSigner) { throw 'Android apksigner was not found in the installed build tools.' }
-Invoke-Checked -FilePath $apkSigner -ArgumentList @('verify', '--verbose', '--print-certs', $releaseApk)
+$apkSignerOutput = & $apkSigner @('verify', '--verbose', '--print-certs', $releaseApk) 2>&1
+$apkSignerOutput | Write-Output
+if ($LASTEXITCODE -ne 0) { throw 'Android APK signature verification failed.' }
+$signerMatch = $apkSignerOutput | Select-String -Pattern '^Signer #1 certificate SHA-256 digest: ([0-9a-fA-F]{64})$' | Select-Object -First 1
+if (-not $signerMatch) { throw 'Android APK signer SHA-256 was not reported by apksigner.' }
+$androidSignerSha256 = $signerMatch.Matches[0].Groups[1].Value.ToLowerInvariant()
 
 Write-Output 'Copying the embedded Python runtime...'
 $managedPython = Get-ChildItem -LiteralPath (Join-Path $script:ToolsRoot 'python') -Directory -Filter 'cpython-3.12.*-windows-x86_64-none' |
@@ -106,18 +116,39 @@ foreach ($relative in $sourceDirectories) {
 Copy-Item -LiteralPath (Join-Path $script:RepositoryRoot 'apps\renderer\Builds\Windows') -Destination (Join-Path $stage 'renderer') -Recurse
 New-Item -ItemType Directory -Force -Path (Join-Path $stage 'content') | Out-Null
 Copy-Item -LiteralPath (Join-Path $script:RepositoryRoot 'assets\lesson-content') -Destination (Join-Path $stage 'content\lessons') -Recurse
+Copy-Item -LiteralPath (Join-Path $script:RepositoryRoot 'assets\environment-content') -Destination (Join-Path $stage 'content\environments') -Recurse
 Copy-Item -LiteralPath (Join-Path $script:ToolsRoot "llama.cpp\$($script:LlamaCppBuild)") -Destination (Join-Path $runtimeRoot 'llama.cpp') -Recurse
 Copy-Item -LiteralPath (Join-Path $script:ToolsRoot "whisper.cpp\$($script:WhisperCppBuild)") -Destination (Join-Path $runtimeRoot 'whisper.cpp') -Recurse
 New-Item -ItemType Directory -Force -Path (Join-Path $stage 'config') | Out-Null
 Copy-Item -LiteralPath (Join-Path $script:RepositoryRoot 'config\release-models.json') -Destination (Join-Path $stage 'config\release-models.json')
 Copy-Item -LiteralPath (Join-Path $script:RepositoryRoot 'config\release-sources.json') -Destination (Join-Path $stage 'config\release-sources.json')
 Copy-Item -LiteralPath (Join-Path $script:RepositoryRoot 'config\release-notices.json') -Destination (Join-Path $stage 'config\release-notices.json')
+Copy-Item -LiteralPath $patchPublicKey -Destination (Join-Path $stage 'config\update-signing-public.xml')
+$releaseMetadata = [ordered]@{
+    format_version = 1
+    version = $Version
+    android = [ordered]@{
+        application_id = 'ai.govor.app'
+        version_code = $VersionCode
+        version_name = $Version
+        signer_sha256 = $androidSignerSha256
+    }
+}
+[IO.File]::WriteAllText(
+    (Join-Path $stage 'config\release.json'),
+    (($releaseMetadata | ConvertTo-Json -Depth 4 -Compress) + "`n"),
+    (New-Object Text.UTF8Encoding($false))
+)
 Copy-Item -LiteralPath (Join-Path $script:RepositoryRoot 'distribution\windows\Start-Govor.cmd') -Destination $stage
 Copy-Item -LiteralPath (Join-Path $script:RepositoryRoot 'distribution\windows\Setup-Govor.cmd') -Destination $stage
 Copy-Item -LiteralPath (Join-Path $script:RepositoryRoot 'distribution\windows\Manage-Lessons.cmd') -Destination $stage
 Copy-Item -LiteralPath (Join-Path $script:RepositoryRoot 'distribution\windows\Import-Lessons.ps1') -Destination $stage
 Copy-Item -LiteralPath (Join-Path $script:RepositoryRoot 'distribution\windows\Create-Lesson.cmd') -Destination $stage
 Copy-Item -LiteralPath (Join-Path $script:RepositoryRoot 'distribution\windows\Create-Lesson.ps1') -Destination $stage
+Copy-Item -LiteralPath (Join-Path $script:RepositoryRoot 'distribution\windows\Manage-Environments.cmd') -Destination $stage
+Copy-Item -LiteralPath (Join-Path $script:RepositoryRoot 'distribution\windows\Import-Environments.ps1') -Destination $stage
+Copy-Item -LiteralPath (Join-Path $script:RepositoryRoot 'distribution\windows\Apply-Govor-Patch.cmd') -Destination $stage
+Copy-Item -LiteralPath (Join-Path $script:RepositoryRoot 'distribution\windows\Apply-Govor-Patch.ps1') -Destination $stage
 Copy-Item -LiteralPath (Join-Path $script:RepositoryRoot 'distribution\windows\Install-Prerequisites.ps1') -Destination $stage
 
 $documentation = Join-Path $stage 'documentation'
@@ -241,7 +272,11 @@ $packagePythonPath = @(
     (Join-Path $sourceRoot 'services\media\src')
 ) -join [IO.Path]::PathSeparator
 $oldPythonPath = $env:PYTHONPATH
+$oldLessonDirectory = $env:GOVOR_LESSON_DIRECTORY
+$oldEnvironmentDirectory = $env:GOVOR_ENVIRONMENT_DIRECTORY
 $env:PYTHONPATH = $packagePythonPath
+$env:GOVOR_LESSON_DIRECTORY = Join-Path $stage 'content\lessons'
+$env:GOVOR_ENVIRONMENT_DIRECTORY = Join-Path $stage 'content\environments'
 try {
     Invoke-Checked -FilePath $stagePython -ArgumentList @(
         '-c', "import govor_host.app, govor_media.app, govor_launcher.cli, govor_speech; print('GOVOR_RELEASE_IMPORTS_PASS')"
@@ -255,9 +290,14 @@ try {
     Invoke-Checked -FilePath 'cmd.exe' -ArgumentList @(
         '/d', '/c', (Join-Path $stage 'Start-Govor.cmd'), '--doctor-only'
     ) -WorkingDirectory $stage
+    Invoke-Checked -FilePath 'cmd.exe' -ArgumentList @(
+        '/d', '/c', (Join-Path $stage 'Apply-Govor-Patch.cmd'), '--doctor-only'
+    ) -WorkingDirectory $stage
 }
 finally {
     $env:PYTHONPATH = $oldPythonPath
+    $env:GOVOR_LESSON_DIRECTORY = $oldLessonDirectory
+    $env:GOVOR_ENVIRONMENT_DIRECTORY = $oldEnvironmentDirectory
 }
 
 $artifacts = @(

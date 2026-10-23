@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 
 namespace Govor.Contracts;
 
@@ -25,10 +26,11 @@ public sealed record Vector3Payload(
 
 public sealed record SceneObjectPayload(
     [property: JsonPropertyName("instance_id")] string InstanceId,
-    [property: JsonPropertyName("asset_id")] string AssetId,
+    [property: JsonPropertyName("asset_id")] string? AssetId,
     [property: JsonPropertyName("position")] Vector3Payload Position,
     [property: JsonPropertyName("yaw_degrees")] double YawDegrees,
-    [property: JsonPropertyName("scale")] double Scale)
+    [property: JsonPropertyName("scale")] double Scale,
+    [property: JsonPropertyName("primitive")] PrimitivePayload? Primitive = null)
 {
     private static readonly HashSet<string> AllowedAssets =
     [
@@ -40,16 +42,39 @@ public sealed record SceneObjectPayload(
 
     public void Validate()
     {
-        if (string.IsNullOrWhiteSpace(InstanceId) || InstanceId.Length > 64 ||
-            !AllowedAssets.Contains(AssetId))
+        if (string.IsNullOrWhiteSpace(InstanceId) ||
+            !Regex.IsMatch(InstanceId, "^[a-z][a-z0-9-]{1,63}$") ||
+            (AssetId is null) == (Primitive is null) ||
+            (AssetId is not null && !AllowedAssets.Contains(AssetId)) || Position is null)
         {
             throw new InvalidDataException("Scene object identifiers are invalid or not allow-listed.");
         }
+        Primitive?.Validate();
         Position.Validate();
         if (!double.IsFinite(YawDegrees) || Math.Abs(YawDegrees) > 360 ||
             !double.IsFinite(Scale) || Scale is < 0.1 or > 5.0)
         {
             throw new InvalidDataException("Scene object transform is outside the accepted range.");
+        }
+    }
+}
+
+public sealed record PrimitivePayload(
+    [property: JsonPropertyName("shape")] string Shape,
+    [property: JsonPropertyName("size")] Vector3Payload Size,
+    [property: JsonPropertyName("color")] string Color)
+{
+    private static readonly HashSet<string> Shapes = ["box", "cylinder", "sphere"];
+
+    public void Validate()
+    {
+        if (Size is null || !Shapes.Contains(Shape) ||
+            !Regex.IsMatch(Color ?? string.Empty, "^#[0-9A-Fa-f]{6}$") ||
+            !double.IsFinite(Size.X) || !double.IsFinite(Size.Y) || !double.IsFinite(Size.Z) ||
+            Size.X is < 0.05 or > 20 || Size.Y is < 0.05 or > 20 || Size.Z is < 0.05 or > 20 ||
+            (Shape == "cylinder" && Math.Abs(Size.X - Size.Z) > 0.001))
+        {
+            throw new InvalidDataException("Scene primitive is invalid.");
         }
     }
 }
@@ -64,25 +89,24 @@ public sealed record SceneSpecificationPayload(
     [property: JsonPropertyName("avatar_yaw_degrees")] double AvatarYawDegrees,
     [property: JsonPropertyName("objects")] IReadOnlyList<SceneObjectPayload> Objects)
 {
-    private static readonly HashSet<string> Environments = ["cafe", "supermarket", "airport", "home"];
     private static readonly HashSet<string> Cameras = ["counter", "conversation", "wide"];
     private static readonly HashSet<string> Lighting = ["warm", "daylight", "terminal", "home"];
     private static readonly HashSet<string> Transitions = ["fade", "cut"];
 
     public void Validate()
     {
-        if (string.IsNullOrWhiteSpace(SceneId) || SceneId.Length > 64 ||
-            !Environments.Contains(EnvironmentId) || !Cameras.Contains(CameraPreset) ||
+        if (!IsSlug(SceneId) || !IsSlug(EnvironmentId) ||
+            !Cameras.Contains(CameraPreset) ||
             !Lighting.Contains(LightingPreset) || !Transitions.Contains(Transition))
         {
             throw new InvalidDataException("Scene specification identifiers are invalid.");
         }
-        AvatarPosition.Validate();
-        if (!double.IsFinite(AvatarYawDegrees) || Math.Abs(AvatarYawDegrees) > 360 ||
-            Objects is null || Objects.Count is < 1 or > 32)
+        if (AvatarPosition is null || Objects is null || Objects.Count is < 1 or > 64 ||
+            !double.IsFinite(AvatarYawDegrees) || Math.Abs(AvatarYawDegrees) > 360)
         {
             throw new InvalidDataException("Scene specification bounds are invalid.");
         }
+        AvatarPosition.Validate();
         var instanceIds = new HashSet<string>(StringComparer.Ordinal);
         foreach (SceneObjectPayload item in Objects)
         {
@@ -93,6 +117,10 @@ public sealed record SceneSpecificationPayload(
             }
         }
     }
+
+    private static bool IsSlug(string value) =>
+        !string.IsNullOrWhiteSpace(value) && value.Length <= 64 &&
+        Regex.IsMatch(value, "^[a-z][a-z0-9-]{2,63}$");
 }
 
 public sealed record SpeechEnergySamplePayload(

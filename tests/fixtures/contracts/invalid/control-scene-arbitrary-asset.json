@@ -20,6 +20,7 @@
         {
           "instance_id": "unsafe-object",
           "asset_id": "../../downloaded-model.glb",
+          "primitive": null,
           "position": { "x": 0, "y": 0, "z": 0 },
           "yaw_degrees": 0,
           "scale": 1

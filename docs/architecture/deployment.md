@@ -22,6 +22,10 @@ govor.ai-<version>-windows-x64/
 `-- documentation/      guides, notices, and corresponding source
 ```
 
+Updater-capable packages also contain `Apply-Govor-Patch.cmd`/`.ps1`, signed-release metadata, and
+the public half of the dedicated application-update identity. The corresponding private RSA-3072
+key remains beside the Android keystore in ignored, ACL-restricted `.secrets`.
+
 The launcher stores mutable state under `%LOCALAPPDATA%\govor.ai`, never inside that versioned
 directory:
 
@@ -58,6 +62,13 @@ media uses DTLS-SRTP.
 The release APK has application ID `ai.govor.app`, monotonically increasing `versionCode`, a
 human-readable version name, and a stable user-controlled RSA-3072 signing identity. Signing state
 is excluded from Git and distribution artifacts. Compatible updates require the same key.
+
+For an incremental release, `scripts/create-application-patch.ps1` compares a retained base
+package with the new package and signs a `.govorpatch`. The installed bootstrap checks the exact
+base and payload, performs a transactional local update, and preserves unlisted files. If the
+patch includes the new release APK, it is verified and saved for explicit transfer/opening on the
+phone; the updater never uses ADB or bypasses Android confirmation. A pre-updater package must be
+replaced once with a complete updater-capable release.
 
 `scripts/package.ps1` verifies the APK signature and creates an artifact manifest with byte sizes
 and SHA-256 digests. It also bundles exact runtime notices, installed Python package licenses, the

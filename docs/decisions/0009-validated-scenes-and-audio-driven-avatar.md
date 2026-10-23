@@ -2,6 +2,7 @@
 
 - Status: accepted
 - Date: 2026-10-12
+- Amended: 2026-10-23 (bounded custom procedural primitives)
 - Milestone: 6
 
 ## Context
@@ -27,6 +28,11 @@ The shared version 1 renderer command carries the validated specification at ses
 constructs the environment in memory from its closed procedural catalog; it never interprets a
 path, URL, script, model-generated node type, or remote asset reference.
 
+ADR-0015 extends the same boundary with locally installed data-only recipes. Built-in objects keep
+their closed catalog IDs; custom objects contain only one closed primitive shape, bounded size,
+hex color, transform, and application-owned instance ID. Environment IDs are bounded slugs
+resolved from a validated planner snapshot rather than an unrestricted resource name.
+
 Derive mouth energy from the actual mono PCM16 WAV at 40 ms intervals. Convert phonemes to the six
 viseme shapes only when the selected speech provider supplied real phoneme timing. When alignment
 is unavailable, send an empty viseme sequence with source `none`; the PCM envelope still drives a
@@ -39,7 +45,8 @@ asset ID is rejected by the contract before rendering.
 
 ## Security and privacy consequences
 
-- Scenario and asset IDs are closed at the Python, JSON Schema, and C# boundaries.
+- Built-in asset IDs and custom primitive shapes are closed at the Python, JSON Schema, and C#
+  boundaries; environment IDs are bounded and must exist in the validated local planner.
 - LLM output cannot select an environment, asset, path, URL, script, or executable content.
 - Scene and avatar payloads contain no learner transcript, credential, or microphone recording.
 - PCM is summarized into bounded integer energy samples; renderer commands do not duplicate the

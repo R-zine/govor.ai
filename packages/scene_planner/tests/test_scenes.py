@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import json
 import math
 import struct
 import wave
+import zipfile
 from io import BytesIO
+from pathlib import Path
 
 import pytest
 from govor_scene_planner import (
@@ -13,7 +16,11 @@ from govor_scene_planner import (
     SceneSpecification,
     TimedPhoneme,
     build_avatar_animation,
+    import_environment_bundle,
 )
+
+ROOT = Path(__file__).resolve().parents[3]
+ENVIRONMENT_FIXTURE = ROOT / "tests/fixtures/contracts/valid/environment-hotel-lobby.json"
 
 
 def _wav(samples: list[int], sample_rate: int = 16_000) -> bytes:
@@ -47,6 +54,82 @@ def test_unknown_template_and_asset_are_rejected() -> None:
         ScenePlanner().plan("model-selected-path")
     with pytest.raises(ValueError, match="allow-listed"):
         SceneObject("unsafe", "../../arbitrary.glb", (0.0, 0.0, 0.0))
+
+
+def test_custom_environment_catalog_loads_validated_primitives(tmp_path) -> None:
+    (tmp_path / "hotel-lobby.json").write_bytes(ENVIRONMENT_FIXTURE.read_bytes())
+
+    planner = ScenePlanner(tmp_path)
+    scene = planner.plan("hotel-lobby")
+
+    assert planner.environment_choices[-1] == ("hotel-lobby", "Hotel lobby")
+    assert scene.objects[0].asset_id is None
+    assert scene.objects[0].primitive is not None
+    assert scene.objects[0].primitive.shape == "box"
+
+
+def test_environment_bundle_import_is_additive_and_canonical(tmp_path) -> None:
+    source = tmp_path / "environments.zip"
+    destination = tmp_path / "installed"
+    with zipfile.ZipFile(source, "w") as archive:
+        archive.writestr("hotel/environment.json", ENVIRONMENT_FIXTURE.read_bytes())
+
+    imported = import_environment_bundle(source, destination)
+
+    assert [item.environment_id for item in imported] == ["hotel-lobby"]
+    installed = json.loads((destination / "hotel-lobby.json").read_text(encoding="utf-8"))
+    assert installed["display_name"] == "Hotel lobby"
+    assert ScenePlanner(destination).plan("hotel-lobby").scene_id == "hotel-lobby-v1"
+
+
+@pytest.mark.parametrize(
+    ("member_name", "content"),
+    [
+        ("../escape.json", ENVIRONMENT_FIXTURE.read_bytes()),
+        ("plugin.dll", b"not code"),
+    ],
+)
+def test_environment_bundle_rejects_unsafe_or_non_json_entries(
+    tmp_path, member_name: str, content: bytes
+) -> None:
+    source = tmp_path / "bad.zip"
+    with zipfile.ZipFile(source, "w") as archive:
+        archive.writestr(member_name, content)
+
+    with pytest.raises(ValueError):
+        import_environment_bundle(source, tmp_path / "installed")
+
+
+def test_environment_bundle_rejects_built_in_collision_without_partial_install(tmp_path) -> None:
+    definition = json.loads(ENVIRONMENT_FIXTURE.read_text(encoding="utf-8"))
+    definition["environment_id"] = "cafe"
+    source = tmp_path / "collision.zip"
+    destination = tmp_path / "installed"
+    with zipfile.ZipFile(source, "w") as archive:
+        archive.writestr("collision.json", json.dumps(definition))
+
+    with pytest.raises(ValueError, match="already exists"):
+        import_environment_bundle(source, destination)
+    assert not tuple(destination.glob("*.json"))
+
+
+def test_environment_import_requires_an_existing_zip(tmp_path) -> None:
+    with pytest.raises(ValueError, match="does not exist"):
+        import_environment_bundle(tmp_path / "missing.zip", tmp_path / "installed")
+    source = tmp_path / "environment.json"
+    source.write_bytes(ENVIRONMENT_FIXTURE.read_bytes())
+    with pytest.raises(ValueError, match="zip"):
+        import_environment_bundle(source, tmp_path / "installed")
+
+
+def test_environment_bundle_rejects_duplicate_environment_ids(tmp_path) -> None:
+    source = tmp_path / "duplicates.zip"
+    with zipfile.ZipFile(source, "w") as archive:
+        archive.writestr("one.json", ENVIRONMENT_FIXTURE.read_bytes())
+        archive.writestr("two.json", ENVIRONMENT_FIXTURE.read_bytes())
+
+    with pytest.raises(ValueError, match="duplicate environment"):
+        import_environment_bundle(source, tmp_path / "installed")
 
 
 def test_duplicate_instances_and_out_of_range_transforms_are_rejected() -> None:

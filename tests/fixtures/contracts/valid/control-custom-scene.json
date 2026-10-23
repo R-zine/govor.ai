@@ -1,0 +1,36 @@
+{
+  "protocol_version": "1.0",
+  "message_type": "renderer.command",
+  "correlation_id": "42b606a0-d767-4c22-a86f-3354d7186e73",
+  "payload": {
+    "session_id": "3191d8bd-d30f-488b-a324-cb91f1286745",
+    "command_id": "19c369b5-6fca-43ea-bffc-764b51b7e7c2",
+    "action": "session_started",
+    "media_start_us": 0,
+    "duration_us": null,
+    "scene": {
+      "scene_id": "hotel-lobby-v1",
+      "environment_id": "hotel-lobby",
+      "camera_preset": "wide",
+      "lighting_preset": "warm",
+      "transition": "fade",
+      "avatar_position": { "x": 0, "y": 0, "z": -0.5 },
+      "avatar_yaw_degrees": 0,
+      "objects": [
+        {
+          "instance_id": "front-desk",
+          "asset_id": null,
+          "primitive": {
+            "shape": "box",
+            "size": { "x": 4, "y": 1.1, "z": 0.8 },
+            "color": "#70452A"
+          },
+          "position": { "x": 0, "y": 0.55, "z": 1 },
+          "yaw_degrees": 0,
+          "scale": 1
+        }
+      ]
+    },
+    "avatar_animation": null
+  }
+}

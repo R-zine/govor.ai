@@ -304,23 +304,45 @@ class Vector3Payload(StrictModel):
     z: float = Field(ge=-20.0, le=20.0)
 
 
+class PrimitivePayload(StrictModel):
+    shape: Literal["box", "cylinder", "sphere"]
+    size: Vector3Payload
+    color: str = Field(pattern=r"^#[0-9A-Fa-f]{6}$")
+
+    @model_validator(mode="after")
+    def validate_size(self) -> PrimitivePayload:
+        components = (self.size.x, self.size.y, self.size.z)
+        if any(not 0.05 <= component <= 20.0 for component in components):
+            raise ValueError("primitive size is outside the accepted range")
+        if self.shape == "cylinder" and abs(self.size.x - self.size.z) > 0.001:
+            raise ValueError("cylinder x and z size must match")
+        return self
+
+
 class SceneObjectPayload(StrictModel):
     instance_id: str = Field(pattern=r"^[a-z][a-z0-9-]{1,63}$", max_length=64)
-    asset_id: SceneAssetId
+    asset_id: SceneAssetId | None = None
+    primitive: PrimitivePayload | None = None
     position: Vector3Payload
     yaw_degrees: float = Field(ge=-360.0, le=360.0)
     scale: float = Field(ge=0.1, le=5.0)
 
+    @model_validator(mode="after")
+    def validate_source(self) -> SceneObjectPayload:
+        if (self.asset_id is None) == (self.primitive is None):
+            raise ValueError("scene object requires exactly one asset or primitive")
+        return self
+
 
 class SceneSpecificationPayload(StrictModel):
     scene_id: str = Field(pattern=r"^[a-z][a-z0-9-]{2,63}$", max_length=64)
-    environment_id: Literal["cafe", "supermarket", "airport", "home"]
+    environment_id: str = Field(pattern=r"^[a-z][a-z0-9-]{2,63}$", max_length=64)
     camera_preset: Literal["counter", "conversation", "wide"]
     lighting_preset: Literal["warm", "daylight", "terminal", "home"]
     transition: Literal["fade", "cut"]
     avatar_position: Vector3Payload
     avatar_yaw_degrees: float = Field(ge=-360.0, le=360.0)
-    objects: list[SceneObjectPayload] = Field(min_length=1, max_length=32)
+    objects: list[SceneObjectPayload] = Field(min_length=1, max_length=64)
 
     @model_validator(mode="after")
     def validate_unique_instances(self) -> SceneSpecificationPayload:

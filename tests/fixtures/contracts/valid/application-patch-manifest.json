@@ -1,0 +1,18 @@
+{
+  "format_version": 1,
+  "patch_id": "84e6575c-5d79-4ae1-84e8-b36ef7a5cc2b",
+  "created_at_utc": "2026-10-23T12:00:00Z",
+  "from_version": "0.1.12",
+  "target_version": "0.1.13",
+  "files": [
+    {
+      "path": "app/apps/host/src/govor_host/app.py",
+      "action": "replace",
+      "old_size": 100,
+      "old_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "size": 120,
+      "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    }
+  ],
+  "android": null
+}

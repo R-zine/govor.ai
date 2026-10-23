@@ -91,14 +91,14 @@ listener. It accepts a closed action set, validates UUIDs and integer-microsecon
 acknowledges commands. This loopback connection relies on the trusted desktop-user boundary and is
 not a LAN authentication mechanism.
 
-Milestone 6 scene commands add only closed environment, camera, lighting, transition, and asset
-IDs with bounded transforms. Startup-loaded lesson JSON may select only one of the four closed
-scene-template IDs; the host resolves that template through the planner allow-list. Neither
-dialogue output nor learner text supplies an asset. Godot's procedural catalog
-does not accept paths, URLs, resource names, scripts, or downloads. Unknown wire IDs are rejected,
-and the predictable internal fallback is reachable only when an allow-listed catalog entry is
-missing from the renderer implementation. Avatar commands contain bounded PCM energy summaries
-and actual-or-empty viseme cues, not the audio or transcript.
+Scene commands add only bounded environment IDs, closed camera/lighting/transition presets, and
+objects that are exactly one closed built-in asset or one closed box/cylinder/sphere primitive
+with bounded dimensions, color, and transform. Lesson JSON may select only an ID in the current
+validated planner. Neither dialogue output nor learner text supplies an object. Godot does not
+accept paths, URLs, resource names, scripts, models, textures, assemblies, or downloads. Unknown
+built-in IDs are rejected, and the predictable internal fallback is reachable only when an
+allow-listed built-in implementation is missing. Avatar commands contain bounded PCM energy
+summaries and actual-or-empty viseme cues, not the audio or transcript.
 
 Lesson JSON is local content but is still treated as untrusted input at the process boundary. The
 loader limits the directory to 64 files and each file to 256 KiB, requires exact fields and bounded
@@ -114,6 +114,23 @@ partial catalog: the host keeps its last valid immutable snapshot, reports `relo
 health, and sends no update. The importer and watcher are local filesystem features; there is no
 new LAN endpoint. Lesson data cannot become a path, URL, script, command, or renderer asset ID.
 Catalog messages expose only ID, title, description, and display order.
+
+Environment ZIPs are local content and remain untrusted. The importer permits one to 32 JSON
+files, caps source/entry/expanded sizes, rejects encryption, traversal and every non-JSON member,
+and never extracts an archive path. Exact fields, closed primitive/preset values, numeric bounds,
+unique IDs, protected built-in IDs, and the complete resulting catalog are validated before
+additive publication under a local lock. A runtime watcher retains its last valid immutable
+planner on invalid edits and reports `environment_catalog_status=reload_error`. This path adds no
+LAN endpoint and cannot replace application or Godot project files.
+
+Application patches have a separate, stronger boundary because they can replace code. The package
+pins an RSA-3072 update public key; its private counterpart stays in ignored ACL-restricted
+`.secrets`. The installed verifier authenticates the exact manifest before extraction, accepts
+only bounded canonical relative paths and exact listed members, verifies old and new size/SHA-256
+values, stages before mutation, and rolls back partial commits. It refuses to patch its own
+bootstrap or trust key. Patch archives are never treated as executable input and no update route is
+LAN-facing. An optional APK is signature-bound to the patch and staged only; Android performs the
+actual visible package-signature/update decision. See ADR-0016.
 
 The Windows lesson creator talks only to fixed loopback llama.cpp HTTP. Its topic is bounded to 500
 characters and treated as untrusted content in the model prompt. The model response is capped,

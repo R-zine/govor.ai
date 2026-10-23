@@ -50,7 +50,10 @@ public partial class DynamicSceneDirector : Node3D
         int fallbacks = 0;
         foreach (SceneObjectPayload item in specification.Objects)
         {
-            Node3D node = ProceduralSceneAssetCatalog.Create(item.AssetId, out bool usedFallback);
+            bool usedFallback = false;
+            Node3D node = item.Primitive is not null
+                ? ProceduralSceneAssetCatalog.CreatePrimitive(item.Primitive)
+                : ProceduralSceneAssetCatalog.Create(item.AssetId!, out usedFallback);
             node.Name = item.InstanceId;
             node.Position = new Vector3(
                 (float)item.Position.X,

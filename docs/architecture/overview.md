@@ -61,14 +61,15 @@ playback. Godot and the domain do not depend on a speech SDK. See ADR-0007.
 
 ## Scene and avatar boundary
 
-`packages/scene_planner` maps four closed scene-template IDs to deterministic scene
-specifications. A validated lesson selects one of those templates independently of its scenario
-ID, so additional lesson content can reuse an environment without changing renderer code. The
-shared renderer contract permits only closed environment, camera, lighting, transition, and asset
-identifiers plus bounded transforms. Godot assembles those specifications entirely in memory from
-a procedural catalog, reuses cached mesh/material resources, and releases the prior scene tree.
-Unknown wire asset IDs are rejected; an internal missing catalog implementation produces a
-predictable magenta fallback.
+`packages/scene_planner` combines four built-in templates with strictly validated local recipes
+from `assets/environment-content` in development or `content/environments` in a release. A lesson
+selects one current planner ID independently of its scenario ID. Built-in objects use closed asset
+IDs; imported objects use only closed box/cylinder/sphere primitives, hex colors, and bounded
+dimensions/transforms. Godot assembles both representations entirely in memory, reuses cached
+mesh/material resources, and releases the prior scene tree. Unknown built-in asset IDs are
+rejected; an internal missing catalog implementation produces a predictable magenta fallback.
+Imported data cannot name a path, URL, Godot resource, script, model, texture, or assembly. See
+ADR-0009 and ADR-0015.
 
 The active teacher is a repository-owned CC0 stylized procedural avatar. It animates idle,
 speaking, listening, thinking, gestures, and basic expressions. The host derives a bounded energy
@@ -108,7 +109,7 @@ renderer asset. See ADR-0014.
 packaged copy and additive user imports live under `content/lessons`. Invalid or duplicate content
 fails startup. `Manage-Lessons.cmd` opens a native Windows picker and passes one local `.json` or
 `.zip` to the launcher importer. That boundary validates all entries, the combined catalog, and
-closed scene IDs before publishing files under an import lock. The host polls the directory,
+current planner scene IDs before publishing files under an import lock. The host polls the directory,
 atomically swaps only a complete valid snapshot, and pushes its bounded summary over existing
 authenticated control connections. Android updates its selector without reconnecting. Active
 lessons retain their original catalog/service snapshot; subsequent lessons use the replacement.
@@ -117,6 +118,11 @@ Invalid out-of-band edits leave the last valid catalog active and mark health as
 exercise length. It validates structured local-model output, assembles the deterministic fields,
 and enters the catalog through the same locked importer. There is no runtime network download or
 LAN administration endpoint. The deterministic `TeachingEngine` consumes the selected definition.
+`Manage-Environments.cmd` accepts only a bounded data-only ZIP, validates the complete combined
+catalog, and publishes canonical recipes under an import lock. The host atomically swaps immutable
+planner snapshots; new lessons and the lesson creator see installed display names without restart.
+Invalid changes retain the previous planner and mark local health
+`environment_catalog_status=reload_error`. See ADR-0015.
 The active local dialogue model may classify or phrase a conversational turn,
 but it cannot award progress. Only recognized English production that satisfies the active guided
 exercise can advance. Bulgarian/mixed assistance, vocabulary questions, repetition, slower-speech
@@ -169,3 +175,10 @@ release lesson passes. ADR-0012 adds a QEMU/WHPX clean-Windows base/overlay fixt
 host Android emulator through loopback TCP and fixture-only UDP ICE forwards. The final 0.1.4 guest
 setup/start/media/shutdown run closes Milestone 8's clean-software gate for the exact recorded VM
 image; it does not replace Milestone 9 hardware acceptance.
+
+Updater-capable releases additionally pin an RSA-3072 application-update public key and include a
+stable local patch bootstrap. A `.govorpatch` is data until that installed bootstrap authenticates
+its signed manifest, verifies exact base/new hashes, stages the complete bounded payload, and
+commits it with failure rollback and the release marker last. The bootstrap/trust key cannot update
+themselves. An optional bound APK is saved for explicit Android platform installation; no update
+route is exposed on the LAN. See ADR-0016.

@@ -25,6 +25,7 @@ from govor_contracts import (
     LessonProgressPayload,
     MessageEnvelope,
     PhonemeAlignmentPayload,
+    PrimitivePayload,
     PronunciationPayload,
     ProviderCapabilities,
     RecordingStartedPayload,
@@ -139,6 +140,7 @@ class ControlSession:
         microphone: MicrophoneAudioSource,
         settings: Settings,
         registry: SessionRegistry,
+        scene_planner_provider: Callable[[], ScenePlanner] = ScenePlanner,
     ) -> None:
         self._send_json = send_json
         self._renderer = renderer
@@ -149,7 +151,7 @@ class ControlSession:
         self._microphone = microphone
         self._settings = settings
         self._registry = registry
-        self._scene_planner = ScenePlanner()
+        self._scene_planner_provider = scene_planner_provider
         self._send_lock = asyncio.Lock()
         self._machine = SessionMachine()
         self._session_id: UUID | None = None
@@ -281,7 +283,7 @@ class ControlSession:
         ):
             self._machine.apply(event, uuid4())
         self._machine.apply(SessionEvent.CONNECTED, correlation_id)
-        scene = self._scene_planner.plan(lesson_definition.scene_template_id)
+        scene = self._scene_planner_provider().plan(lesson_definition.scene_template_id)
         await self._renderer_command(
             "session_started",
             correlation_id,
@@ -563,7 +565,7 @@ class ControlSession:
             "session_started",
             correlation_id,
             scene=_scene_specification_payload(
-                self._scene_planner.plan(
+                self._scene_planner_provider().plan(
                     self._require_active_catalog().get(self._scenario_id).scene_template_id
                 )
             ),
@@ -827,6 +829,19 @@ def _scene_specification_payload(scene: SceneSpecification) -> SceneSpecificatio
             SceneObjectPayload(
                 instance_id=item.instance_id,
                 asset_id=item.asset_id,
+                primitive=(
+                    PrimitivePayload(
+                        shape=item.primitive.shape,
+                        size=Vector3Payload(
+                            x=item.primitive.size[0],
+                            y=item.primitive.size[1],
+                            z=item.primitive.size[2],
+                        ),
+                        color=item.primitive.color,
+                    )
+                    if item.primitive is not None
+                    else None
+                ),
                 position=Vector3Payload(
                     x=item.position[0],
                     y=item.position[1],

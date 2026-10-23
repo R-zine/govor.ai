@@ -38,16 +38,17 @@ def main(arguments: Sequence[str] | None = None) -> int:
     subparsers.add_parser("install-models")
     lesson_import = subparsers.add_parser("import-lessons")
     lesson_import.add_argument("--source", type=Path, required=True)
+    environment_import = subparsers.add_parser("import-environments")
+    environment_import.add_argument("--source", type=Path, required=True)
+    environment_list = subparsers.add_parser("list-environments")
+    environment_list.add_argument("--json", action="store_true")
     lesson_creator = subparsers.add_parser("create-lesson")
     lesson_creator.add_argument("--topic", required=True)
     lesson_creator.add_argument(
         "--difficulty",
         choices=("beginner", "intermediate", "advanced"),
     )
-    lesson_creator.add_argument(
-        "--environment",
-        choices=("cafe", "supermarket", "airport", "home"),
-    )
+    lesson_creator.add_argument("--environment")
     lesson_creator.add_argument("--exercise-count", type=int)
     start = subparsers.add_parser("start")
     start.add_argument("--smoke-seconds", type=float)
@@ -65,6 +66,10 @@ def main(arguments: Sequence[str] | None = None) -> int:
         return _install_models(paths)
     if options.command == "import-lessons":
         return _import_lessons(paths, options.source)
+    if options.command == "import-environments":
+        return _import_environments(paths, options.source)
+    if options.command == "list-environments":
+        return _list_environments(paths, as_json=options.json)
     if options.command == "create-lesson":
         return _create_lesson(
             paths,
@@ -89,6 +94,7 @@ class ReleasePaths:
         self.whisper = install_root / "runtime" / "whisper.cpp" / "Release" / "whisper-cli.exe"
         self.renderer = install_root / "renderer" / "GovorRenderer.exe"
         self.lessons = install_root / "content" / "lessons"
+        self.environments = install_root / "content" / "environments"
         self.credentials = data_root / "security" / "gateway-credentials.json"
         self.progress = data_root / "progress" / "progress.sqlite3"
         self.logs = data_root / "logs"
@@ -117,6 +123,8 @@ def _doctor(paths: ReleasePaths, *, require_models: bool) -> None:
         raise RuntimeError("package is incomplete: " + ", ".join(missing))
     if not paths.lessons.is_dir() or not any(paths.lessons.glob("*.json")):
         raise RuntimeError("package contains no guided lesson definitions")
+    if not paths.environments.is_dir():
+        raise RuntimeError("package contains no environment directory")
     if require_models:
         unavailable = [
             artifact.display_name
@@ -167,7 +175,7 @@ def _import_lessons(paths: ReleasePaths, source: Path) -> int:
         imported = import_lesson_bundle(
             source,
             paths.lessons,
-            allowed_scene_templates=set(ScenePlanner().supported_templates),
+            allowed_scene_templates=set(ScenePlanner(paths.environments).supported_templates),
         )
     except (OSError, ValueError) as error:
         print(f"Lesson import failed: {error}", file=sys.stderr)
@@ -175,6 +183,40 @@ def _import_lessons(paths: ReleasePaths, source: Path) -> int:
     for lesson in imported:
         print(f"Imported: {lesson.title} ({lesson.scenario_id})")
     print("Lesson import completed. Running clients will receive the updated catalog.")
+    return 0
+
+
+def _import_environments(paths: ReleasePaths, source: Path) -> int:
+    from govor_scene_planner import import_environment_bundle
+
+    try:
+        imported = import_environment_bundle(source, paths.environments)
+    except (OSError, ValueError) as error:
+        print(f"Environment import failed: {error}", file=sys.stderr)
+        return 2
+    for environment in imported:
+        print(f"Imported: {environment.display_name} ({environment.environment_id})")
+    print("Environment import completed. It is available without restarting govor.ai.")
+    return 0
+
+
+def _list_environments(paths: ReleasePaths, *, as_json: bool) -> int:
+    from govor_scene_planner import ScenePlanner
+
+    try:
+        choices = ScenePlanner(paths.environments).environment_choices
+    except (OSError, ValueError) as error:
+        print(f"Environment catalog failed: {error}", file=sys.stderr)
+        return 2
+    result = [
+        {"environment_id": environment_id, "display_name": display_name}
+        for environment_id, display_name in choices
+    ]
+    if as_json:
+        print(json.dumps(result))
+    else:
+        for item in result:
+            print(f"{item['display_name']} ({item['environment_id']})")
     return 0
 
 
@@ -207,7 +249,7 @@ def _create_lesson(
                 request,
                 LlamaCppLessonContentProvider(f"http://127.0.0.1:{_LLAMA_PORT}"),
                 paths.lessons,
-                allowed_scene_templates=set(ScenePlanner().supported_templates),
+                allowed_scene_templates=set(ScenePlanner(paths.environments).supported_templates),
             )
         )
     except (OSError, ProviderError, TimeoutError, ValueError) as error:
@@ -400,6 +442,7 @@ def _release_environment(paths: ReleasePaths, certificate: Path) -> dict[str, st
             "GOVOR_MEDIA_SOURCE": "renderer",
             "GOVOR_PROGRESS_DATABASE": str(paths.progress),
             "GOVOR_LESSON_DIRECTORY": str(paths.lessons),
+            "GOVOR_ENVIRONMENT_DIRECTORY": str(paths.environments),
             "GOVOR_OFFLINE_ONLY": "true",
         }
     )

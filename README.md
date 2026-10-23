@@ -34,6 +34,17 @@ The learner confirmed on 2026-10-22 that the moving phone scene was visible and 
 audible and intelligible, completing Milestone 9. VM/emulator evidence is not used for any physical
 row.
 
+Packaged users can also install bounded data-only procedural environment ZIPs through
+`Manage-Environments.cmd`. The host registers their colored box/cylinder/sphere recipes without a
+restart, and the lesson creator lists them dynamically. Environment packs never patch Godot code
+or load scripts, models, textures, paths, or URLs.
+
+Updater-capable portable releases can apply an offline RSA-signed `.govorpatch` through
+`Apply-Govor-Patch.cmd`. Patches bind exact old/new host hashes, stage before mutation, roll back a
+partial commit, preserve unlisted imported content and per-user state, and may carry a verified
+release APK for explicit Android installation. Pre-updater releases need one final complete ZIP
+replacement. See ADR-0016 and the Windows user guide.
+
 ## Quick start (Windows PowerShell)
 
 ```powershell
@@ -85,8 +96,9 @@ Initialize the private signing state once, then give every Android update a high
 The resulting ignored artifacts are written below `.cache/dist`: a signed release APK, a portable
 Windows ZIP, and a digest manifest. The Windows learner runs `Setup-Govor.cmd` once while online,
 then `Start-Govor.cmd`; normal lessons remain offline. Signing keys stay in ignored `.secrets` and
-must be backed up privately. See `docs/user-guide/windows.md`, `docs/user-guide/android.md`, and
-ADR-0011 before distributing the candidate.
+must be backed up privately. The initialization command creates both the Android and application
+update identities. See `docs/user-guide/windows.md`, `docs/user-guide/android.md`, ADR-0011, and
+ADR-0016 before distributing the candidate.
 
 The completed clean-Windows procedure is in `docs/testing/m8-clean-vm.md`. The fixture requires a
 caller-supplied Windows 11 x64 ISO plus its independently recorded SHA-256 and keeps its clean base

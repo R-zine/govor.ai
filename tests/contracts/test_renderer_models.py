@@ -7,6 +7,7 @@ from uuid import uuid4
 import pytest
 from govor_contracts import (
     AvatarAnimationPayload,
+    PrimitivePayload,
     RendererCommandPayload,
     SceneObjectPayload,
     SceneSpecificationPayload,
@@ -31,12 +32,50 @@ def test_shared_renderer_fixture_validates_scene_animation_model() -> None:
     assert command.avatar_animation.visemes[0].viseme == "closed"
 
 
+def test_shared_custom_scene_fixture_validates_primitive_model() -> None:
+    fixture = json.loads(
+        (ROOT / "tests/fixtures/contracts/valid/control-custom-scene.json").read_text(
+            encoding="utf-8"
+        )
+    )
+
+    command = RendererCommandPayload.model_validate(fixture["payload"])
+
+    assert command.scene is not None
+    assert command.scene.environment_id == "hotel-lobby"
+    assert command.scene.objects[0].primitive is not None
+    assert command.scene.objects[0].primitive.shape == "box"
+
+
 def test_scene_rejects_arbitrary_asset_and_duplicate_instances() -> None:
     position = Vector3Payload(x=0, y=0, z=0)
     with pytest.raises(ValidationError):
         SceneObjectPayload(
             instance_id="unsafe-object",
             asset_id="../../arbitrary.glb",  # type: ignore[arg-type]
+            position=position,
+            yaw_degrees=0,
+            scale=1,
+        )
+
+    primitive = PrimitivePayload(
+        shape="box",
+        size=Vector3Payload(x=4, y=1, z=0.8),
+        color="#70452A",
+    )
+    custom = SceneObjectPayload(
+        instance_id="front-desk",
+        primitive=primitive,
+        position=position,
+        yaw_degrees=0,
+        scale=1,
+    )
+    assert custom.asset_id is None
+    with pytest.raises(ValidationError, match="exactly one"):
+        SceneObjectPayload(
+            instance_id="ambiguous",
+            asset_id="cafe-cup",
+            primitive=primitive,
             position=position,
             yaw_degrees=0,
             scale=1,

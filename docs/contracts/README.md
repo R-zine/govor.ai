@@ -46,6 +46,20 @@ selection. Application code supplies those fields and validates the assembled ob
 `lesson-definition.schema.json` before publication. A negative fixture proves that an injected
 application command is rejected.
 
+`environment-definition.schema.json` is the data-only local environment recipe. It permits
+bounded IDs, display text, closed camera/lighting/transition presets, teacher placement, and one
+to 64 colored box/cylinder/sphere objects. Runtime validation additionally enforces exact fields,
+finite numeric values, equal X/Z cylinder diameter, unique instance/scene/environment IDs, and
+catalog collisions. It contains no executable or external-resource field and is transported to
+Godot only after translation into the scene portion of `renderer.command`.
+
+`application-patch-manifest.schema.json` describes the offline signed update file boundary. It
+binds an exact source/target pair, closed add/replace/delete host operations with old/new sizes and
+SHA-256 values, and an optional Android APK identity/digest. Runtime validation additionally
+requires canonical traversal-free paths, Windows-case uniqueness, exact archive membership, the
+pinned RSA signature, base-file matches, and a non-patchable bootstrap/trust key. It is not a wire
+envelope and is never accepted through a LAN endpoint.
+
 Speech messages must include locale, format, sample rate, channel count, utterance ID, and timing
 reference. Media timing uses integer microseconds relative to the associated media item. Null
 alignment means unavailable; it never authorizes guessed timestamps.
@@ -58,8 +72,9 @@ reason. It contains no learner utterance or audio. Python, Kotlin, C#, JSON Sche
 teacher-turn fixture understand the same shape.
 
 Milestone 6 adds optional `scene` and `avatar_animation` fields to `renderer.command`. A scene is
-valid only on `session_started`; it uses closed environment/camera/lighting/transition/asset IDs
-and bounded numeric transforms. Avatar animation is valid only on `teacher_speaking`; it carries
+valid only on `session_started`; it uses bounded environment IDs, closed presets, exactly one
+closed built-in asset or primitive per object, and bounded numeric transforms. Avatar animation
+is valid only on `teacher_speaking`; it carries
 duration, a bounded PCM-derived energy envelope, a closed gesture/expression, and either real
 provider-aligned viseme cues or an empty list with source `none`. A negative shared fixture proves
 that an arbitrary relative asset path is rejected.

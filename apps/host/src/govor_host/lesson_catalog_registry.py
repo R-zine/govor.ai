@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from pathlib import Path
 
 from govor_domain import IMPORT_LOCK_NAME, LessonCatalog, load_lesson_catalog
@@ -18,10 +19,12 @@ class LessonCatalogRegistry:
         initial: LessonCatalog,
         *,
         reload_enabled: bool,
+        scene_planner_provider: Callable[[], ScenePlanner] = ScenePlanner,
     ) -> None:
         self._directory = Path(directory)
         self._catalog = initial
         self._reload_enabled = reload_enabled
+        self._scene_planner_provider = scene_planner_provider
         self._observed = self._fingerprint()
         self._last_reload_failed = False
 
@@ -33,18 +36,18 @@ class LessonCatalogRegistry:
     def status(self) -> str:
         return "reload_error" if self._last_reload_failed else "ready"
 
-    def refresh(self) -> LessonCatalog | None:
+    def refresh(self, *, force: bool = False) -> LessonCatalog | None:
         """Replace the snapshot only when the complete changed directory is valid."""
 
         if not self._reload_enabled or (self._directory / IMPORT_LOCK_NAME).exists():
             return None
         fingerprint = self._fingerprint()
-        if fingerprint == self._observed:
+        if not force and fingerprint == self._observed:
             return None
         self._observed = fingerprint
         try:
             catalog = load_lesson_catalog(self._directory)
-            planner = ScenePlanner()
+            planner = self._scene_planner_provider()
             for definition in catalog.lessons:
                 planner.plan(definition.scene_template_id)
         except (OSError, ValueError) as error:

@@ -469,28 +469,63 @@
         "z": { "type": "number", "minimum": -20, "maximum": 20 }
       }
     },
+    "primitiveSize": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["x", "y", "z"],
+      "properties": {
+        "x": { "type": "number", "minimum": 0.05, "maximum": 20 },
+        "y": { "type": "number", "minimum": 0.05, "maximum": 20 },
+        "z": { "type": "number", "minimum": 0.05, "maximum": 20 }
+      }
+    },
+    "primitive": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["shape", "size", "color"],
+      "properties": {
+        "shape": { "enum": ["box", "cylinder", "sphere"] },
+        "size": { "$ref": "#/$defs/primitiveSize" },
+        "color": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" }
+      }
+    },
     "sceneObject": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["instance_id", "asset_id", "position", "yaw_degrees", "scale"],
+      "required": ["instance_id", "asset_id", "primitive", "position", "yaw_degrees", "scale"],
       "properties": {
         "instance_id": {
           "type": "string",
           "pattern": "^[a-z][a-z0-9-]{1,63}$",
           "maxLength": 64
         },
-        "asset_id": {
-          "enum": [
-            "airport-bench", "airport-counter", "airport-sign", "airport-suitcase",
-            "cafe-chair", "cafe-counter", "cafe-cup", "cafe-table",
-            "home-bookshelf", "home-lamp", "home-sofa", "home-table",
-            "market-basket", "market-crate", "market-shelf"
-          ]
-        },
+        "asset_id": {},
+        "primitive": {},
         "position": { "$ref": "#/$defs/vector3" },
         "yaw_degrees": { "type": "number", "minimum": -360, "maximum": 360 },
         "scale": { "type": "number", "minimum": 0.1, "maximum": 5 }
-      }
+      },
+      "oneOf": [
+        {
+          "properties": {
+            "asset_id": {
+              "enum": [
+                "airport-bench", "airport-counter", "airport-sign", "airport-suitcase",
+                "cafe-chair", "cafe-counter", "cafe-cup", "cafe-table",
+                "home-bookshelf", "home-lamp", "home-sofa", "home-table",
+                "market-basket", "market-crate", "market-shelf"
+              ]
+            },
+            "primitive": { "type": "null" }
+          }
+        },
+        {
+          "properties": {
+            "asset_id": { "type": "null" },
+            "primitive": { "$ref": "#/$defs/primitive" }
+          }
+        }
+      ]
     },
     "sceneSpecification": {
       "type": "object",
@@ -505,7 +540,11 @@
           "pattern": "^[a-z][a-z0-9-]{2,63}$",
           "maxLength": 64
         },
-        "environment_id": { "enum": ["cafe", "supermarket", "airport", "home"] },
+        "environment_id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]{2,63}$",
+          "maxLength": 64
+        },
         "camera_preset": { "enum": ["counter", "conversation", "wide"] },
         "lighting_preset": { "enum": ["warm", "daylight", "terminal", "home"] },
         "transition": { "enum": ["fade", "cut"] },
@@ -514,7 +553,7 @@
         "objects": {
           "type": "array",
           "minItems": 1,
-          "maxItems": 32,
+          "maxItems": 64,
           "items": { "$ref": "#/$defs/sceneObject" }
         }
       }

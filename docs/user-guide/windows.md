@@ -65,7 +65,7 @@ the extracted version directory during an update, then import them into the new 
    language model owned by that running process.
 2. Double-click `Create-Lesson.cmd`.
 3. Describe the topic or speaking goal. Optionally choose beginner/intermediate/advanced content,
-   a café/supermarket/airport/home environment, and one through eight exercises. Automatic uses
+   any currently installed environment, and one through eight exercises. Automatic uses
    intermediate content, five exercises, and a deterministic suitable/fallback environment.
 4. Select **Create** and wait for the result dialog. Generation can take longer on the first call.
 5. The lesson is saved under `content\lessons` and appears on connected phones without restarting
@@ -76,14 +76,54 @@ content is structurally validated but can still contain awkward or inaccurate te
 try a clearer topic or remove the new JSON file while govor.ai is stopped if the result is not
 useful. Keep wanted custom lesson files when updating the portable directory.
 
+## Add 3D environments
+
+1. Double-click `Manage-Environments.cmd` in the extracted Windows package.
+2. Choose one environment `.zip` supplied for govor.ai. Do not unpack it first.
+3. Wait for the confirmation dialog. The environment is registered immediately; the host and
+   Godot player do not need to restart.
+4. Open `Create-Lesson.cmd` to select the new environment, or import a lesson whose
+   `scene_template_id` matches it. A connected phone shows the environment when that lesson next
+   starts.
+
+Environment imports are local, additive, and offline. A bundle may contain multiple JSON recipes,
+but cannot contain Godot projects, programs, models, textures, or other files. Invalid bundles
+install nothing. Imported recipes are stored under `content\environments`; keep a copy before
+replacing the extracted version directory during an update.
+
 ## Update
+
+### Signed incremental patch
+
+This path is available only when the current package already contains `Apply-Govor-Patch.cmd`.
+Older packages, including the completed 0.1.11 acceptance package, require the full-replacement
+steps below once before they can receive incremental patches.
+
+1. Stop govor.ai and wait for its clean-shutdown message.
+2. Save the supplied `.govorpatch` or patch ZIP locally. Do not unpack or run a script from it.
+3. Double-click the package's existing `Apply-Govor-Patch.cmd`, select the patch, and wait for the
+   signed source version plus every old/new file hash to be checked before changes begin.
+4. If it reports a wrong base, local conflict, signature/integrity failure, or rollback, do not
+   copy files manually; request a patch for the exact installed version or use a complete release.
+5. When an Android update is included, the verified APK path is printed. Copy it to the phone,
+   open it, and approve Android's normal update prompt. It must appear as an update to
+   `ai.govor.app`; never uninstall first, because that discards app-private pairing state.
+
+The patch is a signed data archive, not an executable. The trusted updater is the copy already in
+the installed release. It preserves unlisted files, including imported lesson/environment content,
+and never modifies `%LOCALAPPDATA%` models, progress, credentials, or TLS identity except for
+temporary update staging and an included verified APK. Android installation is never silent and
+may be blocked by the phone's sideload policy.
+
+### Complete release replacement
 
 1. Stop the old launcher completely.
 2. Verify and extract the new ZIP into a new versioned directory rather than mixing files from two
    versions.
-3. Run the new `Setup-Govor.cmd`. Already present models are rechecked and are not downloaded again
+3. Copy/re-import any custom lesson or environment content from the old release when needed.
+4. Run the new `Setup-Govor.cmd`. Already present models are rechecked and are not downloaded again
    when their size and SHA-256 still match.
-4. Run the new `Start-Govor.cmd`.
+5. Run the new `Start-Govor.cmd`.
 
 The `%LOCALAPPDATA%\govor.ai` directory is deliberately shared across versions, so models, pairing,
 and structured progress survive this replacement. Keep a backup of learner progress before a

@@ -116,6 +116,30 @@ public sealed class MessageEnvelopeTests
     }
 
     [Fact]
+    public void CustomPrimitiveSceneIsAccepted()
+    {
+        var scene = new SceneSpecificationPayload(
+            "hotel-lobby-v1",
+            "hotel-lobby",
+            "wide",
+            "warm",
+            "fade",
+            new Vector3Payload(0, 0, -0.5),
+            0,
+            [
+                new SceneObjectPayload(
+                    "front-desk",
+                    null,
+                    new Vector3Payload(0, 0.55, 1),
+                    0,
+                    1,
+                    new PrimitivePayload("box", new Vector3Payload(4, 1.1, 0.8), "#70452A")),
+            ]);
+
+        scene.Validate();
+    }
+
+    [Fact]
     public void NonAllowListedSceneAssetIsRejected()
     {
         var scene = new SceneSpecificationPayload(

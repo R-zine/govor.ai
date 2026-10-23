@@ -1,5 +1,6 @@
 import json
 import shutil
+import zipfile
 from pathlib import Path
 
 import pytest
@@ -34,6 +35,7 @@ def test_release_environment_selects_packaged_lesson_directory(tmp_path: Path) -
     environment = _release_environment(paths, tmp_path / "ca.pem")
 
     assert environment["GOVOR_LESSON_DIRECTORY"] == str(tmp_path / "content" / "lessons")
+    assert environment["GOVOR_ENVIRONMENT_DIRECTORY"] == str(tmp_path / "content" / "environments")
 
 
 def test_import_lessons_command_installs_into_the_packaged_catalog(
@@ -46,6 +48,7 @@ def test_import_lessons_command_installs_into_the_packaged_catalog(
         REPOSITORY_ROOT / "assets" / "lesson-content",
         install_root / "content" / "lessons",
     )
+    (install_root / "content" / "environments").mkdir(parents=True)
     source = tmp_path / "hotel.json"
     lesson = json.loads(
         (REPOSITORY_ROOT / "assets" / "lesson-content" / "cafe-ordering.json").read_text(
@@ -81,6 +84,7 @@ def test_create_lesson_command_rejects_an_out_of_bounds_length_before_provider_c
         REPOSITORY_ROOT / "assets" / "lesson-content",
         install_root / "content" / "lessons",
     )
+    (install_root / "content" / "environments").mkdir(parents=True)
     monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "data"))
 
     result = main(
@@ -98,6 +102,32 @@ def test_create_lesson_command_rejects_an_out_of_bounds_length_before_provider_c
     assert result == 2
     assert "between one and eight" in capsys.readouterr().err
     assert len(tuple((install_root / "content" / "lessons").glob("*.json"))) == 4
+
+
+def test_import_and_list_environments_use_the_packaged_catalog(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    install_root = tmp_path / "install"
+    environments = install_root / "content" / "environments"
+    environments.mkdir(parents=True)
+    source = tmp_path / "hotel.zip"
+    fixture = REPOSITORY_ROOT / "tests/fixtures/contracts/valid/environment-hotel-lobby.json"
+    with zipfile.ZipFile(source, "w") as archive:
+        archive.writestr("hotel.json", fixture.read_bytes())
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "data"))
+
+    assert (
+        main(["--install-root", str(install_root), "import-environments", "--source", str(source)])
+        == 0
+    )
+    assert (environments / "hotel-lobby.json").is_file()
+    capsys.readouterr()
+
+    assert main(["--install-root", str(install_root), "list-environments", "--json"]) == 0
+    result = json.loads(capsys.readouterr().out)
+    assert result[-1] == {"environment_id": "hotel-lobby", "display_name": "Hotel lobby"}
 
 
 def test_release_renderer_is_silent_by_default(

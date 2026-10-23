@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "environment_id": "hotel-lobby",
+  "display_name": "Hotel lobby",
+  "scene_id": "hotel-lobby-v1",
+  "camera_preset": "wide",
+  "lighting_preset": "warm",
+  "transition": "fade",
+  "avatar_position": { "x": 0, "y": 0, "z": -0.5 },
+  "avatar_yaw_degrees": 0,
+  "objects": [
+    {
+      "instance_id": "front-desk",
+      "primitive": "box",
+      "size": { "x": 4, "y": 1.1, "z": 0.8 },
+      "color": "#70452A",
+      "position": { "x": 0, "y": 0.55, "z": 1 },
+      "yaw_degrees": 0,
+      "scale": 1
+    },
+    {
+      "instance_id": "lobby-table",
+      "primitive": "cylinder",
+      "size": { "x": 1.6, "y": 0.15, "z": 1.6 },
+      "color": "#B78352",
+      "position": { "x": -3, "y": 0.75, "z": 0.4 },
+      "yaw_degrees": 0,
+      "scale": 1
+    },
+    {
+      "instance_id": "decorative-globe",
+      "primitive": "sphere",
+      "size": { "x": 0.6, "y": 0.6, "z": 0.6 },
+      "color": "#4B8F8C",
+      "position": { "x": 2.8, "y": 1.4, "z": 0.2 },
+      "yaw_degrees": 0,
+      "scale": 1
+    }
+  ]
+}

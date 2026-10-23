@@ -13,8 +13,8 @@ not execute or extract ZIP paths. Invalid batches leave the installed catalog un
 failure dialog.
 
 Packaged users can instead double-click `Create-Lesson.cmd` while `Start-Govor.cmd` is running.
-The native form asks for a lesson topic and optionally accepts content difficulty, one of the four
-existing environments, and a length of one through eight exercises. Automatic settings resolve to
+The native form asks for a lesson topic and optionally accepts content difficulty, any currently
+installed environment, and a length of one through eight exercises. Automatic settings resolve to
 intermediate, five exercises, and a deterministic allow-listed environment. The loopback local
 model generates the teaching content once; application code supplies IDs, ordering, and the scene
 field. The same strict importer installs the result, so connected Android clients update without a
@@ -26,7 +26,8 @@ restart. Model-generated content should still be reviewed for teaching quality b
 2. Give it a unique, stable `scenario_id` slug and unique exercise IDs. Do not rename a shipped
    scenario casually: the ID is the key for persisted learner progress.
 3. Set `title`, `description`, and `display_order`; Android obtains these values from the host.
-4. Choose one existing `scene_template_id`: `cafe`, `supermarket`, `airport`, or `home`.
+4. Choose an installed `scene_template_id`. The built-ins are `cafe`, `supermarket`, `airport`,
+   and `home`; validated local additions are listed by the launcher.
 5. Replace every objective, vocabulary item, prompt, accepted phrase pattern, correction,
    Bulgarian explanation, example, misunderstanding, and completion condition.
 6. Save the file. A development host that is already running reloads the complete valid catalog;
@@ -43,10 +44,10 @@ unique scenario/exercise IDs, and domain invariants. One bad file intentionally 
 startup. An invalid edit made while the host is running retains the previous valid catalog and
 sets `/health` `lesson_catalog_status` to `reload_error` rather than partially changing the UI.
 
-Reusing a scene template requires no renderer change. A genuinely new environment is code and
-asset work: extend the closed scene planner and Godot procedural catalog, update contracts/tests,
-and collect renderer evidence. Lesson JSON cannot name resource paths, URLs, scripts, or arbitrary
-assets.
+Reusing a scene template requires no renderer change. A new bounded procedural environment can be
+installed with `Manage-Environments.cmd`; see `environment-content.md`. Rich authored assets still
+require a reviewed contract/renderer change. Lesson JSON cannot name resource paths, URLs,
+scripts, or arbitrary assets.
 
 ## Verify
 

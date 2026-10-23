@@ -16,6 +16,7 @@ from govor_scene_planner import ScenePlanner
 from pydantic import ValidationError
 
 from .config import Settings, get_settings
+from .environment_catalog_registry import EnvironmentCatalogRegistry
 from .fake_lesson import FakeLessonService
 from .lesson_catalog_registry import LessonCatalogRegistry
 from .microphone import MediaMicrophoneSource, MicrophoneAudioSource, ReferenceOnlyMicrophoneSource
@@ -33,13 +34,18 @@ def create_app(
 ) -> FastAPI:
     runtime = settings or get_settings()
     catalog = lesson_catalog or load_lesson_catalog(runtime.lesson_directory)
-    scene_planner = ScenePlanner()
+    scene_planner = ScenePlanner(runtime.environment_directory)
     for definition in catalog.lessons:
         scene_planner.plan(definition.scene_template_id)
+    environment_registry = EnvironmentCatalogRegistry(
+        runtime.environment_directory,
+        scene_planner,
+    )
     catalog_registry = LessonCatalogRegistry(
         runtime.lesson_directory,
         catalog,
         reload_enabled=lesson_catalog is None,
+        scene_planner_provider=lambda: environment_registry.planner,
     )
     control_sessions: set[ControlSession] = set()
     lesson_factory: Callable[[LessonCatalog], LessonService]
@@ -80,7 +86,13 @@ def create_app(
         async def watch_lesson_catalog() -> None:
             while True:
                 await asyncio.sleep(0.5)
-                if catalog_registry.refresh() is None:
+                environment_changed = (
+                    environment_registry.refresh(catalog_registry.catalog) is not None
+                )
+                retry_failed_lessons = (
+                    environment_changed and catalog_registry.status == "reload_error"
+                )
+                if catalog_registry.refresh(force=retry_failed_lessons) is None:
                     continue
                 results = await asyncio.gather(
                     *(session.send_lesson_catalog_update() for session in tuple(control_sessions)),
@@ -103,6 +115,7 @@ def create_app(
     app.state.session_registry = session_registry
     app.state.renderer_gateway = renderer_gateway
     app.state.lesson_catalog_registry = catalog_registry
+    app.state.environment_catalog_registry = environment_registry
 
     @app.get("/health")
     async def health() -> dict[str, Any]:
@@ -116,6 +129,8 @@ def create_app(
             "active_sessions": session_registry.active_count,
             "lesson_count": len(catalog_registry.catalog.lessons),
             "lesson_catalog_status": catalog_registry.status,
+            "environment_count": len(environment_registry.planner.supported_templates),
+            "environment_catalog_status": environment_registry.status,
             "providers": [
                 {
                     "provider_id": capability.provider_id,
@@ -192,6 +207,7 @@ def create_app(
             renderer=renderer_gateway,
             lesson_factory=lesson_factory,
             lesson_catalog_provider=lambda: catalog_registry.catalog,
+            scene_planner_provider=lambda: environment_registry.planner,
             microphone=microphone_source,
             settings=runtime,
             registry=session_registry,
