@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import asyncio
 import json
 import os
 import socket
@@ -37,6 +38,17 @@ def main(arguments: Sequence[str] | None = None) -> int:
     subparsers.add_parser("install-models")
     lesson_import = subparsers.add_parser("import-lessons")
     lesson_import.add_argument("--source", type=Path, required=True)
+    lesson_creator = subparsers.add_parser("create-lesson")
+    lesson_creator.add_argument("--topic", required=True)
+    lesson_creator.add_argument(
+        "--difficulty",
+        choices=("beginner", "intermediate", "advanced"),
+    )
+    lesson_creator.add_argument(
+        "--environment",
+        choices=("cafe", "supermarket", "airport", "home"),
+    )
+    lesson_creator.add_argument("--exercise-count", type=int)
     start = subparsers.add_parser("start")
     start.add_argument("--smoke-seconds", type=float)
     options = parser.parse_args(arguments)
@@ -53,6 +65,14 @@ def main(arguments: Sequence[str] | None = None) -> int:
         return _install_models(paths)
     if options.command == "import-lessons":
         return _import_lessons(paths, options.source)
+    if options.command == "create-lesson":
+        return _create_lesson(
+            paths,
+            topic=options.topic,
+            difficulty=options.difficulty,
+            environment=options.environment,
+            exercise_count=options.exercise_count,
+        )
     if options.command == "start":
         return _start(paths, smoke_seconds=options.smoke_seconds)
     raise AssertionError("unreachable command")
@@ -155,6 +175,51 @@ def _import_lessons(paths: ReleasePaths, source: Path) -> int:
     for lesson in imported:
         print(f"Imported: {lesson.title} ({lesson.scenario_id})")
     print("Lesson import completed. Running clients will receive the updated catalog.")
+    return 0
+
+
+def _create_lesson(
+    paths: ReleasePaths,
+    *,
+    topic: str,
+    difficulty: str | None,
+    environment: str | None,
+    exercise_count: int | None,
+) -> int:
+    from govor_domain import Difficulty
+    from govor_local_ai.lesson_creator import (
+        LessonCreationRequest,
+        LlamaCppLessonContentProvider,
+        create_lesson,
+    )
+    from govor_provider_interfaces import ProviderError
+    from govor_scene_planner import ScenePlanner
+
+    try:
+        request = LessonCreationRequest(
+            topic=topic,
+            difficulty=Difficulty(difficulty) if difficulty is not None else None,
+            scene_template_id=environment,
+            exercise_count=exercise_count,
+        )
+        created = asyncio.run(
+            create_lesson(
+                request,
+                LlamaCppLessonContentProvider(f"http://127.0.0.1:{_LLAMA_PORT}"),
+                paths.lessons,
+                allowed_scene_templates=set(ScenePlanner().supported_templates),
+            )
+        )
+    except (OSError, ProviderError, TimeoutError, ValueError) as error:
+        print(f"Lesson creation failed: {error}", file=sys.stderr)
+        return 2
+    print(f"Created: {created.imported.title} ({created.imported.scenario_id})")
+    print(
+        "Settings: "
+        f"{created.options.difficulty.value}, {created.options.scene_template_id}, "
+        f"{created.options.exercise_count} exercises"
+    )
+    print("The lesson is installed. Running clients will receive the updated catalog.")
     return 0
 
 

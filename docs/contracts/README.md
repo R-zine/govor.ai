@@ -39,6 +39,13 @@ the same closed shape is supplied to llama.cpp constrained generation and indepe
 before domain policy applies. An explicit negative fixture proves that an injected renderer action
 is rejected.
 
+`local-ai-lesson-content.schema.json` is the closed structured-output shape used by the local
+lesson creator. It contains bounded lesson prose, examples, misunderstandings, and one to eight
+exercises, but deliberately omits install paths, IDs, schema version, display order, and scene
+selection. Application code supplies those fields and validates the assembled object against
+`lesson-definition.schema.json` before publication. A negative fixture proves that an injected
+application command is rejected.
+
 Speech messages must include locale, format, sample rate, channel count, utterance ID, and timing
 reference. Media timing uses integer microseconds relative to the associated media item. Null
 alignment means unavailable; it never authorizes guessed timestamps.

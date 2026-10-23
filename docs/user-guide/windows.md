@@ -59,6 +59,23 @@ or partially invalid bundle installs nothing; correct the content and select it 
 stores imported files under `content\lessons`. Keep a copy of custom lesson files before replacing
 the extracted version directory during an update, then import them into the new version.
 
+## Create a lesson
+
+1. Start govor.ai with `Start-Govor.cmd` and leave its console open. The creator uses the local
+   language model owned by that running process.
+2. Double-click `Create-Lesson.cmd`.
+3. Describe the topic or speaking goal. Optionally choose beginner/intermediate/advanced content,
+   a café/supermarket/airport/home environment, and one through eight exercises. Automatic uses
+   intermediate content, five exercises, and a deterministic suitable/fallback environment.
+4. Select **Create** and wait for the result dialog. Generation can take longer on the first call.
+5. The lesson is saved under `content\lessons` and appears on connected phones without restarting
+   the host. It does not replace a lesson already in progress.
+
+Creation remains offline and sends the description only to the local loopback model. Generated
+content is structurally validated but can still contain awkward or inaccurate teaching material;
+try a clearer topic or remove the new JSON file while govor.ai is stopped if the result is not
+useful. Keep wanted custom lesson files when updating the portable directory.
+
 ## Update
 
 1. Stop the old launcher completely.

@@ -1,0 +1,41 @@
+{
+  "title": "Checking in at a hotel",
+  "description": "Practise a polite hotel check-in.",
+  "objectives": ["Check in and answer a receptionist's questions."],
+  "target_vocabulary": ["reservation", "passport", "room"],
+  "difficulty_descriptions": [
+    "Use modelled check-in phrases.",
+    "Answer short follow-up questions.",
+    "Handle a natural check-in exchange."
+  ],
+  "examples": [
+    {
+      "teacher": "Do you have a reservation?",
+      "learner": "Yes, I have a reservation under Ivanov."
+    }
+  ],
+  "common_misunderstandings": [
+    {
+      "pattern": "I have reserve",
+      "correction": "Say: I have a reservation.",
+      "explanation_bg": "Използвайте съществителното ‘reservation’."
+    }
+  ],
+  "exercises": [
+    {
+      "exercise_type": "guided_response",
+      "goal": "State that you have a reservation.",
+      "expected_intent": "answer_receptionist",
+      "prompts": [
+        "Say: I have a reservation.",
+        "Do you have a reservation?",
+        "Welcome. How may I help you?"
+      ],
+      "accepted_patterns": [["have", "reservation"]],
+      "target_vocabulary": ["reservation"],
+      "gentle_correction": "Use a complete check-in answer.",
+      "explanation_bg": "Отговорете с цяло изречение на английски."
+    }
+  ],
+  "completion_condition": "Complete the hotel exchange."
+}

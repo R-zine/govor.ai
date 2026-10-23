@@ -71,6 +71,35 @@ def test_import_lessons_command_installs_into_the_packaged_catalog(
     assert "Imported: Hotel (hotel-check-in)" in capsys.readouterr().out
 
 
+def test_create_lesson_command_rejects_an_out_of_bounds_length_before_provider_call(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    install_root = tmp_path / "install"
+    shutil.copytree(
+        REPOSITORY_ROOT / "assets" / "lesson-content",
+        install_root / "content" / "lessons",
+    )
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "data"))
+
+    result = main(
+        [
+            "--install-root",
+            str(install_root),
+            "create-lesson",
+            "--topic",
+            "Hotel check-in",
+            "--exercise-count",
+            "9",
+        ]
+    )
+
+    assert result == 2
+    assert "between one and eight" in capsys.readouterr().err
+    assert len(tuple((install_root / "content" / "lessons").glob("*.json"))) == 4
+
+
 def test_release_renderer_is_silent_by_default(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

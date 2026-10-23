@@ -31,6 +31,27 @@ def test_lesson_manager_uses_a_native_picker_and_local_import_command() -> None:
     assert "Import-Lessons.ps1" in packager
 
 
+def test_lesson_creator_uses_the_loopback_backend_and_is_packaged() -> None:
+    command = (REPOSITORY_ROOT / "distribution" / "windows" / "Create-Lesson.cmd").read_text(
+        encoding="utf-8"
+    )
+    creator = (REPOSITORY_ROOT / "distribution" / "windows" / "Create-Lesson.ps1").read_text(
+        encoding="utf-8"
+    )
+    packager = (REPOSITORY_ROOT / "scripts" / "package.ps1").read_text(encoding="utf-8")
+
+    assert "Create-Lesson.ps1" in command
+    assert "Windows.Forms.Form" in creator
+    assert "create-lesson" in creator
+    assert "--topic" in creator
+    assert "--difficulty" in creator
+    assert "--environment" in creator
+    assert "--exercise-count" in creator
+    assert "Invoke-WebRequest" not in creator
+    assert "Create-Lesson.cmd" in packager
+    assert "Create-Lesson.ps1" in packager
+
+
 def test_start_entrypoint_forwards_bounded_smoke_arguments() -> None:
     script = (REPOSITORY_ROOT / "distribution" / "windows" / "Start-Govor.cmd").read_text(
         encoding="utf-8"

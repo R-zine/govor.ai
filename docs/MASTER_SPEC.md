@@ -1218,6 +1218,16 @@ continues on its original snapshot; a later lesson uses the new catalog. Invalid
 changes retain the last valid snapshot and surface a degraded catalog status. Network-downloaded
 lesson content remains out of scope.
 
+The packaged Windows host must also provide a local lesson-creator UI. The user supplies a topic
+and may optionally select content difficulty, one allow-listed visual environment, and a bounded
+exercise count. Omitted options are resolved deterministically and do not require another model
+call. The existing loopback local dialogue model generates only bounded lesson prose and exercise
+content through a closed structured-output schema. Application code, not the model, owns schema
+version, persistent IDs, file names, display order, scene selection, and publication. Generated
+content must pass the normal lesson-definition and combined-catalog validation, then use the same
+locked additive import path so a running host publishes it to connected Android clients without a
+restart. No lesson-generation or upload endpoint is exposed on the LAN.
+
 ### Acceptance criteria
 
 - A complete guided lesson can be finished.

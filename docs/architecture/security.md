@@ -115,6 +115,17 @@ health, and sends no update. The importer and watcher are local filesystem featu
 new LAN endpoint. Lesson data cannot become a path, URL, script, command, or renderer asset ID.
 Catalog messages expose only ID, title, description, and display order.
 
+The Windows lesson creator talks only to fixed loopback llama.cpp HTTP. Its topic is bounded to 500
+characters and treated as untrusted content in the model prompt. The model response is capped,
+constrained by the versioned `local-ai-lesson-content` schema, parsed with unknown fields forbidden,
+and then validated again as a complete lesson definition. The output shape has no path, persistent
+ID, display-order, schema-version, scene-ID, command, URL, or renderer-asset field; generated prose
+is never interpreted as any of those. Application code selects the structural fields and publishes
+only through the locked additive importer.
+Omitted options are deterministic and never cause an extra provider request. The creator adds no
+LAN route, cloud fallback, telemetry, or content logging. These controls establish structural and
+execution safety; they do not certify generated pedagogical or factual quality.
+
 ## Required controls
 
 - Pair using a short-lived code/QR bootstrap and generate a cryptographically random device key.

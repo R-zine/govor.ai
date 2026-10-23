@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://govor.ai/contracts/v1/local-ai-lesson-content.schema.json",
+  "title": "Validated local lesson model output",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "title",
+    "description",
+    "objectives",
+    "target_vocabulary",
+    "difficulty_descriptions",
+    "examples",
+    "common_misunderstandings",
+    "exercises",
+    "completion_condition"
+  ],
+  "properties": {
+    "title": { "$ref": "#/$defs/shortText" },
+    "description": { "type": "string", "minLength": 1, "maxLength": 512 },
+    "objectives": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 8,
+      "items": { "$ref": "#/$defs/text" }
+    },
+    "target_vocabulary": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 32,
+      "items": { "$ref": "#/$defs/shortText" }
+    },
+    "difficulty_descriptions": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": { "$ref": "#/$defs/text" }
+    },
+    "examples": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 8,
+      "items": { "$ref": "#/$defs/example" }
+    },
+    "common_misunderstandings": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 8,
+      "items": { "$ref": "#/$defs/misunderstanding" }
+    },
+    "exercises": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 8,
+      "items": { "$ref": "#/$defs/exercise" }
+    },
+    "completion_condition": { "$ref": "#/$defs/text" }
+  },
+  "$defs": {
+    "text": { "type": "string", "minLength": 1, "maxLength": 1024 },
+    "shortText": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "example": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["teacher", "learner"],
+      "properties": {
+        "teacher": { "$ref": "#/$defs/text" },
+        "learner": { "$ref": "#/$defs/text" }
+      }
+    },
+    "misunderstanding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pattern", "correction", "explanation_bg"],
+      "properties": {
+        "pattern": { "$ref": "#/$defs/text" },
+        "correction": { "$ref": "#/$defs/text" },
+        "explanation_bg": { "$ref": "#/$defs/text" }
+      }
+    },
+    "pattern": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 16,
+      "items": { "$ref": "#/$defs/shortText" }
+    },
+    "exercise": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "exercise_type",
+        "goal",
+        "expected_intent",
+        "prompts",
+        "accepted_patterns",
+        "target_vocabulary",
+        "gentle_correction",
+        "explanation_bg"
+      ],
+      "properties": {
+        "exercise_type": {
+          "enum": ["guided_response", "vocabulary", "comprehension", "role_play"]
+        },
+        "goal": { "$ref": "#/$defs/text" },
+        "expected_intent": { "$ref": "#/$defs/text" },
+        "prompts": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "items": { "$ref": "#/$defs/text" }
+        },
+        "accepted_patterns": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 16,
+          "items": { "$ref": "#/$defs/pattern" }
+        },
+        "target_vocabulary": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 16,
+          "items": { "$ref": "#/$defs/shortText" }
+        },
+        "gentle_correction": { "$ref": "#/$defs/text" },
+        "explanation_bg": { "$ref": "#/$defs/text" }
+      }
+    }
+  }
+}

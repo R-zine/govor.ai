@@ -116,6 +116,8 @@ Copy-Item -LiteralPath (Join-Path $script:RepositoryRoot 'distribution\windows\S
 Copy-Item -LiteralPath (Join-Path $script:RepositoryRoot 'distribution\windows\Setup-Govor.cmd') -Destination $stage
 Copy-Item -LiteralPath (Join-Path $script:RepositoryRoot 'distribution\windows\Manage-Lessons.cmd') -Destination $stage
 Copy-Item -LiteralPath (Join-Path $script:RepositoryRoot 'distribution\windows\Import-Lessons.ps1') -Destination $stage
+Copy-Item -LiteralPath (Join-Path $script:RepositoryRoot 'distribution\windows\Create-Lesson.cmd') -Destination $stage
+Copy-Item -LiteralPath (Join-Path $script:RepositoryRoot 'distribution\windows\Create-Lesson.ps1') -Destination $stage
 Copy-Item -LiteralPath (Join-Path $script:RepositoryRoot 'distribution\windows\Install-Prerequisites.ps1') -Destination $stage
 
 $documentation = Join-Path $stage 'documentation'

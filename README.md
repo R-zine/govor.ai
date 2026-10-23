@@ -18,7 +18,9 @@ local SQLite resume/history without retaining recordings or complete transcripts
 lessons now live in the JSON catalog under `assets/lesson-content`, and Android discovers the
 available list from the host. Packaged Windows users can add a local JSON lesson or multi-JSON ZIP
 through `Manage-Lessons.cmd`; the host validates and publishes the new catalog to connected clients
-without a restart. Milestone 6
+without a restart. `Create-Lesson.cmd` can generate a validated new lesson with the running local
+LLM from a topic plus optional difficulty, environment, and length, then publish it through the
+same live catalog path. Milestone 6
 adds the animated procedural teacher, PCM/real-phoneme lip synchronization, and validated dynamic
 café, supermarket, airport, and home environments. Milestone 7 adds independently selectable,
 explicitly opt-in OpenAI-compatible providers while retaining a hard offline-only default and

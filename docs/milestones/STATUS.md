@@ -167,6 +167,57 @@ Verification for this amendment:
 - The native file-picker dialog and resulting Android selector were not manually exercised in this
   run. No emulator/device was attached, and no release package or physical acceptance was rerun.
 
+### Local LLM lesson creator
+
+On 2026-10-23 the packaged Windows host gained `Create-Lesson.cmd` and a native form for a required
+lesson topic plus optional content difficulty, visual environment, and one-to-eight exercise
+length. Omitted settings resolve deterministically to intermediate difficulty, five exercises, and
+an allow-listed environment selected from topic keywords or a stable hash. These choices require
+no model call.
+
+The existing loopback-only Qwen/llama.cpp backend generates bounded teaching content through the
+new closed `local-ai-lesson-content` schema. The model has no fields for file paths,
+scenario/exercise IDs, display order, schema version, scene IDs, application commands, or renderer
+assets, and generated prose is never interpreted as one. Application code adds the structural
+fields, validates the assembled version 1 lesson, and publishes it
+through the same locked additive importer. The existing watcher therefore supplies the live
+Android catalog update while preserving any active lesson snapshot. ADR-0014 records the decision.
+
+Verification to date:
+
+- `./scripts/test.ps1 -Scope contracts`: verified passing; 32 schema/fixture tests including valid
+  generated content and rejection of an injected application command.
+- `./scripts/test.ps1 -Scope python`: verified passing; final focused run had 225 tests at 85.46%
+  combined branch
+  coverage plus Ruff, format, and strict mypy. Tests cover deterministic defaults, explicit
+  settings, output bounds, loopback enforcement, retry bounds, exact exercise count, unique
+  additive IDs, complete lesson validation, importer publication, launcher dispatch, and package
+  entrypoints.
+- `./scripts/check-powershell-syntax.ps1 -Paths distribution/windows/Create-Lesson.ps1`: verified
+  passing.
+- A bounded real Qwen3 4B Q4_K_M/llama.cpp smoke generated one beginner airport exercise from
+  `Practice asking for help after a flight is delayed`, produced a valid canonical lesson through
+  the actual launcher/provider/importer path, and reported the expected resolved settings. It used
+  an isolated ignored catalog; the generated smoke directory was removed and port 8767 was no
+  longer listening afterward.
+- `./scripts/test.ps1 -Scope all`: verified passing; 224 Python tests at 85.44% combined coverage,
+  Kotlin/JVM tests, 8 C# tests, 21 real media tests, Godot import/build/self-test, and Android debug
+  assembly all passed. The Godot build emitted only the existing inability to query NuGet's online
+  vulnerability feed in the restricted environment.
+- `uv run --frozen pre-commit run --all-files`: verified passing; JSON/YAML, line endings,
+  whitespace, secret/size checks, Ruff, format, 32 contract tests, PowerShell syntax, and the
+  path-selected complete software gate all passed.
+- The final full-catalog preflight guard was followed by the 225-test Python run above and
+  `pre-commit run --files` on its implementation, regression test, and this handoff; every selected
+  hook passed.
+
+The native form itself, a rebuilt portable package, and a live connected Android catalog push were
+not manually exercised in this maintenance run. The underlying importer-to-live-watcher path was
+already directly verified in the preceding import amendment, but that prior evidence is not a
+claim that this new form was clicked. Completed Milestone 8/9 VM and physical acceptance were not
+rerun because this feature changes neither Android, media, rendering, network gateways, nor device
+behavior.
+
 ### Path-aware pre-commit software gate
 
 On 2026-10-23 pre-commit gained a staged-path dispatcher in

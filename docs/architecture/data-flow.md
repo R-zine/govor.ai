@@ -36,6 +36,11 @@ followed by playback completion, recording start/submission metadata, retry, and
 launcher, which validates and additively publishes it into `content/lessons`. The control host
 notices that local directory change and sends a new `lesson.catalog`; no unauthenticated LAN
 administration endpoint is exposed. A running lesson keeps its prior immutable snapshot.
+`Create-Lesson.cmd` is a second same-PC path. It resolves omitted settings deterministically,
+sends the bounded topic and resolved content settings to loopback llama.cpp, validates the closed
+structured response, adds application-owned IDs/order/scene fields, and hands the complete JSON to
+the same importer. The creator does not call a network-facing host route, and the existing watcher
+provides the same live Android update.
 The microphone itself remains on the WebRTC track. In `local` mode, recording start opens a single
 bounded capture in the media service; received frames are resampled to 16 kHz mono PCM. Submission
 closes the capture and returns an in-memory WAV over a loopback-only internal HTTP endpoint. The

@@ -322,3 +322,19 @@ Final manual evidence:
 
 Milestone 9 is complete. Its physical rows come from the documented target PC, physical phone, and
 intended Wi-Fi execution; emulator results do not satisfy or replace them.
+
+## Post-milestone local lesson creator
+
+The next maintenance feature adds a packaged host-side lesson creator without reopening any
+completed milestone. `Create-Lesson.cmd` accepts a required topic plus optional content difficulty,
+closed scene environment, and one-to-eight exercise length. Omitted values are resolved
+deterministically. The existing loopback Qwen/llama.cpp backend generates only the bounded lesson
+content; application code owns IDs, ordering, scene selection, final lesson validation, and locked
+additive publication. The existing catalog watcher makes the new lesson available to connected
+Android clients without a restart. ADR-0014 defines this boundary.
+
+Acceptance for this maintenance item requires structured-output/provider tests, deterministic
+default tests, real importer publication, contract fixtures, launcher/distribution checks,
+PowerShell parsing, one bounded real local-model smoke when the installed model is available, and
+the normal software/pre-commit gates. It does not require rerunning completed physical-device or
+clean-VM acceptance unless those paths change.

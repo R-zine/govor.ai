@@ -12,6 +12,14 @@ overwritten. The picker copies canonical `<scenario_id>.json` files into `conten
 not execute or extract ZIP paths. Invalid batches leave the installed catalog unchanged and show a
 failure dialog.
 
+Packaged users can instead double-click `Create-Lesson.cmd` while `Start-Govor.cmd` is running.
+The native form asks for a lesson topic and optionally accepts content difficulty, one of the four
+existing environments, and a length of one through eight exercises. Automatic settings resolve to
+intermediate, five exercises, and a deterministic allow-listed environment. The loopback local
+model generates the teaching content once; application code supplies IDs, ordering, and the scene
+field. The same strict importer installs the result, so connected Android clients update without a
+restart. Model-generated content should still be reviewed for teaching quality before wider use.
+
 ## Add a lesson
 
 1. Copy the closest existing JSON lesson to a new file in `assets/lesson-content`.

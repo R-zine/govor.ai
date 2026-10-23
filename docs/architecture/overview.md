@@ -95,6 +95,12 @@ empty recognition is distinct from malformed provider output and produces a repe
 an invented transcript. The server URL, provider identity, model path, context size, GPU layers,
 and memory window are configurable without changing domain code. See ADR-0006.
 
+The separate Windows lesson creator also uses that loopback llama.cpp process, but through the
+closed `local-ai-lesson-content` shape. The model supplies bounded teaching prose only.
+Deterministic code resolves omitted creator options and owns all identifiers, ordering, the
+allow-listed scene, validation, and publication. It never routes generated text into a command or
+renderer asset. See ADR-0014.
+
 ## Teaching and progress boundary
 
 `assets/lesson-content` contains the versioned JSON lesson definitions. At startup,
@@ -107,8 +113,11 @@ atomically swaps only a complete valid snapshot, and pushes its bounded summary 
 authenticated control connections. Android updates its selector without reconnecting. Active
 lessons retain their original catalog/service snapshot; subsequent lessons use the replacement.
 Invalid out-of-band edits leave the last valid catalog active and mark health as `reload_error`.
-There is no runtime network download. The deterministic `TeachingEngine` consumes the selected
-definition. The active local dialogue model may classify or phrase a conversational turn,
+`Create-Lesson.cmd` collects a required topic plus optional difficulty, scene, and one-to-eight
+exercise length. It validates structured local-model output, assembles the deterministic fields,
+and enters the catalog through the same locked importer. There is no runtime network download or
+LAN administration endpoint. The deterministic `TeachingEngine` consumes the selected definition.
+The active local dialogue model may classify or phrase a conversational turn,
 but it cannot award progress. Only recognized English production that satisfies the active guided
 exercise can advance. Bulgarian/mixed assistance, vocabulary questions, repetition, slower-speech
 requests, ambiguity, and recognition failure retain the exercise.

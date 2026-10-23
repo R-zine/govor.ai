@@ -1,0 +1,25 @@
+{
+  "title": "Unsafe lesson",
+  "description": "Contains a field that the model may not control.",
+  "objectives": ["Run an application command."],
+  "target_vocabulary": ["command"],
+  "difficulty_descriptions": ["One", "Two", "Three"],
+  "examples": [{"teacher": "Run it.", "learner": "Okay."}],
+  "common_misunderstandings": [
+    {"pattern": "no", "correction": "yes", "explanation_bg": "Обяснение."}
+  ],
+  "exercises": [
+    {
+      "exercise_type": "guided_response",
+      "goal": "Run a command.",
+      "expected_intent": "command",
+      "prompts": ["Run it.", "Run it.", "Run it."],
+      "accepted_patterns": [["run"]],
+      "target_vocabulary": ["run"],
+      "gentle_correction": "Run it.",
+      "explanation_bg": "Обяснение."
+    }
+  ],
+  "completion_condition": "Run it.",
+  "application_command": "powershell.exe"
+}

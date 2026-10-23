@@ -45,6 +45,7 @@ def test_default_lesson_files_match_the_versioned_schema() -> None:
         ("control-message.schema.json", "control-lesson-catalog.json"),
         ("control-message.schema.json", "control-renderer-command.json"),
         ("local-ai-dialogue.schema.json", "local-ai-dialogue.json"),
+        ("local-ai-lesson-content.schema.json", "local-ai-lesson-content.json"),
     ],
 )
 def test_positive_contract_fixtures(schema_name: str, fixture_name: str) -> None:
@@ -64,6 +65,7 @@ def test_positive_contract_fixtures(schema_name: str, fixture_name: str) -> None
         ("control-message.schema.json", "control-lesson-progress-invalid.json"),
         ("control-message.schema.json", "control-scene-arbitrary-asset.json"),
         ("local-ai-dialogue.schema.json", "local-ai-control-injection.json"),
+        ("local-ai-lesson-content.schema.json", "local-ai-lesson-command.json"),
     ],
 )
 def test_negative_contract_fixtures(schema_name: str, fixture_name: str) -> None:
