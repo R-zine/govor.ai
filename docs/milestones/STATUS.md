@@ -1,6 +1,6 @@
 # Current verified status
 
-Last updated: 2026-10-23
+Last updated: 2026-10-24
 
 ## Outcome
 
@@ -936,6 +936,76 @@ Verification and limits:
   handset check should install the staged code-14 APK and confirm main-loudspeaker playback plus
   route restoration after disconnect/background. This handoff is part of the feature's focused
   commit.
+
+## Post-milestone contextual Android UI
+
+The 2026-10-24 Android maintenance change replaces the single persistent control overlay with a
+native Jetpack Compose Material 3 presentation. Connection, lesson selection, and active lesson are
+mutually exclusive contexts. The selection screen keeps only the selected lesson and start action
+directly visible; its list and settings icons open native bottom sheets for the catalog,
+GB/US accent, and spaced review. The active lesson prioritizes the full-screen video, progress,
+subtitles, transcript, error/retry, and a large hold-to-talk button. Replay, 0.75×/1×/1.25× speed,
+pronunciation, and disconnect remain available through accessible icon dropdowns, sheets, and the
+overflow menu. The WebRTC `SurfaceViewRenderer` remains mounted behind every context so track
+attachment survives navigation. ADR-0017 records the decision.
+
+Implementation and verification:
+
+- `GovorTheme.kt` defines the Material 3 color/typography system. `GovorUiState.kt` owns the pure
+  screen/control-visibility policy, and four new JVM tests cover connection isolation, selection
+  versus active controls, teacher-playback action visibility, and retry/PTT states.
+- `./scripts/test.ps1 -Scope kotlin`: verified passing; 26 JVM tests (22 existing plus four new)
+  passed. The combined core/app gate now runs without the configuration cache, daemon, or parallel
+  execution because the managed workspace's repository-local Gradle cache intermittently denied
+  access while moving generated Kotlin DSL workspaces and reading a Gradle JAR.
+- `./scripts/build.ps1 -Target android`: verified passing; API 34 compilation and debug APK
+  assembly succeeded. The final debug APK is 65,554,653 bytes with SHA-256
+  `9a74e4946c4d339800b8727cb0a125aa0608d9fa736251a3767d053b281f4d5e`.
+  `./scripts/check-powershell-syntax.ps1 -Paths
+  scripts/emulator-renderer-smoke.ps1,scripts/emulator-speech-smoke.ps1,scripts/test.ps1` also
+  passed.
+- `./scripts/test.ps1 -Scope all`: verified passing from the beginning; 258 Python tests at 85.11%
+  branch coverage, 26 Kotlin tests, 9 C# tests, 21 real media tests, Godot import/C# build/headless
+  self-test, and Android debug assembly all passed. Godot emitted only the documented Windows root-
+  certificate-store message and an offline NuGet advisory-index warning.
+- The first live `pip-audit` run exposed three newly published advisories against transitive
+  `filelock 4.0.12`, all fixed after 4.2.1. `uv lock --upgrade-package filelock` updated only that
+  package to 4.2.4; the frozen media/speech audit then reported no known vulnerabilities.
+- Final `uv run --frozen pre-commit run --all-files`: verified passing after its pinned hook
+  environment was allowed to download; JSON/YAML, EOF/line-ending/whitespace, private-key and
+  large-file checks, Ruff check/format, contracts, PowerShell syntax, and the affected-application
+  test gate all passed with the refreshed lock.
+- `./scripts/emulator-renderer-smoke.ps1`: verified passing on the Android Studio API 34 AVD with
+  local audio disabled. It opened the icon lesson catalog, selected the host-provided café lesson,
+  opened the preferences sheet, selected American English and spaced review, proved speed was
+  absent before lesson start, completed fake teacher/learner turns, exercised PTT/transcript,
+  disconnected through the active overflow menu, and reconnected. Godot video reached Android as
+  1280×720 frames with zero reported renderer drops in the final short interval; microphone return
+  passed before and after reconnect. This is a functional smoke, not a performance benchmark.
+- `./scripts/emulator-speech-smoke.ps1`: verified passing with host/emulator output muted. The speed
+  icon/dropdown selected 0.75×, replay retained synchronized highlights, the pronunciation icon
+  opened the word sheet, and isolated-word Kokoro playback completed. The Android log recorded the
+  playback-rate change, seven highlight indices on replay, selection of word zero, and bounded
+  isolated-word completion.
+- Initial emulator-smoke attempts failed before producing UI evidence because the harness omitted
+  the gateway-security source path, UI Automator raced emulator/sheet startup, hardware-keyboard
+  mode made an obsolete Back press exit the Activity, the old PTT text selector no longer matched,
+  and Windows PowerShell 5.1 misread a non-ASCII script literal. The harness now includes the
+  dependency, retries hierarchy capture, avoids the keyboard Back action, selects PTT by content
+  description, and uses an encoding-independent café-title match. Both complete smokes then passed.
+- The smoke scripts force-stopped the app, removed `adb reverse` mappings, and stopped their host,
+  media, and renderer processes. Ports 8765/8766 were not listening and Android reported
+  `mMusicActiveMs=0` afterward; no tone or media server was left active.
+
+Limits:
+
+- The AVD is development evidence for navigation, accessibility structure, media integration, and
+  reconnect only. No new physical-phone, Wi-Fi, acoustic, hardware-codec, target-performance, or
+  release-package claim is inferred, and the historical Milestone 9 acceptance package predates
+  this UI change.
+- ADB screenshots still render the WebRTC `SurfaceView` black even when libwebrtc reports real
+  1280×720 frames. The screenshot supports only the Compose overlay appearance; video evidence
+  remains transport/render logs as already documented.
 
 ## Renderer evidence and limitations
 

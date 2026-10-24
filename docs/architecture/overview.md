@@ -14,7 +14,7 @@ simple controls, and session connectivity; it performs no AI inference or 3D ren
 | `apps/host` | Windows orchestration and authenticated gateway | Model-specific logic in route handlers |
 | `services/*` | Replaceable provider and media adapters | Lesson policy |
 | `apps/renderer` | Render scenes and expose frames/audio | Dialogue or progress logic |
-| `apps/android` | Native stream, audio, PTT, subtitles, settings | AI inference or 3D scene generation |
+| `apps/android` | Native Material 3 stream, audio, PTT, subtitles, and contextual controls | AI inference or 3D scene generation |
 
 Dependencies point inward toward domain rules and provider interfaces. Cross-process messages use
 JSON contracts with protocol version, message type, UUID correlation identifier, and validated
@@ -49,6 +49,20 @@ Provider calls run in cancellable tasks with explicit deadlines, while playback 
 steps have their own deadlines. A connection owns at most one lesson session, and disconnect/end
 cancels outstanding work, resets the renderer, and removes the session from the host registry.
 See ADR-0005.
+
+## Android presentation boundary
+
+Android derives exactly one connection, lesson-selection, or active-lesson context from the media
+and host session state. Connection fields do not share a screen with lesson controls. Selection
+keeps the primary start action visible and places catalog/preferences in Material 3 sheets; the
+active context places replay, speed, pronunciation, and disconnect in icon menus while subtitles,
+progress, errors/retry, and push-to-talk remain direct. Stable accessibility descriptions are part
+of this presentation contract. The mapping and control visibility are pure Kotlin policy with JVM
+tests. See ADR-0017.
+
+The Compose overlay changes by context, but its native `SurfaceViewRenderer` stays mounted for the
+Activity lifetime. This lets an existing or newly arriving WebRTC track retain its sink through UI
+transitions and reconnects.
 
 ## Speech boundary
 

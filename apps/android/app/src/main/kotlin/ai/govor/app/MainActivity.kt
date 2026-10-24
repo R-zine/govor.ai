@@ -5,36 +5,78 @@ import android.content.pm.PackageManager
 import android.net.ConnectivityManager
 import android.net.Network
 import android.os.Bundle
+import ai.govor.core.LessonCatalogItemPayload
+import ai.govor.core.LessonProgressPayload
+import ai.govor.core.PronunciationPayload
 import ai.govor.core.SessionState
+import ai.govor.core.SpeechTimeline
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
-import androidx.activity.viewModels
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.viewModels
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
-import androidx.compose.foundation.text.ClickableText
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ErrorOutline
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Replay
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.Button
-import androidx.compose.material3.Checkbox
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -46,13 +88,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -74,6 +121,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
         setContent { GovorApp(model) }
     }
 
@@ -94,9 +142,10 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun GovorApp(model: MediaSessionViewModel = viewModel()) {
-    val status by model.session.status.collectAsStateWithLifecycle()
+    val mediaStatus by model.session.status.collectAsStateWithLifecycle()
     val mediaError by model.session.error.collectAsStateWithLifecycle()
     val lessonState by model.lesson.state.collectAsStateWithLifecycle()
     val lessonError by model.lesson.error.collectAsStateWithLifecycle()
@@ -110,7 +159,7 @@ private fun GovorApp(model: MediaSessionViewModel = viewModel()) {
     val lessonProgress by model.lesson.lessonProgress.collectAsStateWithLifecycle()
     val lessonCatalog by model.lesson.lessonCatalog.collectAsStateWithLifecycle()
     val lessonActive by model.lesson.lessonActive.collectAsStateWithLifecycle()
-    // Debug emulator defaults use adb reverse for control 8765 and media 8766.
+
     var mediaHost by rememberSaveable {
         mutableStateOf(if (BuildConfig.DEBUG) "127.0.0.1:8766" else "")
     }
@@ -122,362 +171,952 @@ private fun GovorApp(model: MediaSessionViewModel = viewModel()) {
     var scenarioId by rememberSaveable { mutableStateOf("") }
     var englishLocale by rememberSaveable { mutableStateOf("en-GB") }
     var spacedReviewEnabled by rememberSaveable { mutableStateOf(false) }
+
     LaunchedEffect(lessonCatalog) {
         if (lessonCatalog.none { it.scenario_id == scenarioId }) {
             scenarioId = lessonCatalog.firstOrNull()?.scenario_id.orEmpty()
         }
     }
+
     val context = LocalContext.current
+    val connect = {
+        val microphonePermission = ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.RECORD_AUDIO,
+        )
+        if (microphonePermission == PackageManager.PERMISSION_GRANTED) {
+            model.connect(mediaHost, controlHost, token, certificateFingerprint)
+        }
+    }
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
     ) { granted ->
-        if (granted) {
-            model.connect(
-                mediaHost,
-                controlHost,
-                token,
-                certificateFingerprint,
-            )
+        if (granted) connect()
+    }
+    val requestConnection = {
+        if (
+            ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
+            PackageManager.PERMISSION_GRANTED
+        ) {
+            connect()
+        } else {
+            permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
         }
     }
 
-    MaterialTheme {
-        Surface(color = Color(0xFF10201D), modifier = Modifier.fillMaxSize()) {
+    val screen = resolveGovorScreen(
+        mediaConnected = mediaStatus == MediaConnectionStatus.CONNECTED,
+        lessonActive = lessonActive,
+    )
+
+    GovorTheme {
+        Surface(
+            color = MaterialTheme.colorScheme.surface,
+            modifier = Modifier.fillMaxSize(),
+        ) {
             Box(modifier = Modifier.fillMaxSize()) {
-                AndroidView(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color(0xFF263D38)),
-                    factory = { androidContext ->
-                        SurfaceViewRenderer(androidContext).apply {
-                            init(model.session.eglContext, null)
-                            setScalingType(RendererCommon.ScalingType.SCALE_ASPECT_FIT)
-                            setEnableHardwareScaler(true)
-                            model.session.attachRenderer(this)
-                        }
-                    },
-                    onRelease = { view ->
-                        model.session.detachRenderer(view)
-                        view.release()
-                    },
-                )
+                VideoSurface(model)
+                when (screen) {
+                    GovorScreen.CONNECTION -> ConnectionScreen(
+                        mediaStatus = mediaStatus,
+                        lessonState = lessonState,
+                        mediaHost = mediaHost,
+                        onMediaHostChanged = { mediaHost = it },
+                        controlHost = controlHost,
+                        onControlHostChanged = { controlHost = it },
+                        token = token,
+                        onTokenChanged = { token = it },
+                        certificateFingerprint = certificateFingerprint,
+                        onCertificateFingerprintChanged = { certificateFingerprint = it },
+                        onConnect = requestConnection,
+                        errors = listOfNotNull(mediaError, lessonError, pairingError),
+                    )
 
-                Text(
-                    "media: ${status.name.lowercase().replace('_', ' ')} · " +
-                        "lesson: ${lessonState.name.lowercase().replace('_', ' ')}",
-                    color = statusColor(status),
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .padding(24.dp),
-                )
+                    GovorScreen.LESSON_SELECTION -> LessonSelectionScreen(
+                        lessonCatalog = lessonCatalog,
+                        selectedScenarioId = scenarioId,
+                        onScenarioSelected = { scenarioId = it },
+                        englishLocale = englishLocale,
+                        onEnglishLocaleChanged = { englishLocale = it },
+                        spacedReviewEnabled = spacedReviewEnabled,
+                        onSpacedReviewChanged = { spacedReviewEnabled = it },
+                        lessonProgress = lessonProgress,
+                        lessonState = lessonState,
+                        onStartLesson = {
+                            model.startLesson(
+                                scenarioId,
+                                englishLocale,
+                                spacedReviewEnabled,
+                            )
+                        },
+                        onDisconnect = model::disconnect,
+                        errors = listOfNotNull(lessonError, pairingError),
+                    )
 
-                if (
-                    status == MediaConnectionStatus.DISCONNECTED ||
-                    status == MediaConnectionStatus.FAILED ||
-                    lessonCatalog.isEmpty() ||
-                    !lessonActive
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .align(Alignment.Center)
-                            .fillMaxSize()
-                            .padding(24.dp)
-                            .background(Color(0xE610201D), MaterialTheme.shapes.large)
-                            .verticalScroll(rememberScrollState())
-                            .padding(20.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                    ) {
-                        Text("govor.ai session", color = Color.White, fontSize = 22.sp)
-                        if (lessonCatalog.isEmpty()) {
-                            OutlinedTextField(
-                                value = mediaHost,
-                                onValueChange = { mediaHost = it },
-                                singleLine = true,
-                                label = { Text("Media host:port") },
-                                modifier = Modifier.fillMaxWidth(),
-                            )
-                            OutlinedTextField(
-                                value = controlHost,
-                                onValueChange = { controlHost = it },
-                                singleLine = true,
-                                label = { Text("Control host:port") },
-                                modifier = Modifier.fillMaxWidth(),
-                            )
-                            OutlinedTextField(
-                                value = token,
-                                onValueChange = { token = it },
-                                singleLine = true,
-                                label = {
-                                    Text(
-                                        if (BuildConfig.DEBUG) {
-                                            "Development token"
-                                        } else {
-                                            "Pairing code"
-                                        },
-                                    )
-                                },
-                                visualTransformation = PasswordVisualTransformation(),
-                                modifier = Modifier.fillMaxWidth(),
-                            )
-                            if (!BuildConfig.DEBUG) {
-                                OutlinedTextField(
-                                    value = certificateFingerprint,
-                                    onValueChange = { certificateFingerprint = it },
-                                    singleLine = true,
-                                    label = { Text("PC certificate SHA-256") },
-                                    modifier = Modifier.fillMaxWidth(),
-                                )
-                            }
-                            Text(
-                                "Connect to load guided lessons from the Windows PC.",
-                                color = Color.White,
-                            )
-                        } else {
-                            Text("Guided lesson", color = Color.White)
-                            lessonCatalog.forEach { lesson ->
-                                Button(
-                                    onClick = { scenarioId = lesson.scenario_id },
-                                    modifier = Modifier.fillMaxWidth(),
-                                ) {
-                                    Text(
-                                        if (scenarioId == lesson.scenario_id) {
-                                            "${lesson.title} ✓"
-                                        } else {
-                                            lesson.title
-                                        },
-                                    )
-                                }
-                                if (scenarioId == lesson.scenario_id) {
-                                    Text(lesson.description, color = Color(0xFFB8D9D1))
-                                }
-                            }
-                        }
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            listOf("en-GB", "en-US").forEach { locale ->
-                                Button(onClick = { englishLocale = locale }) {
-                                    Text(if (englishLocale == locale) "$locale ✓" else locale)
-                                }
-                            }
-                        }
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Checkbox(
-                                checked = spacedReviewEnabled,
-                                onCheckedChange = { spacedReviewEnabled = it },
-                            )
-                            Text("Enable spaced vocabulary review", color = Color.White)
-                        }
-                        if (lessonCatalog.isEmpty()) {
-                            Button(
-                                onClick = {
-                                    val microphonePermission = ContextCompat.checkSelfPermission(
-                                        context,
-                                        Manifest.permission.RECORD_AUDIO,
-                                    )
-                                    if (
-                                        microphonePermission ==
-                                        PackageManager.PERMISSION_GRANTED
-                                    ) {
-                                        model.connect(
-                                            mediaHost,
-                                            controlHost,
-                                            token,
-                                            certificateFingerprint,
-                                        )
-                                    } else {
-                                        permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-                                    }
-                                },
-                                enabled = lessonState != SessionState.CONNECTING,
-                                modifier = Modifier.fillMaxWidth(),
-                            ) {
-                                Text("Connect and load lessons")
-                            }
-                        } else {
-                            Button(
-                                onClick = {
-                                    model.startLesson(
-                                        scenarioId,
-                                        englishLocale,
-                                        spacedReviewEnabled,
-                                    )
-                                },
-                                enabled = scenarioId.isNotEmpty(),
-                                modifier = Modifier.fillMaxWidth(),
-                            ) {
-                                Text("Start lesson")
-                            }
-                        }
-                        mediaError?.let { Text(it, color = Color(0xFFFFB4AB)) }
-                        lessonError?.let { Text(it, color = Color(0xFFFFB4AB)) }
-                        pairingError?.let { Text(it, color = Color(0xFFFFB4AB)) }
-                    }
-                }
-
-                if (status == MediaConnectionStatus.CONNECTED) {
-                    Column(
-                        modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .padding(bottom = 40.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
-                    ) {
-                        lessonProgress?.let { progress ->
-                            Text(
-                                "${progress.scenario_title} · " +
-                                    "${progress.exercise_number}/${progress.exercise_count} · " +
-                                    progress.difficulty,
-                                color = Color(0xFFB8D9D1),
-                                fontWeight = FontWeight.SemiBold,
-                            )
-                            progress.difficulty_change_reason?.let { reason ->
-                                Text(
-                                    when (reason) {
-                                        "repeated_difficulty" ->
-                                            "Difficulty reduced after repeated difficulty."
-                                        else ->
-                                            "Difficulty increased after consistent first-try success."
-                                    },
-                                    color = Color(0xFFB8D9D1),
-                                )
-                            }
-                            if (progress.status == "completed") {
-                                Text("Lesson complete · progress saved", color = Color(0xFF83F8DA))
-                            }
-                        }
-                        teacherText?.let { text ->
-                            val annotated = buildAnnotatedString {
-                                append("Teacher: ")
-                                val prefixLength = length
-                                append(text)
-                                pronunciations.forEachIndexed { index, pronunciation ->
-                                    val start = prefixLength + pronunciation.start_char
-                                    val end = prefixLength + pronunciation.end_char
-                                    addStringAnnotation("word", index.toString(), start, end)
-                                    addStyle(
-                                        SpanStyle(
-                                            color = Color.White,
-                                            background = if (index == highlightedWordIndex) {
-                                                Color(0xFF00796B)
-                                            } else {
-                                                Color.Transparent
-                                            },
-                                            textDecoration = TextDecoration.Underline,
-                                        ),
-                                        start,
-                                        end,
-                                    )
-                                }
-                            }
-                            ClickableText(
-                                text = annotated,
-                                style = MaterialTheme.typography.bodyLarge.copy(
-                                    color = Color.White,
-                                    fontSize = 18.sp,
-                                ),
-                                onClick = { offset ->
-                                    annotated.getStringAnnotations("word", offset, offset)
-                                        .firstOrNull()
-                                        ?.item
-                                        ?.toIntOrNull()
-                                        ?.let(model.lesson::selectWord)
-                                },
-                            )
-                        }
-                        if (teacherText != null) {
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Button(
-                                    onClick = model.lesson::replayTurn,
-                                    enabled = lessonState == SessionState.AWAITING_LEARNER,
-                                ) { Text("Replay") }
-                                ai.govor.core.SpeechTimeline.supportedRates.forEach { rate ->
-                                    Button(onClick = { model.lesson.setPlaybackRate(rate) }) {
-                                        Text(
-                                            if (rate == playbackRate) "${rate}× ✓" else "${rate}×",
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                        if (pronunciations.isNotEmpty()) {
-                            LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                itemsIndexed(pronunciations) { index, pronunciation ->
-                                    Button(onClick = { model.lesson.selectWord(index) }) {
-                                        Text(pronunciation.word)
-                                    }
-                                }
-                            }
-                        }
-                        selectedPronunciation?.let { pronunciation ->
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth(0.9f)
-                                    .background(Color(0xE6263D38), MaterialTheme.shapes.medium)
-                                    .padding(12.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                            ) {
-                                Text(
-                                    "${pronunciation.word}  /${pronunciation.ipa}/",
-                                    color = Color.White,
-                                    fontWeight = FontWeight.Bold,
-                                )
-                                pronunciation.explanation?.let { explanation ->
-                                    Text(explanation, color = Color(0xFFB8D9D1))
-                                }
-                            }
-                        }
-                        transcript?.let {
-                            Text("You: $it", color = Color(0xFFB8D9D1), fontSize = 15.sp)
-                        }
-                        Text(
-                            if (lessonState == SessionState.AWAITING_LEARNER) {
-                                "Hold while speaking"
-                            } else {
-                                lessonState.name.lowercase().replace('_', ' ')
-                            },
-                            color = Color.White,
-                            fontSize = 20.sp,
-                        )
-                        Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
-                            Button(onClick = model::disconnect) { Text("Disconnect") }
-                            if (
-                                lessonState == SessionState.AWAITING_LEARNER ||
-                                lessonState == SessionState.RECORDING
-                            ) {
-                                Box(
-                                    contentAlignment = Alignment.Center,
-                                    modifier = Modifier
-                                        .size(96.dp)
-                                        .background(Color(0xFF00A88F), CircleShape)
-                                        .pointerInput(Unit) {
-                                            awaitEachGesture {
-                                                awaitFirstDown(requireUnconsumed = false)
-                                                model.setPushToTalk(true)
-                                                waitForUpOrCancellation()
-                                                model.setPushToTalk(false)
-                                            }
-                                        },
-                                ) {
-                                    Text(
-                                        "Hold\nto talk",
-                                        color = Color.White,
-                                        fontSize = 16.sp,
-                                        fontWeight = FontWeight.Bold,
-                                    )
-                                }
-                            } else if (lessonState == SessionState.RECOVERABLE_ERROR) {
-                                Button(onClick = model.lesson::retry) { Text("Retry lesson") }
-                            }
-                        }
-                    }
+                    GovorScreen.ACTIVE_LESSON -> ActiveLessonScreen(
+                        mediaStatus = mediaStatus,
+                        lessonState = lessonState,
+                        teacherText = teacherText,
+                        pronunciations = pronunciations,
+                        highlightedWordIndex = highlightedWordIndex,
+                        selectedPronunciation = selectedPronunciation,
+                        playbackRate = playbackRate,
+                        transcript = transcript,
+                        lessonProgress = lessonProgress,
+                        onReplay = model.lesson::replayTurn,
+                        onPlaybackRateChanged = model.lesson::setPlaybackRate,
+                        onWordSelected = model.lesson::selectWord,
+                        onPushToTalkChanged = model::setPushToTalk,
+                        onRetry = model.lesson::retry,
+                        onDisconnect = model::disconnect,
+                        errors = listOfNotNull(mediaError, lessonError, pairingError),
+                    )
                 }
             }
         }
     }
 }
 
+@Composable
+private fun VideoSurface(model: MediaSessionViewModel) {
+    AndroidView(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.surfaceVariant),
+        factory = { androidContext ->
+            SurfaceViewRenderer(androidContext).apply {
+                init(model.session.eglContext, null)
+                setScalingType(RendererCommon.ScalingType.SCALE_ASPECT_FILL)
+                setEnableHardwareScaler(true)
+                model.session.attachRenderer(this)
+            }
+        },
+        onRelease = { view ->
+            model.session.detachRenderer(view)
+            view.release()
+        },
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ConnectionScreen(
+    mediaStatus: MediaConnectionStatus,
+    lessonState: SessionState,
+    mediaHost: String,
+    onMediaHostChanged: (String) -> Unit,
+    controlHost: String,
+    onControlHostChanged: (String) -> Unit,
+    token: String,
+    onTokenChanged: (String) -> Unit,
+    certificateFingerprint: String,
+    onCertificateFingerprintChanged: (String) -> Unit,
+    onConnect: () -> Unit,
+    errors: List<String>,
+) {
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.96f),
+        topBar = {
+            CenterAlignedTopAppBar(
+                title = { Text("govor.ai") },
+                colors = opaqueTopAppBarColors(),
+            )
+        },
+    ) { padding ->
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding),
+            contentPadding = PaddingValues(24.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Connect to your teacher", style = MaterialTheme.typography.headlineSmall)
+                    Text(
+                        "Enter the details shown by the Windows host. Your lessons load after " +
+                            "the secure connection is ready.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    ConnectionStatusPill(mediaStatus, lessonState)
+                }
+            }
+            item {
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
+                    ),
+                ) {
+                    Column(
+                        modifier = Modifier.padding(20.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp),
+                    ) {
+                        OutlinedTextField(
+                            value = mediaHost,
+                            onValueChange = onMediaHostChanged,
+                            singleLine = true,
+                            label = { Text("Media host:port") },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        OutlinedTextField(
+                            value = controlHost,
+                            onValueChange = onControlHostChanged,
+                            singleLine = true,
+                            label = { Text("Control host:port") },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        OutlinedTextField(
+                            value = token,
+                            onValueChange = onTokenChanged,
+                            singleLine = true,
+                            label = {
+                                Text(if (BuildConfig.DEBUG) "Development token" else "Pairing code")
+                            },
+                            visualTransformation = PasswordVisualTransformation(),
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        if (!BuildConfig.DEBUG) {
+                            OutlinedTextField(
+                                value = certificateFingerprint,
+                                onValueChange = onCertificateFingerprintChanged,
+                                singleLine = true,
+                                label = { Text("PC certificate SHA-256") },
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                        }
+                    }
+                }
+            }
+            if (errors.isNotEmpty()) {
+                item { ErrorCard(errors) }
+            }
+            item {
+                Button(
+                    onClick = onConnect,
+                    enabled = mediaStatus !in setOf(
+                        MediaConnectionStatus.SIGNALING,
+                        MediaConnectionStatus.CONNECTING,
+                    ) && lessonState != SessionState.CONNECTING,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                ) {
+                    Icon(Icons.Filled.Wifi, contentDescription = null)
+                    Spacer(Modifier.width(10.dp))
+                    Text("Connect and load lessons")
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun LessonSelectionScreen(
+    lessonCatalog: List<LessonCatalogItemPayload>,
+    selectedScenarioId: String,
+    onScenarioSelected: (String) -> Unit,
+    englishLocale: String,
+    onEnglishLocaleChanged: (String) -> Unit,
+    spacedReviewEnabled: Boolean,
+    onSpacedReviewChanged: (Boolean) -> Unit,
+    lessonProgress: LessonProgressPayload?,
+    lessonState: SessionState,
+    onStartLesson: () -> Unit,
+    onDisconnect: () -> Unit,
+    errors: List<String>,
+) {
+    var showLessonPicker by rememberSaveable { mutableStateOf(false) }
+    var showPreferences by rememberSaveable { mutableStateOf(false) }
+    var showMore by rememberSaveable { mutableStateOf(false) }
+    val selectedLesson = lessonCatalog.firstOrNull { it.scenario_id == selectedScenarioId }
+
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f),
+        topBar = {
+            CenterAlignedTopAppBar(
+                title = { Text("Choose a lesson") },
+                actions = {
+                    IconButton(onClick = { showLessonPicker = true }) {
+                        Icon(Icons.AutoMirrored.Filled.List, contentDescription = "Choose lesson")
+                    }
+                    IconButton(onClick = { showPreferences = true }) {
+                        Icon(Icons.Filled.Settings, contentDescription = "Lesson preferences")
+                    }
+                    Box {
+                        IconButton(onClick = { showMore = true }) {
+                            Icon(Icons.Filled.MoreVert, contentDescription = "More connection options")
+                        }
+                        DropdownMenu(
+                            expanded = showMore,
+                            onDismissRequest = { showMore = false },
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Disconnect") },
+                                leadingIcon = { Icon(Icons.Filled.Close, contentDescription = null) },
+                                onClick = {
+                                    showMore = false
+                                    onDisconnect()
+                                },
+                            )
+                        }
+                    }
+                },
+                colors = opaqueTopAppBarColors(),
+            )
+        },
+    ) { padding ->
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding),
+            contentPadding = PaddingValues(24.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            item { ConnectionStatusPill(MediaConnectionStatus.CONNECTED, lessonState) }
+            if (lessonProgress?.status == "completed") {
+                item {
+                    Card(
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        ),
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(Icons.Filled.CheckCircle, contentDescription = null)
+                            Spacer(Modifier.width(12.dp))
+                            Text("Lesson complete · progress saved")
+                        }
+                    }
+                }
+            }
+            if (lessonCatalog.isEmpty()) {
+                item {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 64.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                    ) {
+                        CircularProgressIndicator()
+                        Text("Loading lessons from the Windows host…")
+                    }
+                }
+            } else {
+                item {
+                    Card(
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f),
+                        ),
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(20.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                        ) {
+                            Text(
+                                selectedLesson?.title ?: "Select a lesson",
+                                style = MaterialTheme.typography.headlineSmall,
+                            )
+                            selectedLesson?.description?.let {
+                                Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            TextButton(onClick = { showLessonPicker = true }) {
+                                Icon(Icons.AutoMirrored.Filled.List, contentDescription = null)
+                                Spacer(Modifier.width(8.dp))
+                                Text("Browse ${lessonCatalog.size} lessons")
+                            }
+                        }
+                    }
+                }
+                item {
+                    Button(
+                        onClick = onStartLesson,
+                        enabled = selectedLesson != null,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp),
+                    ) {
+                        Icon(Icons.Filled.PlayArrow, contentDescription = null)
+                        Spacer(Modifier.width(10.dp))
+                        Text("Start lesson")
+                    }
+                }
+            }
+            if (errors.isNotEmpty()) {
+                item { ErrorCard(errors) }
+            }
+        }
+    }
+
+    if (showLessonPicker) {
+        ModalBottomSheet(onDismissRequest = { showLessonPicker = false }) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 560.dp)
+                    .verticalScroll(rememberScrollState())
+                    .padding(bottom = 24.dp),
+            ) {
+                Text(
+                    "Lessons",
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp),
+                )
+                lessonCatalog.forEach { lesson ->
+                    ListItem(
+                        headlineContent = { Text(lesson.title) },
+                        supportingContent = { Text(lesson.description) },
+                        leadingContent = {
+                            RadioButton(
+                                selected = lesson.scenario_id == selectedScenarioId,
+                                onClick = null,
+                            )
+                        },
+                        modifier = Modifier.clickable {
+                            onScenarioSelected(lesson.scenario_id)
+                            showLessonPicker = false
+                        },
+                    )
+                }
+            }
+        }
+    }
+
+    if (showPreferences) {
+        LessonPreferencesSheet(
+            englishLocale = englishLocale,
+            onEnglishLocaleChanged = onEnglishLocaleChanged,
+            spacedReviewEnabled = spacedReviewEnabled,
+            onSpacedReviewChanged = onSpacedReviewChanged,
+            onDismiss = { showPreferences = false },
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun LessonPreferencesSheet(
+    englishLocale: String,
+    onEnglishLocaleChanged: (String) -> Unit,
+    spacedReviewEnabled: Boolean,
+    onSpacedReviewChanged: (Boolean) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text("Lesson preferences", style = MaterialTheme.typography.titleLarge)
+            Text("Teacher accent", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            listOf(
+                "en-GB" to "British English",
+                "en-US" to "American English",
+            ).forEach { (locale, label) ->
+                ListItem(
+                    headlineContent = { Text(label) },
+                    supportingContent = { Text(locale) },
+                    leadingContent = {
+                        RadioButton(selected = englishLocale == locale, onClick = null)
+                    },
+                    modifier = Modifier.clickable { onEnglishLocaleChanged(locale) },
+                )
+            }
+            HorizontalDivider()
+            ListItem(
+                headlineContent = { Text("Spaced vocabulary review") },
+                supportingContent = { Text("Include words that are due for review") },
+                trailingContent = {
+                    Switch(
+                        checked = spacedReviewEnabled,
+                        onCheckedChange = onSpacedReviewChanged,
+                    )
+                },
+                modifier = Modifier.clickable {
+                    onSpacedReviewChanged(!spacedReviewEnabled)
+                },
+            )
+            Spacer(Modifier.height(16.dp))
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ActiveLessonScreen(
+    mediaStatus: MediaConnectionStatus,
+    lessonState: SessionState,
+    teacherText: String?,
+    pronunciations: List<PronunciationPayload>,
+    highlightedWordIndex: Int?,
+    selectedPronunciation: PronunciationPayload?,
+    playbackRate: Float,
+    transcript: String?,
+    lessonProgress: LessonProgressPayload?,
+    onReplay: () -> Unit,
+    onPlaybackRateChanged: (Float) -> Unit,
+    onWordSelected: (Int) -> Unit,
+    onPushToTalkChanged: (Boolean) -> Unit,
+    onRetry: () -> Unit,
+    onDisconnect: () -> Unit,
+    errors: List<String>,
+) {
+    var showMore by rememberSaveable { mutableStateOf(false) }
+    var showSpeedMenu by rememberSaveable { mutableStateOf(false) }
+    var showPronunciations by rememberSaveable { mutableStateOf(false) }
+    val controls = lessonControlVisibility(lessonState, teacherText != null)
+
+    Scaffold(
+        containerColor = Color.Transparent,
+        topBar = {
+            CenterAlignedTopAppBar(
+                title = {
+                    Text(
+                        lessonProgress?.scenario_title ?: "Lesson",
+                        maxLines = 1,
+                    )
+                },
+                navigationIcon = {
+                    ConnectionStatusDot(mediaStatus, lessonState)
+                },
+                actions = {
+                    Box {
+                        IconButton(onClick = { showMore = true }) {
+                            Icon(Icons.Filled.MoreVert, contentDescription = "More lesson options")
+                        }
+                        DropdownMenu(
+                            expanded = showMore,
+                            onDismissRequest = { showMore = false },
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Disconnect") },
+                                leadingIcon = { Icon(Icons.Filled.Close, contentDescription = null) },
+                                onClick = {
+                                    showMore = false
+                                    onDisconnect()
+                                },
+                            )
+                        }
+                    }
+                },
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.86f),
+                    scrolledContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f),
+                ),
+            )
+        },
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.Bottom,
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            lessonProgress?.let { ProgressCard(it) }
+            Spacer(Modifier.height(10.dp))
+            teacherText?.let { text ->
+                SubtitleCard(
+                    text = text,
+                    pronunciations = pronunciations,
+                    highlightedWordIndex = highlightedWordIndex,
+                    selectedPronunciation = selectedPronunciation,
+                    onWordSelected = onWordSelected,
+                )
+                Spacer(Modifier.height(10.dp))
+            }
+            transcript?.let {
+                Surface(
+                    shape = MaterialTheme.shapes.medium,
+                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.86f),
+                ) {
+                    Text(
+                        "You: $it",
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Spacer(Modifier.height(10.dp))
+            }
+            if (controls.playbackActions) {
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.88f),
+                ) {
+                    Row(
+                        modifier = Modifier.padding(4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        IconButton(
+                            onClick = onReplay,
+                            enabled = lessonState == SessionState.AWAITING_LEARNER,
+                        ) {
+                            Icon(Icons.Filled.Replay, contentDescription = "Replay teacher")
+                        }
+                        Box {
+                            IconButton(onClick = { showSpeedMenu = true }) {
+                                Icon(
+                                    Icons.Filled.Speed,
+                                    contentDescription = "Playback speed ${formatRate(playbackRate)}",
+                                )
+                            }
+                            DropdownMenu(
+                                expanded = showSpeedMenu,
+                                onDismissRequest = { showSpeedMenu = false },
+                            ) {
+                                SpeechTimeline.supportedRates.forEach { rate ->
+                                    DropdownMenuItem(
+                                        text = { Text(formatRate(rate)) },
+                                        trailingIcon = {
+                                            if (rate == playbackRate) {
+                                                Icon(
+                                                    Icons.Filled.CheckCircle,
+                                                    contentDescription = "Selected",
+                                                )
+                                            }
+                                        },
+                                        onClick = {
+                                            onPlaybackRateChanged(rate)
+                                            showSpeedMenu = false
+                                        },
+                                    )
+                                }
+                            }
+                        }
+                        if (pronunciations.isNotEmpty()) {
+                            IconButton(onClick = { showPronunciations = true }) {
+                                Icon(
+                                    Icons.AutoMirrored.Filled.VolumeUp,
+                                    contentDescription = "Pronunciation words",
+                                )
+                            }
+                        }
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+            }
+            if (errors.isNotEmpty()) {
+                ErrorCard(errors)
+                Spacer(Modifier.height(12.dp))
+            }
+            when {
+                controls.retry -> {
+                    Button(onClick = onRetry) {
+                        Icon(Icons.Filled.Refresh, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Retry lesson")
+                    }
+                }
+
+                controls.pushToTalk -> PushToTalkControl(
+                    recording = lessonState == SessionState.RECORDING,
+                    onPushToTalkChanged = onPushToTalkChanged,
+                )
+
+                else -> {
+                    if (lessonState in setOf(SessionState.PROCESSING, SessionState.TEACHER_SPEAKING)) {
+                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth(0.72f))
+                    }
+                    Text(
+                        lessonStateLabel(lessonState),
+                        modifier = Modifier.padding(top = 10.dp),
+                        color = MaterialTheme.colorScheme.onSurface,
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                }
+            }
+        }
+    }
+
+    if (showPronunciations) {
+        ModalBottomSheet(onDismissRequest = { showPronunciations = false }) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 560.dp)
+                    .verticalScroll(rememberScrollState())
+                    .padding(bottom = 24.dp),
+            ) {
+                Text(
+                    "Pronunciation",
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp),
+                )
+                pronunciations.forEachIndexed { index, pronunciation ->
+                    ListItem(
+                        headlineContent = { Text(pronunciation.word) },
+                        supportingContent = {
+                            Column {
+                                Text("/${pronunciation.ipa}/")
+                                pronunciation.explanation?.let { Text(it) }
+                            }
+                        },
+                        leadingContent = {
+                            Icon(Icons.AutoMirrored.Filled.VolumeUp, contentDescription = null)
+                        },
+                        modifier = Modifier.clickable {
+                            onWordSelected(index)
+                            showPronunciations = false
+                        },
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProgressCard(progress: LessonProgressPayload) {
+    Surface(
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.86f),
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(
+                "${progress.exercise_number}/${progress.exercise_count} · ${progress.difficulty}",
+                style = MaterialTheme.typography.labelLarge,
+            )
+            progress.difficulty_change_reason?.let { reason ->
+                Text(
+                    when (reason) {
+                        "repeated_difficulty" -> "Difficulty reduced after repeated difficulty."
+                        else -> "Difficulty increased after consistent first-try success."
+                    },
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SubtitleCard(
+    text: String,
+    pronunciations: List<PronunciationPayload>,
+    highlightedWordIndex: Int?,
+    selectedPronunciation: PronunciationPayload?,
+    onWordSelected: (Int) -> Unit,
+) {
+    val annotated = buildAnnotatedString {
+        append(text)
+        pronunciations.forEachIndexed { index, pronunciation ->
+            addStringAnnotation(
+                tag = "word",
+                annotation = index.toString(),
+                start = pronunciation.start_char,
+                end = pronunciation.end_char,
+            )
+            addLink(
+                clickable = LinkAnnotation.Clickable(tag = index.toString()) {
+                    onWordSelected(index)
+                },
+                start = pronunciation.start_char,
+                end = pronunciation.end_char,
+            )
+            addStyle(
+                SpanStyle(
+                    color = MaterialTheme.colorScheme.onSurface,
+                    background = if (index == highlightedWordIndex) {
+                        MaterialTheme.colorScheme.primaryContainer
+                    } else {
+                        Color.Transparent
+                    },
+                    textDecoration = TextDecoration.Underline,
+                ),
+                start = pronunciation.start_char,
+                end = pronunciation.end_char,
+            )
+        }
+    }
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+        ),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Text(
+                "Teacher",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Text(
+                text = annotated,
+                style = MaterialTheme.typography.bodyLarge.copy(
+                    color = MaterialTheme.colorScheme.onSurface,
+                ),
+                modifier = Modifier.semantics {
+                    contentDescription = "Teacher: $text"
+                },
+            )
+            selectedPronunciation?.let { pronunciation ->
+                HorizontalDivider()
+                Text(
+                    "${pronunciation.word}  /${pronunciation.ipa}/",
+                    fontWeight = FontWeight.Bold,
+                )
+                pronunciation.explanation?.let {
+                    Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PushToTalkControl(
+    recording: Boolean,
+    onPushToTalkChanged: (Boolean) -> Unit,
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        FilledIconButton(
+            onClick = {},
+            modifier = Modifier
+                .size(96.dp)
+                .pointerInput(Unit) {
+                    awaitEachGesture {
+                        awaitFirstDown(requireUnconsumed = false)
+                        onPushToTalkChanged(true)
+                        waitForUpOrCancellation()
+                        onPushToTalkChanged(false)
+                    }
+                }
+                .semantics {
+                    contentDescription = if (recording) "Release to send" else "Hold to talk"
+                    role = Role.Button
+                },
+        ) {
+            Icon(
+                if (recording) Icons.Filled.Stop else Icons.Filled.Mic,
+                contentDescription = null,
+                modifier = Modifier.size(42.dp),
+            )
+        }
+        Text(
+            if (recording) "Release to send" else "Hold while speaking",
+            style = MaterialTheme.typography.labelLarge,
+        )
+    }
+}
+
+@Composable
+private fun ConnectionStatusPill(
+    mediaStatus: MediaConnectionStatus,
+    lessonState: SessionState,
+) {
+    val description = "media: ${mediaStatusLabel(mediaStatus)} · lesson: " +
+        lessonState.name.lowercase().replace('_', ' ')
+    Surface(
+        shape = CircleShape,
+        color = statusColor(mediaStatus).copy(alpha = 0.18f),
+        modifier = Modifier.semantics(mergeDescendants = true) {
+            contentDescription = description
+        },
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                when (mediaStatus) {
+                    MediaConnectionStatus.CONNECTED -> Icons.Filled.CheckCircle
+                    MediaConnectionStatus.FAILED -> Icons.Filled.ErrorOutline
+                    else -> Icons.Filled.Wifi
+                },
+                contentDescription = null,
+                tint = statusColor(mediaStatus),
+                modifier = Modifier.size(18.dp),
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                description,
+                color = statusColor(mediaStatus),
+                style = MaterialTheme.typography.labelLarge,
+            )
+        }
+    }
+}
+
+@Composable
+private fun ConnectionStatusDot(
+    mediaStatus: MediaConnectionStatus,
+    lessonState: SessionState,
+) {
+    val description = "media: ${mediaStatusLabel(mediaStatus)} · lesson: " +
+        lessonState.name.lowercase().replace('_', ' ')
+    Surface(
+        shape = CircleShape,
+        color = statusColor(mediaStatus),
+        modifier = Modifier
+            .padding(start = 16.dp)
+            .size(14.dp)
+            .semantics { contentDescription = description },
+    ) {}
+}
+
+@Composable
+private fun ErrorCard(errors: List<String>) {
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.errorContainer,
+            contentColor = MaterialTheme.colorScheme.onErrorContainer,
+        ),
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Filled.ErrorOutline, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text("Needs attention", fontWeight = FontWeight.SemiBold)
+            }
+            errors.distinct().forEach { Text(it) }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun opaqueTopAppBarColors() = TopAppBarDefaults.centerAlignedTopAppBarColors(
+    containerColor = MaterialTheme.colorScheme.surface,
+    scrolledContainerColor = MaterialTheme.colorScheme.surface,
+)
+
+private fun formatRate(rate: Float): String = if (rate == 1.0f) "1×" else "${rate}×"
+
+private fun mediaStatusLabel(status: MediaConnectionStatus): String =
+    status.name.lowercase().replace('_', ' ')
+
+private fun lessonStateLabel(state: SessionState): String = when (state) {
+    SessionState.AWAITING_LEARNER -> "Your turn"
+    SessionState.TEACHER_SPEAKING -> "Teacher is speaking"
+    SessionState.PROCESSING -> "Preparing the next response"
+    SessionState.CONNECTING -> "Starting lesson"
+    else -> state.name.lowercase().replace('_', ' ')
+}
+
+@Composable
 private fun statusColor(status: MediaConnectionStatus): Color = when (status) {
-    MediaConnectionStatus.CONNECTED -> Color(0xFF83F8DA)
-    MediaConnectionStatus.FAILED -> Color(0xFFFFB4AB)
-    else -> Color.White
+    MediaConnectionStatus.CONNECTED -> MaterialTheme.colorScheme.primary
+    MediaConnectionStatus.FAILED -> MaterialTheme.colorScheme.error
+    else -> MaterialTheme.colorScheme.onSurfaceVariant
 }

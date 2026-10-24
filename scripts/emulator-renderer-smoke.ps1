@@ -7,13 +7,16 @@ Initialize-GovorEnvironment
 $adb = Join-Path (Get-GovorAndroidSdk) 'platform-tools\adb.exe'
 
 function Get-EmulatorUiDocument {
-    $raw = (& $adb -s $script:EmulatorSerial exec-out uiautomator dump /dev/tty 2>$null) -join ''
-    $endTag = '</hierarchy>'
-    $endIndex = $raw.IndexOf($endTag, [StringComparison]::Ordinal)
-    if ($endIndex -lt 0) {
-        throw 'Android UI Automator did not return a hierarchy document.'
+    for ($attempt = 0; $attempt -lt 10; $attempt++) {
+        $raw = (& $adb -s $script:EmulatorSerial exec-out uiautomator dump /dev/tty 2>$null) -join ''
+        $endTag = '</hierarchy>'
+        $endIndex = $raw.IndexOf($endTag, [StringComparison]::Ordinal)
+        if ($endIndex -ge 0) {
+            return [xml]$raw.Substring(0, $endIndex + $endTag.Length)
+        }
+        Start-Sleep -Milliseconds 200
     }
-    return [xml]$raw.Substring(0, $endIndex + $endTag.Length)
+    throw 'Android UI Automator did not return a hierarchy document.'
 }
 
 function Get-NodeCenter {
@@ -52,12 +55,14 @@ $rendererStderr = Join-Path $script:CacheRoot 'godot-emulator-renderer.stderr.lo
 $rendererRuntimeLog = Join-Path $script:CacheRoot 'godot-emulator-renderer.runtime.log'
 $webrtcLog = Join-Path $script:CacheRoot 'godot-emulator-webrtc.log'
 $uiDump = Join-Path $script:CacheRoot 'godot-emulator-window.xml'
+$pickerUiDump = Join-Path $script:CacheRoot 'godot-emulator-lesson-picker.xml'
+$pickerScreenshot = Join-Path $script:CacheRoot 'godot-emulator-lesson-picker.png'
 $completedTurnUiDump = Join-Path $script:CacheRoot 'godot-emulator-completed-turn.xml'
 $screenshot = Join-Path $script:CacheRoot 'godot-emulator-connected.png'
 foreach ($artifact in @(
     $serverStdout, $serverStderr, $controlStdout, $controlStderr,
     $rendererStdout, $rendererStderr, $rendererRuntimeLog, $webrtcLog,
-    $uiDump, $completedTurnUiDump, $screenshot
+    $uiDump, $pickerUiDump, $pickerScreenshot, $completedTurnUiDump, $screenshot
 )) {
     if (Test-Path -LiteralPath $artifact) {
         Remove-Item -LiteralPath $artifact -Force
@@ -68,6 +73,7 @@ $env:GOVOR_DEV_PAIRING_TOKEN = $token
 $env:GOVOR_MEDIA_SOURCE = 'renderer'
 $env:PYTHONPATH = @(
     (Join-Path $script:RepositoryRoot 'services\media\src'),
+    (Join-Path $script:RepositoryRoot 'packages\gateway_security\src'),
     (Join-Path $script:RepositoryRoot 'packages\contracts\python')
 ) -join [IO.Path]::PathSeparator
 
@@ -108,6 +114,7 @@ try {
         (Join-Path $script:RepositoryRoot 'packages\domain\src'),
         (Join-Path $script:RepositoryRoot 'packages\provider_interfaces\src'),
         (Join-Path $script:RepositoryRoot 'packages\scene_planner\src'),
+        (Join-Path $script:RepositoryRoot 'packages\gateway_security\src'),
         (Join-Path $script:RepositoryRoot 'packages\contracts\python')
     ) -join [IO.Path]::PathSeparator
     $controlServer = Start-Process -FilePath $python -ArgumentList @(
@@ -142,13 +149,17 @@ try {
     }
     $tokenCenter = Get-NodeCenter -Node $editFields[2]
     & $adb -s $serial shell input tap $tokenCenter[0] $tokenCenter[1]
+    Start-Sleep -Milliseconds 500
     & $adb -s $serial shell input text $token
-    & $adb -s $serial shell input keyevent 4
-    Start-Sleep -Milliseconds 250
-    $entryUi = Get-EmulatorUiDocument
-    $connectText = $entryUi.SelectNodes('//node') |
-        Where-Object { $_.text -eq 'Connect and load lessons' } |
-        Select-Object -First 1
+    $connectText = $null
+    for ($attempt = 0; $attempt -lt 20; $attempt++) {
+        $entryUi = Get-EmulatorUiDocument
+        $connectText = $entryUi.SelectNodes('//node') |
+            Where-Object { $_.text -eq 'Connect and load lessons' } |
+            Select-Object -First 1
+        if ($connectText) { break }
+        Start-Sleep -Milliseconds 250
+    }
     if (-not $connectText) {
         throw 'The disconnected UI did not expose the lesson-catalog connection button.'
     }
@@ -159,7 +170,7 @@ try {
     for ($attempt = 0; $attempt -lt 40; $attempt++) {
         $candidate = Get-EmulatorUiDocument
         $mediaConnected = $candidate.SelectNodes('//node') |
-            Where-Object { $_.text -like 'media: connected*' }
+            Where-Object { $_.'content-desc' -like 'media: connected*' }
         $startLesson = $candidate.SelectNodes('//node') |
             Where-Object { $_.text -eq 'Start lesson' } | Select-Object -First 1
         if ($mediaConnected -and $startLesson) {
@@ -171,6 +182,78 @@ try {
     if (-not $connectedUi) {
         throw "The emulator did not load the host lesson catalog. See $controlStderr."
     }
+    if ($connectedUi.SelectNodes('//node') |
+        Where-Object { $_.'content-desc' -like 'Playback speed*' }) {
+        throw 'Playback speed leaked onto the lesson-selection screen.'
+    }
+
+    $lessonPicker = $connectedUi.SelectNodes('//node') |
+        Where-Object { $_.'content-desc' -eq 'Choose lesson' } | Select-Object -First 1
+    if (-not $lessonPicker) { throw 'The lesson-selection screen did not expose its lesson icon.' }
+    $pickerCenter = Get-NodeCenter -Node $lessonPicker
+    & $adb -s $serial shell input tap $pickerCenter[0] $pickerCenter[1]
+    $cafeLesson = $null
+    for ($attempt = 0; $attempt -lt 20; $attempt++) {
+        $pickerUi = Get-EmulatorUiDocument
+        $cafeLesson = $pickerUi.SelectNodes('//node') |
+            Where-Object { $_.text -like 'Ordering at a caf*' } | Select-Object -First 1
+        if ($cafeLesson) { break }
+        Start-Sleep -Milliseconds 200
+    }
+    if (-not $cafeLesson) {
+        $pickerUi.Save($pickerUiDump)
+        & $adb -s $serial shell screencap -p /sdcard/govor-lesson-picker.png
+        & $adb -s $serial pull /sdcard/govor-lesson-picker.png $pickerScreenshot | Out-Null
+        throw "The lesson picker did not expose the host-provided cafe lesson. See $pickerUiDump."
+    }
+    $cafeCenter = Get-NodeCenter -Node $cafeLesson
+    & $adb -s $serial shell input tap $cafeCenter[0] $cafeCenter[1]
+
+    $selectionUi = $null
+    for ($attempt = 0; $attempt -lt 20; $attempt++) {
+        $candidate = Get-EmulatorUiDocument
+        $preferences = $candidate.SelectNodes('//node') |
+            Where-Object { $_.'content-desc' -eq 'Lesson preferences' } | Select-Object -First 1
+        if ($preferences) {
+            $selectionUi = $candidate
+            break
+        }
+        Start-Sleep -Milliseconds 200
+    }
+    if (-not $selectionUi) { throw 'The lesson picker did not return to lesson selection.' }
+    $preferences = $selectionUi.SelectNodes('//node') |
+        Where-Object { $_.'content-desc' -eq 'Lesson preferences' } | Select-Object -First 1
+    $preferencesCenter = Get-NodeCenter -Node $preferences
+    & $adb -s $serial shell input tap $preferencesCenter[0] $preferencesCenter[1]
+    Start-Sleep -Milliseconds 400
+    $preferencesUi = Get-EmulatorUiDocument
+    foreach ($label in @('British English', 'American English', 'Spaced vocabulary review')) {
+        if (-not ($preferencesUi.SelectNodes('//node') | Where-Object { $_.text -eq $label })) {
+            throw "The lesson preferences sheet did not expose '$label'."
+        }
+    }
+    $american = $preferencesUi.SelectNodes('//node') |
+        Where-Object { $_.text -eq 'American English' } | Select-Object -First 1
+    $americanCenter = Get-NodeCenter -Node $american
+    & $adb -s $serial shell input tap $americanCenter[0] $americanCenter[1]
+    $review = $preferencesUi.SelectNodes('//node') |
+        Where-Object { $_.text -eq 'Spaced vocabulary review' } | Select-Object -First 1
+    $reviewCenter = Get-NodeCenter -Node $review
+    & $adb -s $serial shell input tap $reviewCenter[0] $reviewCenter[1]
+    & $adb -s $serial shell input keyevent 4
+
+    $connectedUi = $null
+    for ($attempt = 0; $attempt -lt 20; $attempt++) {
+        $candidate = Get-EmulatorUiDocument
+        $startLesson = $candidate.SelectNodes('//node') |
+            Where-Object { $_.text -eq 'Start lesson' } | Select-Object -First 1
+        if ($startLesson) {
+            $connectedUi = $candidate
+            break
+        }
+        Start-Sleep -Milliseconds 200
+    }
+    if (-not $connectedUi) { throw 'The preferences sheet did not return to lesson selection.' }
     $startLesson = $connectedUi.SelectNodes('//node') |
         Where-Object { $_.text -eq 'Start lesson' } | Select-Object -First 1
     $startCenter = Get-NodeCenter -Node $startLesson
@@ -253,19 +336,19 @@ try {
 
     $ui = $lessonUi
     $ui.Save($uiDump)
-    $holdText = $ui.SelectNodes('//node') | Where-Object { $_.text -like '*talk*' } |
-        Select-Object -Last 1
-    if (-not $holdText) {
+    $holdControl = $ui.SelectNodes('//node') |
+        Where-Object { $_.'content-desc' -eq 'Hold to talk' } | Select-Object -First 1
+    if (-not $holdControl) {
         throw 'The connected UI did not expose the hold-to-talk control.'
     }
-    $holdCenter = Get-NodeCenter -Node $holdText
+    $holdCenter = Get-NodeCenter -Node $holdControl
     & $adb -s $serial shell input swipe $holdCenter[0] $holdCenter[1] $holdCenter[0] $holdCenter[1] 750
 
     $completedTurnUi = $null
     for ($attempt = 0; $attempt -lt 30; $attempt++) {
         $candidate = Get-EmulatorUiDocument
         $hasReply = $candidate.SelectNodes('//node') |
-            Where-Object { $_.text -like 'Teacher: Thank you*' }
+            Where-Object { $_.'content-desc' -like 'Teacher: Thank you*' }
         $hasTranscript = $candidate.SelectNodes('//node') |
             Where-Object { $_.text -eq 'You: I would like coffee, please.' }
         if ($hasReply -and $hasTranscript) {
@@ -304,6 +387,15 @@ try {
     }
 
     $connectedUi = Get-EmulatorUiDocument
+    $moreOptions = $connectedUi.SelectNodes('//node') |
+        Where-Object { $_.'content-desc' -eq 'More lesson options' } | Select-Object -First 1
+    if (-not $moreOptions) {
+        throw 'The connected UI did not expose the lesson options menu.'
+    }
+    $moreCenter = Get-NodeCenter -Node $moreOptions
+    & $adb -s $serial shell input tap $moreCenter[0] $moreCenter[1]
+    Start-Sleep -Milliseconds 250
+    $connectedUi = Get-EmulatorUiDocument
     $disconnectText = $connectedUi.SelectNodes('//node') |
         Where-Object { $_.text -eq 'Disconnect' } | Select-Object -First 1
     if (-not $disconnectText) {
@@ -334,7 +426,7 @@ try {
     for ($attempt = 0; $attempt -lt 40; $attempt++) {
         $candidate = Get-EmulatorUiDocument
         $mediaConnected = $candidate.SelectNodes('//node') |
-            Where-Object { $_.text -like 'media: connected*' }
+            Where-Object { $_.'content-desc' -like 'media: connected*' }
         $startLesson = $candidate.SelectNodes('//node') |
             Where-Object { $_.text -eq 'Start lesson' } | Select-Object -First 1
         if ($mediaConnected -and $startLesson) {
@@ -363,18 +455,18 @@ try {
         throw 'The reconnected media peer did not receive a non-black Godot frame.'
     }
 
-    $holdText = $null
+    $holdControl = $null
     for ($attempt = 0; $attempt -lt 30; $attempt++) {
         $reconnectedUi = Get-EmulatorUiDocument
-        $holdText = $reconnectedUi.SelectNodes('//node') |
-            Where-Object { $_.text -like '*talk*' } | Select-Object -Last 1
-        if ($holdText) { break }
+        $holdControl = $reconnectedUi.SelectNodes('//node') |
+            Where-Object { $_.'content-desc' -eq 'Hold to talk' } | Select-Object -First 1
+        if ($holdControl) { break }
         Start-Sleep -Milliseconds 200
     }
-    if (-not $holdText) {
+    if (-not $holdControl) {
         throw 'The reconnected fake lesson did not reach awaiting learner state.'
     }
-    $holdCenter = Get-NodeCenter -Node $holdText
+    $holdCenter = Get-NodeCenter -Node $holdControl
     & $adb -s $serial shell input swipe $holdCenter[0] $holdCenter[1] $holdCenter[0] $holdCenter[1] 750
     for ($attempt = 0; $attempt -lt 30; $attempt++) {
         $serverLog = (Get-Content -LiteralPath $serverStdout -Raw -ErrorAction SilentlyContinue) +

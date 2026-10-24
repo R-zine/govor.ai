@@ -109,6 +109,7 @@ $env:PYTHONPATH = @(
     (Join-Path $script:RepositoryRoot 'packages\provider_interfaces\src'),
     (Join-Path $script:RepositoryRoot 'packages\progress\src'),
     (Join-Path $script:RepositoryRoot 'packages\scene_planner\src'),
+    (Join-Path $script:RepositoryRoot 'packages\gateway_security\src'),
     (Join-Path $script:RepositoryRoot 'packages\contracts\python'),
     (Join-Path $script:RepositoryRoot 'services\local_ai\src'),
     (Join-Path $script:RepositoryRoot 'services\provider_router\src'),
@@ -172,12 +173,16 @@ try {
     $editFields = @($entryUi.SelectNodes('//node[@class="android.widget.EditText"]'))
     if ($editFields.Count -ne 3) { throw 'The Android connection form was not available.' }
     Invoke-NodeTap -Node $editFields[2]
+    Start-Sleep -Milliseconds 500
     & $adb -s $script:EmulatorSerial shell input text $token
-    & $adb -s $script:EmulatorSerial shell input keyevent 4
-    Start-Sleep -Milliseconds 200
-    $entryUi = Get-EmulatorUiDocument
-    $connect = $entryUi.SelectNodes('//node') |
-        Where-Object { $_.text -eq 'Connect and load lessons' } | Select-Object -First 1
+    $connect = $null
+    for ($attempt = 0; $attempt -lt 20; $attempt++) {
+        $entryUi = Get-EmulatorUiDocument
+        $connect = $entryUi.SelectNodes('//node') |
+            Where-Object { $_.text -eq 'Connect and load lessons' } | Select-Object -First 1
+        if ($connect) { break }
+        Start-Sleep -Milliseconds 250
+    }
     if (-not $connect) { throw 'The Android connection form had no catalog connection button.' }
     Invoke-NodeTap -Node $connect
 
@@ -185,7 +190,7 @@ try {
     for ($attempt = 0; $attempt -lt 100; $attempt++) {
         $candidate = Get-EmulatorUiDocument
         $connected = $candidate.SelectNodes('//node') |
-            Where-Object { $_.text -like 'media: connected*' }
+            Where-Object { $_.'content-desc' -like 'media: connected*' }
         $startLesson = $candidate.SelectNodes('//node') |
             Where-Object { $_.text -eq 'Start lesson' } | Select-Object -First 1
         if ($connected -and $startLesson) { $catalogUi = $candidate; break }
@@ -193,6 +198,10 @@ try {
     }
     if (-not $catalogUi) {
         throw "The Android client did not load the host lesson catalog. See $controlStderr."
+    }
+    if ($catalogUi.SelectNodes('//node') |
+        Where-Object { $_.'content-desc' -like 'Playback speed*' }) {
+        throw 'Playback speed leaked onto the lesson-selection screen.'
     }
     $startLesson = $catalogUi.SelectNodes('//node') |
         Where-Object { $_.text -eq 'Start lesson' } | Select-Object -First 1
@@ -202,11 +211,11 @@ try {
     for ($attempt = 0; $attempt -lt 200; $attempt++) {
         $candidate = Get-EmulatorUiDocument
         $connected = $candidate.SelectNodes('//node') |
-            Where-Object { $_.text -like 'media: connected*' }
+            Where-Object { $_.'content-desc' -like 'media: connected*' }
         $awaiting = $candidate.SelectNodes('//node') |
             Where-Object { $_.text -eq 'Hold while speaking' }
         $teacher = $candidate.SelectNodes('//node') |
-            Where-Object { $_.text -like 'Teacher: *' }
+            Where-Object { $_.'content-desc' -like 'Teacher: *' }
         if ($connected -and $awaiting -and $teacher) { $lessonUi = $candidate; break }
         Start-Sleep -Milliseconds 200
     }
@@ -215,14 +224,20 @@ try {
     }
     $lessonUi.Save($lessonUiDump)
 
-    $slow = $lessonUi.SelectNodes('//node') |
+    $speedMenu = $lessonUi.SelectNodes('//node') |
+        Where-Object { $_.'content-desc' -like 'Playback speed*' } | Select-Object -First 1
+    if (-not $speedMenu) { throw 'The speech-speed menu icon was not available.' }
+    Invoke-NodeTap -Node $speedMenu
+    Start-Sleep -Milliseconds 300
+    $controlsUi = Get-EmulatorUiDocument
+    $slow = $controlsUi.SelectNodes('//node') |
         Where-Object { $_.text -like '0.75*' } | Select-Object -First 1
-    if (-not $slow) { throw 'The 0.75x speech control was not available.' }
+    if (-not $slow) { throw 'The 0.75x speech option was not available in its menu.' }
     Invoke-NodeTap -Node $slow
     Start-Sleep -Milliseconds 300
     $controlsUi = Get-EmulatorUiDocument
     $replay = $controlsUi.SelectNodes('//node') |
-        Where-Object { $_.text -eq 'Replay' } | Select-Object -First 1
+        Where-Object { $_.'content-desc' -eq 'Replay teacher' } | Select-Object -First 1
     if (-not $replay) { throw 'The speech replay control was not available.' }
     Invoke-NodeTap -Node $replay
 
@@ -238,9 +253,17 @@ try {
     }
 
     $wordUi = Get-EmulatorUiDocument
+    $pronunciationMenu = $wordUi.SelectNodes('//node') |
+        Where-Object { $_.'content-desc' -eq 'Pronunciation words' } | Select-Object -First 1
+    if (-not $pronunciationMenu) {
+        throw 'The pronunciation menu icon was not available.'
+    }
+    Invoke-NodeTap -Node $pronunciationMenu
+    Start-Sleep -Milliseconds 300
+    $wordUi = Get-EmulatorUiDocument
     $wordButton = $wordUi.SelectNodes('//node') |
         Where-Object { $_.text -eq 'Welcome' } | Select-Object -First 1
-    if (-not $wordButton) { throw 'The Android word-selection buttons were not available.' }
+    if (-not $wordButton) { throw 'The Android pronunciation menu did not list Welcome.' }
     Invoke-NodeTap -Node $wordButton
     Start-Sleep -Milliseconds 500
     $speechLog = (& $adb -s $script:EmulatorSerial logcat -d -v brief 'GovorSpeech:I' '*:S') -join "`n"

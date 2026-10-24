@@ -263,6 +263,7 @@ Use the phone's native video decoding and audio playback facilities wherever pra
 
 UI requirements:
 
+- Use the pinned Jetpack Compose Material 3 component library and a coherent application theme.
 - Full-screen streamed 3D scene.
 - One prominent push-to-talk button.
 - A small replay control.
@@ -274,6 +275,14 @@ UI requirements:
 - Large touch targets.
 - Adjustable text size.
 - Accessible contrast.
+
+Connection, lesson selection, and an active lesson are distinct UI contexts. Connection details
+belong only on the connection screen. Lesson catalog, accent, and spaced-review choices belong only
+before lesson start. During a lesson, keep the stream, progress, subtitles, learner transcript,
+errors/retry, and push-to-talk directly visible when relevant. Put secondary lesson actions such as
+replay, playback speed, pronunciation, and disconnect behind clearly described native icons,
+dropdown menus, bottom sheets, or overflow menus. Every supported action must remain reachable in
+at most a few deliberate taps and must expose an accessible label.
 
 Avoid clutter.
 

@@ -20,13 +20,16 @@
    Milestone 2 emulator development path instead uses debug-only `adb reverse` to loopback.
 2. Android requests `lesson.catalog`; the host returns the current ordered immutable summary.
    Android selects only an ID from that response. A validated host-side import causes the host to
-   push the replacement summary on the same authenticated connection.
+   push the replacement summary on the same authenticated connection. Before lesson start, the
+   Material 3 list and preferences sheets own catalog, accent, and review selection; playback
+   actions are not present in this context.
 3. The gateway starts a WebRTC media session with the renderer/media service.
 4. The host produces a validated teacher response, synthesized audio, and optional timing data.
 5. The renderer receives only validated scene/avatar commands and media timing.
 6. Android selects its built-in loudspeaker for the connected lesson, receives video and teacher
-   audio, then reports playback completion. Disconnect/background teardown restores the prior
-   communication-audio route.
+   audio, then reports playback completion. The active Material 3 overlay exposes progress,
+   subtitles, transcript, retry/PTT, and icon menus for replay, speed, pronunciation, and
+   disconnect. Disconnect/background teardown restores the prior communication-audio route.
 7. Only in `awaiting_learner` may Android enter `recording`.
 8. Push-to-talk audio is sent as a bounded authenticated upload or WebRTC track.
 9. The host recognizes speech, classifies intent, applies lesson policy, and creates the next turn.

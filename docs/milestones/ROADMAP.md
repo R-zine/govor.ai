@@ -39,6 +39,11 @@ and dynamic creator choices under ADR-0015; it does not allow application/Godot 
 The Android audio-routing maintenance amendment defaults active lessons to the built-in
 loudspeaker and restores the prior phone route at teardown; it does not reopen completed physical
 acceptance, which predates this application change.
+The 2026-10-24 Android presentation amendment replaces the persistent control overlay with three
+contextual Material 3 screens. Connection, selection, and active-lesson actions are isolated;
+secondary actions use accessible icon menus/sheets, and all prior functionality remains available.
+ADR-0017 defines the boundary. Native-emulator verification is new software evidence only and does
+not revise the completed physical acceptance record.
 
 ## Milestone 2 acceptance tracking
 

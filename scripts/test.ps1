@@ -35,7 +35,13 @@ function Test-Kotlin {
     if (-not (Test-Path -LiteralPath $gradle)) {
         throw 'Gradle wrapper is missing. Run scripts/bootstrap.ps1.'
     }
-    Invoke-Checked -FilePath $gradle -ArgumentList @(':core:test') -WorkingDirectory (Join-Path $script:RepositoryRoot 'apps\android')
+    # Keep the combined JVM/Android unit-test gate deterministic on Windows: parallel persistent
+    # daemons can hold generated Kotlin-DSL/version-catalog workspaces while the other project is
+    # configured.
+    Invoke-Checked -FilePath $gradle -ArgumentList @(
+        ':core:test', ':app:testDebugUnitTest', '--no-configuration-cache', '--no-daemon',
+        '--no-parallel'
+    ) -WorkingDirectory (Join-Path $script:RepositoryRoot 'apps\android')
 }
 
 function Test-CSharp {

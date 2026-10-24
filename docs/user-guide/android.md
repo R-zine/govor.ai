@@ -35,7 +35,8 @@ APK: <https://developer.android.com/developer-verification>.
    - **PC certificate SHA-256:** the complete fingerprint shown in the Windows console. Colons and
      spaces are optional, but all 64 hexadecimal characters must match.
 4. Tap **Connect and load lessons**. The lesson list comes from the Windows host.
-5. Choose a lesson, accent, and spaced-review preference, then tap **Start lesson**.
+5. On **Choose a lesson**, use the list icon to select a lesson and the settings icon to choose the
+   accent and spaced-review preference, then tap **Start lesson**.
 6. Confirm that both media and lesson state become connected before speaking.
 
 The code expires after ten minutes and is consumed by the first successful exchange. The app
@@ -47,13 +48,15 @@ same media/control addresses and leave the code/fingerprint blank to reuse that 
 - Teacher and environment audio plays through the phone's main loudspeaker by default, not the
   quiet call earpiece. Use the phone's volume buttons to adjust it. govor.ai restores the
   previous communication-audio route after disconnecting or moving to the background.
-- Hold **Hold to talk** for the entire learner response and release it when finished.
+- Hold the large microphone button labelled **Hold while speaking** for the entire learner response
+  and release it when finished.
 - Do not start another recording while the app shows `processing` or the teacher is speaking.
-- **Replay** repeats the last teacher audio locally without advancing the lesson.
-- `0.75×`, `1.0×`, and `1.25×` change teacher playback speed.
-- Tap an annotated word to view pronunciation and request isolated-word audio.
-- **Disconnect** ends the current connection. Interrupted lessons retain structured progress on
-  Windows and resume at the current exercise.
+- Tap the replay icon to repeat the last teacher audio locally without advancing the lesson.
+- Tap the speedometer icon, then choose `0.75×`, `1×`, or `1.25×` to change teacher playback speed.
+- Tap the pronunciation icon to open the word sheet. Select a word to view IPA/Bulgarian help and
+  request isolated-word audio; annotated subtitle words can also be selected directly.
+- Open the three-dot menu and choose **Disconnect** to end the current connection. Interrupted
+  lessons retain structured progress on Windows and resume at the current exercise.
 
 The app does not save raw microphone recordings. Normal logs omit full learner transcripts.
 
