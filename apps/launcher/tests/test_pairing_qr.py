@@ -5,7 +5,11 @@ from pathlib import Path
 from uuid import UUID
 
 import pytest
-from govor_launcher.pairing_qr import build_pairing_bootstrap, write_pairing_qr
+from govor_launcher.pairing_qr import (
+    build_pairing_bootstrap,
+    write_pairing_bootstrap,
+    write_pairing_qr,
+)
 
 
 def test_pairing_bootstrap_is_a_strict_versioned_envelope(tmp_path: Path) -> None:
@@ -33,9 +37,13 @@ def test_pairing_bootstrap_is_a_strict_versioned_envelope(tmp_path: Path) -> Non
     }
 
     output = tmp_path / "pairing.png"
+    bootstrap_output = tmp_path / "pairing.json"
     write_pairing_qr(output, value)
+    write_pairing_bootstrap(bootstrap_output, value)
     assert output.read_bytes().startswith(b"\x89PNG\r\n\x1a\n")
+    assert bootstrap_output.read_text(encoding="utf-8") == value
     assert not (tmp_path / "pairing.png.tmp").exists()
+    assert not (tmp_path / "pairing.json.tmp").exists()
 
 
 @pytest.mark.parametrize(

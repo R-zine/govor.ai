@@ -55,10 +55,18 @@ needed. `--scene-tour-output=<directory>` is a trusted local benchmark option, n
 The release launcher instead passes
 `--control-url=wss://localhost:8765/v1/renderer/control` plus
 `--control-ca=<protected per-user certificate>` and
-`--pairing-qr=<protected temporary PNG>`. The QR overlay is a host-only UI layer outside the
-captured `SubViewport`; it is not sent to the phone as video and is dismissed when a session
-starts. The renderer still connects outward to loopback; neither option exposes a renderer
-listener or makes certificate verification optional.
+`--pairing-qr=<protected temporary PNG>` and
+`--pairing-bootstrap=<protected temporary JSON>`. These paths feed an opaque host-only 2D
+pre-connect screen outside the captured `SubViewport`; it shows instructions, status, expiry,
+the QR, and a user-opened manual fallback without putting secret values in process arguments. It
+is not sent to the phone as video and is dismissed when a session starts. The renderer still
+connects outward to loopback; none of these options exposes a renderer listener or makes
+certificate verification optional.
+
+The project and exported Windows executable use `Assets/Brand/govor-icon.png` and its
+multi-resolution `.ico` derivative. `--ui-proof-image=<path> --exit-after-ui-proof` captures the
+complete host UI for a bounded local visual check; add `--show-manual-pairing` to exercise the
+fallback state. These are trusted local test arguments, not wire fields.
 
 Godot import/build/self-test and emulator results remain development evidence only. The dated
 Milestone 9 ledger records physical Wi-Fi transport, hardware decode, cadence/resources,

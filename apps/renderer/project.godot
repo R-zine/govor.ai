@@ -5,9 +5,10 @@ config_version=5
 
 [application]
 
-config/name="govor.ai Renderer"
+config/name="govor.ai"
 run/main_scene="res://Scenes/MediaProof.tscn"
 config/features=PackedStringArray("4.7", "C#", "GL Compatibility")
+config/icon="res://Assets/Brand/govor-icon.png"
 
 [display]
 

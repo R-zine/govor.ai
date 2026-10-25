@@ -19,7 +19,7 @@ public partial class RendererSessionController : Node
 
     public string ControlUrl { get; set; } = string.Empty;
     public string? ControlCaPath { get; set; }
-    public PairingQrOverlay? PairingOverlay { get; set; }
+    public HostPairingScreen? PairingScreen { get; set; }
 
     public override void _Ready()
     {
@@ -175,7 +175,7 @@ public partial class RendererSessionController : Node
             _teacher?.ApplySessionAction(command.Action, command.AvatarAnimation);
             if (command.Action == "session_started")
             {
-                PairingOverlay?.Dismiss();
+                PairingScreen?.CompleteConnection();
             }
             applied = true;
             GD.Print(

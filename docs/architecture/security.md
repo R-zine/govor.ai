@@ -38,10 +38,12 @@ authentication boundary: the renderer and media peer must run as the same truste
 
 The Milestone 8 launcher starts separate HTTPS/WSS control and media gateways on ports 8765/8766.
 It creates a persistent current-user RSA-3072 TLS identity and an eight-digit one-time code with a
-ten-minute lifetime. A temporary PNG in the protected current-user security directory encodes a
-closed, versioned bootstrap envelope containing the selected LAN endpoints, code, full SHA-256
-fingerprint, and expiry. Godot receives only the image path, displays it outside the streamed
-viewport, and dismisses it when a session starts; the launcher deletes it at shutdown. The same
+ten-minute lifetime. A temporary PNG and matching bounded JSON file in the protected current-user
+security directory carry a closed, versioned bootstrap envelope containing the selected LAN
+endpoints, code, full SHA-256 fingerprint, and expiry. Godot receives only the paths, renders an
+opaque host-only 2D connection screen outside the streamed viewport, and dismisses it when a
+session starts; the launcher deletes both files at shutdown. The JSON exists solely so the manual
+fallback can display/copy the values without placing the secret in process arguments. The same
 values remain in the console for diagnostics. The code is stored only as a PBKDF2-SHA256 salted
 digest, is consumed on success, is limited to five failed attempts per client per minute, and
 cannot enroll more than eight devices.

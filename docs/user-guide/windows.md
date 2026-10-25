@@ -36,12 +36,13 @@ inside the extracted version directory.
 2. Run `Start-Govor.cmd`.
 3. If Windows Firewall prompts, allow the packaged Python runtime on private networks only. The
    phone needs TCP ports 8765 and 8766; local inference remains bound to loopback.
-4. Keep the console and renderer open. The renderer displays a QR containing the PC endpoints,
-   certificate fingerprint, expiry, and one-time eight-digit code. The console shows the same
-   values for manual diagnostics. The code is valid for ten minutes.
+4. Keep the console and host window open. The host starts on a dedicated **Connect your phone**
+   screen with instructions, a QR, and an expiry countdown. The 3D lesson remains hidden until a
+   lesson starts. The code is valid for ten minutes.
 5. In the Android release, tap **Scan host QR** and point the phone at the host display. If the QR
-   cannot be scanned, expand **Pair manually** and copy all values from the console. Do not accept
-   pairing details supplied by an unexpected device or network page.
+   cannot be scanned, choose **Manual pairing options** in the host window and **Pair manually**
+   on Android, then copy the displayed values. The console also retains the same diagnostics. Do
+   not accept pairing details supplied by an unexpected device or network page.
 6. To stop govor.ai, return to the console and press Enter. Wait for the message confirming that
    managed child processes closed before moving or updating the directory.
 

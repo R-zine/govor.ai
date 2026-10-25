@@ -3,9 +3,10 @@
 ## Release connection
 
 1. The Windows launcher reuses or creates its current-user TLS identity, creates a ten-minute
-   one-time pairing code, writes a temporary QR containing a versioned bootstrap envelope, and
-   passes only that protected local image path to Godot. Godot displays the QR above, and outside,
-   the captured 1280x720 media viewport. The console retains the same values for diagnostics.
+   one-time pairing code, writes a temporary QR and matching bounded JSON bootstrap, and passes
+   only their protected local paths to Godot. Godot opens an opaque 2D connection screen above,
+   and outside, the captured 1280x720 media viewport. The screen supplies instructions, countdown,
+   QR, and a manual fallback; the console retains the same values for diagnostics.
 2. Android scans and strictly validates the bootstrap locally, pins its certificate fingerprint,
    and sends the code/device identity to the HTTPS pairing endpoint. The server consumes the code
    and returns a random device credential. Manual release entry remains collapsed unless opened.
@@ -16,7 +17,8 @@
    loopback.
 5. Later starts reuse the stored credential when the same hosts and optional fingerprint match;
    no pairing code is needed. Replacing the versioned Windows directory leaves that state intact.
-6. The launcher removes the temporary QR image during shutdown. Its embedded code is already
+6. `session_started` dismisses the 2D host screen and exposes the selected 3D lesson. The launcher
+   removes both temporary bootstrap artifacts during shutdown. Their embedded code is already
    single-use and expires after ten minutes.
 
 ## Lesson turn

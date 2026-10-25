@@ -186,8 +186,12 @@ from an exact size/SHA-256 manifest. Mutable models, progress, logs, TLS identit
 credentials live below `%LOCALAPPDATA%\govor.ai` so application updates do not replace them.
 
 The launcher is the only release process owner. It forces local/offline providers, starts
-loopback inference plus authenticated HTTPS/WSS LAN gateways, displays the PC address/certificate
-fingerprint/one-time pairing code, and places all children in a kill-on-close Windows Job Object.
+loopback inference plus authenticated HTTPS/WSS LAN gateways, creates protected short-lived
+pairing artifacts, and places all children in a kill-on-close Windows Job Object. The Godot window
+starts in an opaque 2D QR-first connection state with instructions, expiry status, and a manual
+fallback; the underlying 3D lesson becomes visible only after `session_started`. This host UI is
+outside the 1280x720 WebRTC capture viewport. The exported Windows player uses the govor.ai brand
+icon rather than the Godot default.
 Android pins the displayed certificate and encrypts its random device credential with Android
 Keystore. ADR-0011 records the package/update/security decision. A development-machine/emulator
 release lesson passes. ADR-0012 adds a QEMU/WHPX clean-Windows base/overlay fixture that routes the

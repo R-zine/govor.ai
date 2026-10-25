@@ -149,9 +149,15 @@ def test_release_renderer_receives_only_the_temporary_qr_path(
 ) -> None:
     paths = ReleasePaths.from_roots(tmp_path, tmp_path / "data")
 
-    command = _renderer_command(paths, tmp_path / "ca.pem", paths.pairing_qr)
+    command = _renderer_command(
+        paths,
+        tmp_path / "ca.pem",
+        paths.pairing_qr,
+        paths.pairing_bootstrap,
+    )
 
     assert f"--pairing-qr={paths.pairing_qr}" in command
+    assert f"--pairing-bootstrap={paths.pairing_bootstrap}" in command
     assert not any("12345678" in value or "certificate_sha256" in value for value in command)
 
 

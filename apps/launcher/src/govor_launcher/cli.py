@@ -17,7 +17,7 @@ from pathlib import Path
 from govor_gateway_security import PairingAuthority
 
 from .models import artifact_path, install_artifact, load_manifest, verify_artifact
-from .pairing_qr import build_pairing_bootstrap, write_pairing_qr
+from .pairing_qr import build_pairing_bootstrap, write_pairing_bootstrap, write_pairing_qr
 from .processes import WindowsKillOnCloseJob
 from .security import ensure_tls_identity
 
@@ -97,6 +97,7 @@ class ReleasePaths:
         self.lessons = install_root / "content" / "lessons"
         self.environments = install_root / "content" / "environments"
         self.credentials = data_root / "security" / "gateway-credentials.json"
+        self.pairing_bootstrap = data_root / "security" / "pairing-bootstrap.json"
         self.pairing_qr = data_root / "security" / "pairing-bootstrap.png"
         self.progress = data_root / "progress" / "progress.sqlite3"
         self.logs = data_root / "logs"
@@ -284,7 +285,13 @@ def _start(paths: ReleasePaths, *, smoke_seconds: float | None) -> int:
         certificate_sha256=identity.fingerprint_sha256,
         expires_at_unix=expires_at,
     )
-    write_pairing_qr(paths.pairing_qr, pairing_bootstrap)
+    try:
+        write_pairing_bootstrap(paths.pairing_bootstrap, pairing_bootstrap)
+        write_pairing_qr(paths.pairing_qr, pairing_bootstrap)
+    except Exception:
+        paths.pairing_bootstrap.unlink(missing_ok=True)
+        paths.pairing_qr.unlink(missing_ok=True)
+        raise
     print("govor.ai is starting in local-only mode.")
     print(f"PC address: {pairing_address}")
     print(f"Control port: {_CONTROL_PORT}   Media port: {_MEDIA_PORT}")
@@ -369,7 +376,12 @@ def _start(paths: ReleasePaths, *, smoke_seconds: float | None) -> int:
                 children,
             )
             renderer = subprocess.Popen(  # noqa: S603 - executable is package-owned
-                _renderer_command(paths, identity.certificate, paths.pairing_qr),
+                _renderer_command(
+                    paths,
+                    identity.certificate,
+                    paths.pairing_qr,
+                    paths.pairing_bootstrap,
+                ),
                 cwd=paths.install_root / "renderer",
                 env=environment,
             )
@@ -389,6 +401,7 @@ def _start(paths: ReleasePaths, *, smoke_seconds: float | None) -> int:
             for stream in logs:
                 stream.close()  # type: ignore[attr-defined]
             paths.pairing_qr.unlink(missing_ok=True)
+            paths.pairing_bootstrap.unlink(missing_ok=True)
             print("govor.ai stopped; managed child processes were closed.")
 
 
@@ -396,6 +409,7 @@ def _renderer_command(
     paths: ReleasePaths,
     certificate: Path,
     pairing_qr: Path | None = None,
+    pairing_bootstrap: Path | None = None,
 ) -> list[str]:
     command = [str(paths.renderer), "--", "--mute-local-audio"]
     fixture_delay = os.environ.get("GOVOR_RENDERER_FIXTURE_TONE_DELAY_SECONDS")
@@ -417,6 +431,8 @@ def _renderer_command(
     )
     if pairing_qr is not None:
         command.append(f"--pairing-qr={pairing_qr}")
+    if pairing_bootstrap is not None:
+        command.append(f"--pairing-bootstrap={pairing_bootstrap}")
     return command
 
 

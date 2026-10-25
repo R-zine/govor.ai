@@ -58,6 +58,19 @@ def write_pairing_qr(path: Path, bootstrap: str) -> None:
         temporary.unlink(missing_ok=True)
 
 
+def write_pairing_bootstrap(path: Path, bootstrap: str) -> None:
+    encoded = bootstrap.encode("utf-8")
+    if len(encoded) > 2_048:
+        raise ValueError("pairing bootstrap exceeds the file payload limit")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(f"{path.name}.tmp")
+    try:
+        temporary.write_bytes(encoded)
+        os.replace(temporary, path)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
 def _validate_host_port(value: str) -> None:
     host, separator, raw_port = value.rpartition(":")
     if separator != ":" or not _HOST_PATTERN.fullmatch(host) or not raw_port.isascii():

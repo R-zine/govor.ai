@@ -12,8 +12,11 @@ public partial class MediaProofScene : Node
     private DynamicSceneDirector? _sceneDirector;
     private StylizedTeacherAvatar? _teacher;
     private string? _proofImagePath;
+    private string? _uiProofImagePath;
+    private bool _exitAfterUiProof;
     private ulong _runtimeStartedAtUs;
     private bool _proofImageSaved;
+    private bool _uiProofImageSaved;
 
     public override void _Ready()
     {
@@ -64,10 +67,24 @@ public partial class MediaProofScene : Node
         string? pairingQrPath = arguments
             .FirstOrDefault(argument => argument.StartsWith(pairingQrPrefix, StringComparison.Ordinal))?
             [pairingQrPrefix.Length..];
+        const string pairingBootstrapPrefix = "--pairing-bootstrap=";
+        string? pairingBootstrapPath = arguments
+            .FirstOrDefault(argument => argument.StartsWith(
+                pairingBootstrapPrefix,
+                StringComparison.Ordinal))?[pairingBootstrapPrefix.Length..];
         const string proofImagePrefix = "--proof-image=";
         _proofImagePath = arguments
             .FirstOrDefault(argument => argument.StartsWith(proofImagePrefix, StringComparison.Ordinal))?
             [proofImagePrefix.Length..];
+        const string uiProofImagePrefix = "--ui-proof-image=";
+        _uiProofImagePath = arguments
+            .FirstOrDefault(argument => argument.StartsWith(
+                uiProofImagePrefix,
+                StringComparison.Ordinal))?[uiProofImagePrefix.Length..];
+        _exitAfterUiProof = arguments.Contains("--exit-after-ui-proof", StringComparer.Ordinal);
+        bool showManualPairing = arguments.Contains(
+            "--show-manual-pairing",
+            StringComparer.Ordinal);
         _runtimeStartedAtUs = Time.GetTicksUsec();
 
         _captureViewport = CreateCaptureViewport();
@@ -75,15 +92,17 @@ public partial class MediaProofScene : Node
         _sceneDirector?.ApplyScene(DynamicSceneDirector.DefaultCafeScene());
         AddChild(CreateDisplay(_captureViewport));
 
-        PairingQrOverlay? pairingOverlay = null;
+        HostPairingScreen? pairingScreen = null;
         if (!string.IsNullOrWhiteSpace(pairingQrPath))
         {
-            pairingOverlay = new PairingQrOverlay
+            pairingScreen = new HostPairingScreen
             {
-                Name = "PairingQrOverlay",
+                Name = "HostPairingScreen",
                 QrImagePath = pairingQrPath,
+                BootstrapPath = pairingBootstrapPath ?? string.Empty,
+                ShowManualDetailsOnReady = showManualPairing,
             };
-            AddChild(pairingOverlay);
+            AddChild(pairingScreen);
         }
 
         var videoPublisher = new SharedMemoryVideoPublisher
@@ -106,7 +125,7 @@ public partial class MediaProofScene : Node
                 Name = "RendererSessionController",
                 ControlUrl = controlUrl,
                 ControlCaPath = controlCaPath,
-                PairingOverlay = pairingOverlay,
+                PairingScreen = pairingScreen,
             });
         }
 
@@ -139,24 +158,45 @@ public partial class MediaProofScene : Node
     public override void _Process(double delta)
     {
         _ = delta;
-        if (_proofImageSaved || _proofImagePath is null || _captureViewport is null ||
-            Time.GetTicksUsec() - _runtimeStartedAtUs < 500_000UL)
+        if (Time.GetTicksUsec() - _runtimeStartedAtUs < 500_000UL)
         {
             return;
         }
 
-        Image image = _captureViewport.GetTexture().GetImage();
+        if (!_proofImageSaved && _proofImagePath is not null && _captureViewport is not null)
+        {
+            _proofImageSaved = SaveProofImage(
+                _captureViewport.GetTexture().GetImage(),
+                _proofImagePath,
+                "GOVOR_RENDERER_PROOF_IMAGE");
+        }
+
+        if (!_uiProofImageSaved && _uiProofImagePath is not null)
+        {
+            _uiProofImageSaved = SaveProofImage(
+                GetViewport().GetTexture().GetImage(),
+                _uiProofImagePath,
+                "GOVOR_RENDERER_UI_PROOF_IMAGE");
+            if (_uiProofImageSaved && _exitAfterUiProof)
+            {
+                GetTree().Quit();
+            }
+        }
+    }
+
+    private static bool SaveProofImage(Image image, string path, string marker)
+    {
         try
         {
-            Error result = image.SavePng(_proofImagePath);
+            Error result = image.SavePng(path);
             if (result != Error.Ok)
             {
                 GD.PushError($"Unable to save renderer proof image: {result}.");
-                return;
+                return false;
             }
 
-            _proofImageSaved = true;
-            GD.Print($"GOVOR_RENDERER_PROOF_IMAGE:{_proofImagePath}");
+            GD.Print($"{marker}:{path}");
+            return true;
         }
         finally
         {

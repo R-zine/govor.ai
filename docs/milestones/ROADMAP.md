@@ -400,3 +400,10 @@ dependency audit, full suite, and pre-commit gate. A physical camera scan is val
 evidence but does not reopen or replace the completed Milestone 9 candidate. The separate mixed
 Ethernet/Wi-Fi assessment is recorded in deployment architecture; deterministic multi-adapter
 selection remains follow-up work and is not part of this feature.
+
+The host-side follow-up replaces the QR-over-3D presentation with a dedicated opaque 2D
+pre-connect state. It contains network guidance, QR expiry/status, a collapsed manual fallback,
+and transitions to the 3D scene only at `session_started`. The release launcher supplies the
+fallback through a second protected temporary bootstrap artifact and removes both artifacts at
+shutdown; secret values remain absent from process arguments and WebRTC video. The Godot project
+and exported Windows executable also use the project-owned govor.ai icon.

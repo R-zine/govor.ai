@@ -721,6 +721,12 @@ one-time pairing code, certificate fingerprint, and expiry. The signed Android r
 validates that QR locally, then starts the existing certificate-pinned pairing exchange. This is
 the default first-run path; the QR must never be sent to a cloud scanning service.
 
+Before a lesson starts, the host window must be an opaque, dedicated 2D connection screen rather
+than the 3D lesson scene. It shows concise phone/network instructions, connection status, the QR,
+and its remaining lifetime. Manual host, code, and fingerprint values remain available behind a
+clearly labeled fallback dialog. The screen is host-only, is not part of the captured WebRTC
+viewport, and gives way to the 3D scene when a lesson session starts.
+
 Keep the same values available as a manual diagnostic fallback. In the release Android UI, manual
 pairing fields must be collapsed by default so a learner is not expected to transcribe addresses,
 an eight-digit code, or a 64-character fingerprint.
@@ -1409,7 +1415,7 @@ Create a simple launcher that:
 1. Checks prerequisites.
 2. Starts services.
 3. Loads the application.
-4. Displays pairing information.
+4. Displays the dedicated QR-first 2D pairing screen and its manual fallback.
 5. Shows model and connectivity status.
 6. Stops child processes cleanly when exiting.
 

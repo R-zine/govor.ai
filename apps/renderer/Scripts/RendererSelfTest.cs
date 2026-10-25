@@ -26,6 +26,30 @@ internal static class RendererSelfTest
             throw new InvalidOperationException("The bounded tone PCM is invalid.");
         }
 
+        const string pairingBootstrap =
+            """{"protocol_version":"1.0","message_type":"pairing.bootstrap","correlation_id":"b278aa30-e921-436f-8b46-a70a53d9cc89","payload":{"control_host":"192.168.1.10:8765","media_host":"192.168.1.10:8766","pairing_code":"12345678","certificate_sha256":"0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF","expires_at_unix":4102444800}}""";
+        PairingBootstrapDetails pairing = PairingBootstrapDetails.Parse(pairingBootstrap);
+        if (pairing.ControlHost != "192.168.1.10:8765" ||
+            pairing.MediaHost != "192.168.1.10:8766" ||
+            pairing.PairingCode != "12345678" ||
+            pairing.DisplayFingerprint().Split(':').Length != 32)
+        {
+            throw new InvalidOperationException("The host pairing bootstrap was not parsed correctly.");
+        }
+
+        try
+        {
+            PairingBootstrapDetails.Parse(pairingBootstrap.Replace(
+                "\"payload\":",
+                "\"unexpected\":true,\"payload\":",
+                StringComparison.Ordinal));
+            throw new InvalidOperationException("Unknown host pairing fields were accepted.");
+        }
+        catch (JsonException)
+        {
+            // Closed bootstrap payloads reject unrecognized fields.
+        }
+
         using var payloadDocument = JsonDocument.Parse(
             """{"session_id":"3191d8bd-d30f-488b-a324-cb91f1286745","command_id":"19c369b5-6fca-43ea-bffc-764b51b7e7c2","action":"teacher_speaking","media_start_us":0,"duration_us":150000}""");
         var envelope = new MessageEnvelope(
