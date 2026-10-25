@@ -32,23 +32,33 @@ inside the extracted version directory.
 
 ## Start, pair, and stop
 
-1. Put the PC and phone on the same trusted private network.
-2. Run `Start-Govor.cmd`.
-3. If Windows Firewall prompts, allow the packaged Python runtime on private networks only. The
+1. Put the PC and phone on the same trusted private network. The PC may use Ethernet or Wi-Fi; the
+   phone uses Wi-Fi. Do not use a guest/client-isolated wireless network.
+2. In Windows **Settings > Network & internet**, open the connected Ethernet or Wi-Fi network and
+   set **Network profile type** to **Private**. govor.ai refuses to advertise a Public-profile
+   adapter.
+3. Run `Start-Govor.cmd`.
+4. If Windows Firewall prompts, allow the packaged Python runtime on private networks only. The
    phone needs TCP ports 8765 and 8766; local inference remains bound to loopback.
-4. Keep the console and host window open. The host starts on a dedicated **Connect your phone**
+5. Keep the console and host window open. The host starts on a dedicated **Connect your phone**
    screen with instructions, a QR, and an expiry countdown. The 3D lesson remains hidden until a
    lesson starts. The code is valid for ten minutes.
-5. In the Android release, tap **Scan host QR** and point the phone at the host display. If the QR
+6. In the Android release, tap **Scan host QR** and point the phone at the host display. If the QR
    cannot be scanned, choose **Manual pairing options** in the host window and **Pair manually**
    on Android, then copy the displayed values. The console also retains the same diagnostics. Do
    not accept pairing details supplied by an unexpected device or network page.
-6. To stop govor.ai, return to the console and press Enter. Wait for the message confirming that
+7. To stop govor.ai, return to the console and press Enter. Wait for the message confirming that
    managed child processes closed before moving or updating the directory.
 
 The pairing code is single use. The temporary QR image is removed when the launcher exits. A
 successfully paired Android installation keeps a random device credential and offers
 **Reconnect to saved host** on later starts.
+
+The launcher chooses the active Private-profile adapter preferred by Windows. If the console lists
+multiple eligible private addresses and the chosen one is not on the phone-reachable LAN, stop the
+app and run `Start-Govor.cmd --lan-address <listed-IPv4>` from PowerShell or Command Prompt. The
+override cannot select a Public, virtual/VPN, disconnected, or unassigned address. After changing
+the host address, choose **Scan a different host QR** on Android.
 
 ## Add lessons
 

@@ -64,6 +64,15 @@ placed in a kill-on-close Job Object and is also stopped explicitly in reverse o
 and passwords live only in an ignored ACL-restricted `.secrets` directory and are not copied into
 the package or corresponding-source bundle.
 
+Before either LAN gateway starts or a pairing artifact is written, the launcher queries the
+Windows NetTCPIP inventory. An advertised address must be RFC1918 and belong to an active physical,
+non-virtual adapter whose Windows network category is exactly Private. Public, unidentified,
+disconnected, VPN/virtual, loopback, and link-local candidates fail closed. Windows' lowest active
+default-route metric is deterministic; `--lan-address` can override it only with another address
+that passes the same checks. Firewall instructions remain Private-profile-only. This supports a
+host on Ethernet and a phone on Wi-Fi only when the router bridges or routes both links; it does not
+bypass guest isolation, VLAN policy, or Windows Firewall.
+
 This release path is distinct from the debug token path. The release manifest disallows cleartext,
 and no certificate-verification bypass exists. Certificate rotation, device revocation UI, and
 public-internet exposure are out of scope; the gateway must remain on a trusted private LAN.

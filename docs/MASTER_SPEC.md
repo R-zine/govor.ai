@@ -41,7 +41,9 @@ The application must accommodate those difficulties without feeling childish, ju
 
 The application runs primarily on a Windows PC containing an NVIDIA RTX 3060 or similar GPU.
 
-The learner uses a native Android application on a phone connected to the same Wi-Fi network.
+The learner uses a native Android application on a phone connected over Wi-Fi to the same trusted
+private local network as the Windows host. The host may use wired Ethernet or Wi-Fi; guest/client-
+isolated networks and public-network profiles are unsupported.
 
 The Windows PC performs:
 
@@ -1444,7 +1446,7 @@ Document:
 - Pairing.
 - Updating.
 - Microphone permissions.
-- Wi-Fi requirements.
+- Local-network requirements, including supported Ethernet/Wi-Fi topology and isolation limits.
 - Troubleshooting.
 - Uninstallation.
 
@@ -1495,7 +1497,8 @@ Windows machine. These checks are final release gates, not prerequisites for Mil
 - A physical Android device displays the continuously rendered PC scene.
 - Teacher audio is audible from the phone and phone microphone audio reaches the PC.
 - The lesson media path does not require PC speakers or a PC microphone.
-- Streaming operates over the intended local Wi-Fi network with documented firewall setup.
+- Streaming operates over the intended trusted private local network with documented firewall
+  setup; the phone uses Wi-Fi and the Windows host may use Ethernet or Wi-Fi.
 - Pairing, authentication, WSS/signaling security, DTLS-SRTP media, and reconnect behavior pass on
   the physical network path.
 - Android background/foreground, interruption, Wi-Fi loss/recovery, disconnect/reconnect, and
@@ -1550,8 +1553,8 @@ Reduce graphical complexity before sacrificing essential learning functionality.
 
 On the documented target Windows PC, launch govor.ai.
 
-Open the signed Android app on the documented physical phone connected through the intended local
-Wi-Fi network.
+Open the signed Android app on the documented physical phone connected through Wi-Fi to the
+intended trusted private local network.
 
 Connect to the PC.
 

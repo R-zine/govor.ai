@@ -17,6 +17,7 @@ from pathlib import Path
 from govor_gateway_security import PairingAuthority
 
 from .models import artifact_path, install_artifact, load_manifest, verify_artifact
+from .network import discover_lan_interfaces, eligible_lan_interfaces, select_lan_interface
 from .pairing_qr import build_pairing_bootstrap, write_pairing_bootstrap, write_pairing_qr
 from .processes import WindowsKillOnCloseJob
 from .security import ensure_tls_identity
@@ -53,6 +54,7 @@ def main(arguments: Sequence[str] | None = None) -> int:
     lesson_creator.add_argument("--exercise-count", type=int)
     start = subparsers.add_parser("start")
     start.add_argument("--smoke-seconds", type=float)
+    start.add_argument("--lan-address")
     options = parser.parse_args(arguments)
 
     install_root = options.install_root.resolve()
@@ -80,7 +82,11 @@ def main(arguments: Sequence[str] | None = None) -> int:
             exercise_count=options.exercise_count,
         )
     if options.command == "start":
-        return _start(paths, smoke_seconds=options.smoke_seconds)
+        return _start(
+            paths,
+            smoke_seconds=options.smoke_seconds,
+            lan_address=options.lan_address,
+        )
     raise AssertionError("unreachable command")
 
 
@@ -268,16 +274,21 @@ def _create_lesson(
     return 0
 
 
-def _start(paths: ReleasePaths, *, smoke_seconds: float | None) -> int:
+def _start(
+    paths: ReleasePaths,
+    *,
+    smoke_seconds: float | None,
+    lan_address: str | None = None,
+) -> int:
     _doctor(paths, require_models=True)
     paths.logs.mkdir(parents=True, exist_ok=True)
     paths.progress.parent.mkdir(parents=True, exist_ok=True)
+    lan_interfaces = discover_lan_interfaces()
+    pairing_interface = select_lan_interface(lan_interfaces, lan_address)
+    lan_addresses = eligible_lan_interfaces(lan_interfaces)
+    pairing_address = str(pairing_interface.address)
     identity = ensure_tls_identity(paths.data_root / "security")
     pairing_code, expires_at = PairingAuthority(paths.credentials).create_pairing_code()
-    lan_addresses = _lan_addresses()
-    if not lan_addresses:
-        raise RuntimeError("no LAN IPv4 address was found; connect this PC to a trusted network")
-    pairing_address = lan_addresses[0]
     pairing_bootstrap = build_pairing_bootstrap(
         control_host=f"{pairing_address}:{_CONTROL_PORT}",
         media_host=f"{pairing_address}:{_MEDIA_PORT}",
@@ -294,6 +305,15 @@ def _start(paths: ReleasePaths, *, smoke_seconds: float | None) -> int:
         raise
     print("govor.ai is starting in local-only mode.")
     print(f"PC address: {pairing_address}")
+    print(
+        "LAN adapter: "
+        f"{pairing_interface.interface_alias} "
+        f"({pairing_interface.interface_description}, Windows Private profile)"
+    )
+    alternatives = [str(item.address) for item in lan_addresses if item != pairing_interface]
+    if alternatives:
+        print("Other eligible private addresses: " + ", ".join(alternatives))
+        print("Choose one explicitly with Start-Govor.cmd --lan-address <address>.")
     print(f"Control port: {_CONTROL_PORT}   Media port: {_MEDIA_PORT}")
     print(f"Certificate SHA-256: {identity.fingerprint_sha256}")
     print(f"One-time pairing code: {pairing_code} (expires at Unix time {expires_at})")
@@ -574,22 +594,6 @@ def _stop_children(children: list[subprocess.Popen[bytes]]) -> None:
     for process in children:
         if process.poll() is None:
             process.wait(timeout=5)
-
-
-def _lan_addresses() -> list[str]:
-    addresses: set[str] = set()
-    try:
-        for family, _, _, _, socket_address in socket.getaddrinfo(socket.gethostname(), None):
-            if family != socket.AF_INET:
-                continue
-            address = socket_address[0]
-            if not isinstance(address, str):
-                continue
-            if not address.startswith("127.") and not address.startswith("169.254."):
-                addresses.add(address)
-    except socket.gaierror:
-        pass
-    return sorted(addresses)
 
 
 if __name__ == "__main__":

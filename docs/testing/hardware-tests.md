@@ -380,3 +380,31 @@ The app was force-stopped, phone stay-awake and rotation settings were restored,
 listeners, Godot, llama.cpp, and package-owned processes were stopped. No tone or media service was
 left running. Detailed measurements and the completed release acceptance are in
 `docs/benchmarks/2026-10-21-m9-physical-release-acceptance.md`.
+
+## 2026-10-25 mixed Ethernet/Wi-Fi maintenance check
+
+- Windows machine: the documented development PC, Windows build 10.0.26200.
+- Intended topology: physical `Ethernet 3` host link, Android phone over the access point's Wi-Fi.
+- Adapter inventory: `Ethernet 3` at `192.168.100.72/24`, Realtek PCIe GbE Family Controller,
+  active physical adapter with gateway `192.168.100.1`; disconnected `Wi-Fi 4` and virtual
+  adapters were also present.
+- Windows profile: **Public** on the active Ethernet link at the time of the check.
+
+The new release selector executed against the real Windows inventory and rejected the active
+Ethernet address because its network category was Public. It also rejected the disconnected Wi-Fi
+and virtual/link-local candidates. This is verified fail-closed behavior, not mixed-topology media
+acceptance. The application did not change the machine's network category or firewall policy.
+
+| Criterion | Result | Direct evidence and limit |
+| --- | --- | --- |
+| Deterministic physical-adapter selection | verified passing in software | Windows inventory plus unit tests select the lowest eligible default-route metric |
+| Public/virtual/disconnected exclusion | verified passing | Real Public Ethernet and disconnected/virtual adapters were refused before QR creation |
+| TCP 8765/8766 from phone Wi-Fi to host Ethernet | blocked/not executed | The intended Ethernet link is currently a Windows Public profile |
+| Authenticated WSS and QR pairing over mixed path | blocked/not executed | No LAN listener or pairing artifact was started after the safety rejection |
+| WebRTC video/audio and phone microphone return | blocked/not executed | Requires the same real mixed path after the operator deliberately selects Private |
+| Router bridge/client isolation/VLAN behavior | not executed | Router configuration was not changed or inferred |
+
+To execute the remaining check, set only the intended Ethernet network to Private in Windows
+Settings, retain Private-only firewall access for the packaged runtime, start the exact candidate,
+scan its new QR from the physical Wi-Fi phone, and verify TCP/WSS plus bidirectional WebRTC media.
+Record the phone, router/SSID, exact package, commands, metrics, and cleanup in a new dated entry.

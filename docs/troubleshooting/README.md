@@ -19,9 +19,17 @@
   add a blanket security exclusion.
 - **Port 8765, 8766, or 8767 is already in use:** stop another govor.ai launcher or the conflicting
   process, then retry. Do not run two launchers against the same data directory.
-- **The phone cannot reach the PC:** use the PC's private IPv4 address, confirm both devices are on
-  the same non-isolated network, allow the packaged runtime on private Windows Firewall networks,
-  and verify ports 8765/8766 were not opened to public networks or the internet.
+- **No safe LAN adapter is available:** in Windows **Settings > Network & internet**, open the
+  connected Ethernet or Wi-Fi network and set its network profile to **Private**. govor.ai does not
+  advertise Public, unidentified, VPN/virtual, disconnected, loopback, or link-local adapters.
+- **The phone cannot reach the PC:** use the selected private IPv4 address, confirm the phone's
+  Wi-Fi and PC Ethernet/Wi-Fi are bridged or routed on the same non-isolated trusted network, allow
+  the packaged runtime on private Windows Firewall networks, and verify ports 8765/8766 were not
+  opened to public networks or the internet. Guest/client isolation and unrouted VLANs must be
+  corrected on the router.
+- **The wrong address appears on a multi-homed PC:** stop govor.ai and run
+  `Start-Govor.cmd --lan-address <listed-IPv4>`. Only another active physical RFC1918 address on a
+  Windows Private profile is accepted. Scan the new QR rather than reusing saved host details.
 - **QR will not scan:** clean the phone camera, raise the host display brightness, keep the entire
   square in frame, and confirm the code is no older than ten minutes. If needed, expand
   **Pair manually** and use the values in the host console.

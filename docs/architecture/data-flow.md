@@ -2,11 +2,14 @@
 
 ## Release connection
 
-1. The Windows launcher reuses or creates its current-user TLS identity, creates a ten-minute
-   one-time pairing code, writes a temporary QR and matching bounded JSON bootstrap, and passes
-   only their protected local paths to Godot. Godot opens an opaque 2D connection screen above,
-   and outside, the captured 1280x720 media viewport. The screen supplies instructions, countdown,
-   QR, and a manual fallback; the console retains the same values for diagnostics.
+1. The Windows launcher inventories active IPv4 adapters, rejects non-physical, non-RFC1918, and
+   non-Private-profile links, and follows Windows' preferred default route unless an eligible
+   address was explicitly selected. It then reuses or creates its current-user TLS identity,
+   creates a ten-minute one-time pairing code, writes a temporary QR and matching bounded JSON
+   bootstrap, and passes only their protected local paths to Godot. Godot opens an opaque 2D
+   connection screen above, and outside, the captured 1280x720 media viewport. The screen supplies
+   instructions, countdown, QR, and a manual fallback; the console retains the same values for
+   diagnostics.
 2. Android scans and strictly validates the bootstrap locally, pins its certificate fingerprint,
    and sends the code/device identity to the HTTPS pairing endpoint. The server consumes the code
    and returns a random device credential. Manual release entry remains collapsed unless opened.

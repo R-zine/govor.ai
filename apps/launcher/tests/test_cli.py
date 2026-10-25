@@ -3,6 +3,7 @@ import shutil
 import zipfile
 from pathlib import Path
 
+import govor_launcher.cli as launcher_cli
 import pytest
 from govor_launcher.cli import (
     ReleasePaths,
@@ -36,6 +37,45 @@ def test_release_environment_selects_packaged_lesson_directory(tmp_path: Path) -
 
     assert environment["GOVOR_LESSON_DIRECTORY"] == str(tmp_path / "content" / "lessons")
     assert environment["GOVOR_ENVIRONMENT_DIRECTORY"] == str(tmp_path / "content" / "environments")
+
+
+def test_start_command_forwards_an_explicit_lan_address(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    received: dict[str, object] = {}
+
+    def fake_start(
+        paths: ReleasePaths,
+        *,
+        smoke_seconds: float | None,
+        lan_address: str | None,
+    ) -> int:
+        received.update(
+            paths=paths,
+            smoke_seconds=smoke_seconds,
+            lan_address=lan_address,
+        )
+        return 0
+
+    monkeypatch.setattr(launcher_cli, "_start", fake_start)
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "data"))
+
+    result = main(
+        [
+            "--install-root",
+            str(tmp_path / "install"),
+            "start",
+            "--smoke-seconds",
+            "5",
+            "--lan-address",
+            "192.168.1.20",
+        ]
+    )
+
+    assert result == 0
+    assert received["smoke_seconds"] == 5.0
+    assert received["lan_address"] == "192.168.1.20"
 
 
 def test_import_lessons_command_installs_into_the_packaged_catalog(

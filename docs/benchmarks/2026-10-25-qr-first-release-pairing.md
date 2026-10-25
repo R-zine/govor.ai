@@ -58,7 +58,7 @@ The final signed APK is 59,891,893 bytes with SHA-256
 `versionName=0.1.15`, `versionCode=16`, min SDK 26, target/compile SDK 34, and retains APK Signature
 Scheme v2 with the established signer.
 
-## Mixed Ethernet/Wi-Fi assessment (not implemented here)
+## Mixed Ethernet/Wi-Fi assessment (not implemented in this QR change)
 
 No transport or contract rewrite is required for a wired Windows host and Wi-Fi phone on the same
 routable trusted private LAN: the gateways already bind all IPv4 interfaces and WebRTC gathers
@@ -71,6 +71,10 @@ unsafe candidates, choose or let the user choose a reachable private address, ke
 Private-only, and test TCP 8765/8766 plus ICE across the Ethernet-to-access-point path. Router
 client isolation and VLAN routing must remain explicit failure modes. This assessment makes no
 mixed-topology acceptance claim.
+
+The subsequent ADR-0019 maintenance change implements deterministic Private-profile physical-
+adapter selection and a bounded override. Its dated LAN benchmark retains the still-pending
+physical Ethernet-to-Wi-Fi evidence boundary.
 
 ## Cleanup and limitations
 

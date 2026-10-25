@@ -199,6 +199,13 @@ host Android emulator through loopback TCP and fixture-only UDP ICE forwards. Th
 setup/start/media/shutdown run closes Milestone 8's clean-software gate for the exact recorded VM
 image; it does not replace Milestone 9 hardware acceptance.
 
+Before creating pairing artifacts, the launcher inventories Windows IPv4 adapters and advertises
+only an active physical RFC1918 address whose Windows network category is Private. It follows the
+lowest active default-route metric, with a bounded `--lan-address` override that can select only
+another eligible local address. This supports a wired Windows host and Wi-Fi phone on the same
+routable LAN without changing gateway or WebRTC contracts, while refusing Public-profile, VPN,
+virtual, disconnected, and link-local interfaces. See ADR-0019.
+
 Updater-capable releases additionally pin an RSA-3072 application-update public key and include a
 stable local patch bootstrap. A `.govorpatch` is data until that installed bootstrap authenticates
 its signed manifest, verifies exact base/new hashes, stages the complete bounded payload, and

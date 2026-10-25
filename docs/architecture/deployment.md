@@ -61,22 +61,25 @@ device credential with Android Keystore, and authenticates later HTTPS/WSS reque
 credential. The console and a collapsed Android section retain manual pairing for diagnostics.
 WebRTC media uses DTLS-SRTP.
 
-### Mixed Ethernet/Wi-Fi topology assessment
+### Mixed Ethernet/Wi-Fi topology
 
-The gateway already listens on all IPv4 interfaces, uses interface-independent HTTPS/WSS
-addresses, and lets WebRTC gather host candidates, so a Windows PC on wired Ethernet and a phone
-on Wi-Fi need no wire-contract or lesson/media redesign when both links reach the same trusted
-private LAN. The current launcher, however, advertises one sorted hostname-resolved IPv4 address.
-That is insufficient for a multi-homed PC because the first address may belong to an isolated,
-VPN, virtual, disconnected, or Windows Public-profile interface.
+The gateway listens on all IPv4 interfaces, uses interface-independent HTTPS/WSS addresses, and
+lets WebRTC gather host candidates, so a Windows PC on wired Ethernet and a phone on Wi-Fi need no
+wire-contract or lesson/media redesign when both links reach the same trusted private LAN.
 
-A separate topology change should enumerate active physical adapters with their prefix/gateway and
-Windows network category, exclude loopback/link-local/virtual or Public-profile candidates by
-default, and either select the route that can reach the phone subnet or present the bounded
-private candidates for the user to choose. It must keep firewall rules restricted to the Private
-profile, test TCP 8765/8766 and ICE across the Ethernet-to-access-point path, and document router
-client isolation/VLAN failure modes. QR pairing can then encode the selected reachable address.
-This assessment does not claim that deterministic multi-adapter selection is implemented.
+The launcher queries Windows NetTCPIP configuration before creating the QR. It keeps only active
+physical, non-virtual RFC1918 addresses on a Windows Private network profile and chooses the
+candidate with the lowest active default-route plus interface metric. On a multi-homed PC, the
+learner can run `Start-Govor.cmd --lan-address <IPv4>`; the override must already belong to another
+eligible adapter and cannot bypass the Private-profile or physical-adapter gate. The selected
+address is encoded into both HTTPS/WSS endpoints and shown in the host diagnostics.
+
+This does not reconfigure the network. Windows Firewall access must remain restricted to the
+Private profile, and Ethernet and Wi-Fi must be bridged or routed by the same trusted router.
+Wireless guest/client isolation, separate unrouted VLANs, upstream firewall policy, or a Public
+Windows network profile will prevent connection by design. TCP 8765/8766 and ICE still require an
+end-to-end mixed-topology check on the intended network; software selection tests alone are not
+that evidence.
 
 The release APK has application ID `ai.govor.app`, monotonically increasing `versionCode`, a
 human-readable version name, and a stable user-controlled RSA-3072 signing identity. Signing state

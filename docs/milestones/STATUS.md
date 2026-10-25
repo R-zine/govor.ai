@@ -1075,14 +1075,56 @@ Evidence boundary and next work:
   focus/scan is therefore **not executed** and is not inferred from the emulator. The exact QR
   symbol's cross-library decoding is verified in a JVM test, but that is not physical-camera
   evidence and does not alter the completed Milestone 9 record.
-- Mixed PC Ethernet/phone Wi-Fi should require no media or wire-contract redesign on one routable
-  trusted private LAN, but the launcher still advertises one sorted hostname-resolved address.
-  Deployment architecture records the required active-adapter/private-profile selection,
-  firewall, VLAN/client-isolation, and cross-interface ICE tests. That separate change is assessed,
-  not implemented or claimed here.
+- Mixed PC Ethernet/phone Wi-Fi requires no media or wire-contract redesign on one routable trusted
+  private LAN. At this QR checkpoint the launcher still advertised one sorted hostname-resolved
+  address; the subsequent LAN-topology maintenance section records the implemented active-adapter
+  selection and its still-pending physical mixed-path check.
 - Exact commands and limitations are in
   `docs/benchmarks/2026-10-25-qr-first-release-pairing.md` and
   `docs/benchmarks/2026-10-25-host-preconnect-ui-and-icon.md`.
+
+## Post-milestone mixed Ethernet/Wi-Fi LAN support
+
+The 2026-10-25 maintenance implementation supports a Windows host on Ethernet and an Android phone
+on Wi-Fi when both links are bridged or routed on the same trusted private LAN. The gateway and
+WebRTC contracts were already topology-neutral; the launcher address advertisement was the missing
+boundary. It now queries Windows NetTCPIP adapter/profile/route data before creating pairing state,
+admits only active physical non-virtual RFC1918 addresses on a Windows Private profile, and follows
+the lowest active default-route plus interface metric. A forwarded
+`Start-Govor.cmd --lan-address <IPv4>` option selects another eligible local adapter without
+bypassing the same checks. ADR-0019 records the decision.
+
+Verification and current limitation:
+
+- Focused Ruff, formatting, and launcher tests passed: 32 tests cover inventory parsing and command
+  execution, unsafe/disconnected/virtual/Public filtering, deterministic route preference, bounded
+  explicit selection, QR behavior, and launcher argument forwarding.
+- `./scripts/test.ps1 -Scope python` passed from the beginning after one mypy correction: 283 tests
+  at 85.23% branch coverage with strict mypy and Ruff/format checks. The initial run found only an
+  `Any` return in the new integer parser; converting the already type-checked value resolved it.
+- `./scripts/test.ps1 -Scope all` passed after the documentation update: the same Python gate, 29
+  Kotlin tests, 9 C# tests, 21 real media tests, Godot import/build/headless self-test, and Android
+  debug assembly all completed. Godot/NuGet emitted only the existing certificate/advisory-index
+  environment warnings.
+- The frozen media/speech dependency audit reported no known vulnerabilities after the expected
+  sandbox network denial was repeated with approved metadata access.
+- The all-files pre-commit gate passed JSON/YAML, line-ending/whitespace, private-key/large-file,
+  Ruff check/format, contract, PowerShell syntax, and affected-application tests after its pinned
+  hook environments were initialized with approved network access. A repeat after the last
+  documentation edit found an unreadable cached hook manifest; a fresh workspace-local hook cache
+  completed the final all-files pass.
+- A real adapter query on this Windows PC found active physical `Ethernet 3` at `192.168.100.72`,
+  but Windows classifies that link as **Public**. The selector correctly failed before advertising
+  it. Disconnected physical Wi-Fi and virtual/link-local adapters were also rejected.
+- The code did not change the system profile automatically. An end-to-end phone check of TCP
+  8765/8766, authenticated WSS, ICE video/audio, and microphone return over Ethernet-to-access-point
+  is therefore **blocked/not executed** until the operator deliberately changes the intended
+  Ethernet network to Private. No passing mixed-topology claim is inferred from unit tests or the
+  earlier all-Wi-Fi Milestone 9 record.
+
+Exact evidence, commands, and the required follow-up are in
+`docs/benchmarks/2026-10-25-mixed-ethernet-wifi-lan.md`. Router guest/client isolation, unrouted
+VLANs, and Private-only Windows Firewall access remain explicit deployment requirements.
 
 ## Renderer evidence and limitations
 

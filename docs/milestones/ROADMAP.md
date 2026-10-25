@@ -398,8 +398,8 @@ Acceptance requires JSON Schema/launcher/parser tests, a Segno-to-ZXing compatib
 Godot build and bounded player smoke, signed-release assembly, release UI/scanner verification,
 dependency audit, full suite, and pre-commit gate. A physical camera scan is valuable regression
 evidence but does not reopen or replace the completed Milestone 9 candidate. The separate mixed
-Ethernet/Wi-Fi assessment is recorded in deployment architecture; deterministic multi-adapter
-selection remains follow-up work and is not part of this feature.
+Ethernet/Wi-Fi assessment was recorded in deployment architecture and is implemented by the
+subsequent LAN-topology maintenance feature.
 
 The host-side follow-up replaces the QR-over-3D presentation with a dedicated opaque 2D
 pre-connect state. It contains network guidance, QR expiry/status, a collapsed manual fallback,
@@ -407,3 +407,19 @@ and transitions to the 3D scene only at `session_started`. The release launcher 
 fallback through a second protected temporary bootstrap artifact and removes both artifacts at
 shutdown; secret values remain absent from process arguments and WebRTC video. The Godot project
 and exported Windows executable also use the project-owned govor.ai icon.
+
+## Post-milestone mixed Ethernet/Wi-Fi LAN support
+
+The 2026-10-25 maintenance feature replaces sorted hostname lookup with deterministic Windows
+adapter selection. Only active physical RFC1918 adapters on a Windows Private profile are eligible;
+Public, unidentified, virtual/VPN, disconnected, loopback, and link-local candidates fail closed.
+The default follows the lowest active default-route metric. A bounded `--lan-address` override can
+select another eligible address on a multi-homed PC but cannot weaken those controls. The existing
+gateway binds and WebRTC candidate gathering remain unchanged because they already support a wired
+host and Wi-Fi phone on one routable trusted LAN. ADR-0019 records the decision.
+
+Unit and launcher gates cover inventory parsing, filtering, route preference, explicit selection,
+and failures. Physical acceptance requires the intended Ethernet-to-access-point topology, Private
+Windows profile and Private-only firewall rule, TCP 8765/8766, authenticated WSS, ICE/media, and
+microphone return. Router guest isolation or unrouted VLANs remain documented deployment failures,
+not conditions the application bypasses.

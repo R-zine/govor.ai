@@ -27,8 +27,9 @@ APK: <https://developer.android.com/developer-verification>.
 
 ## First pairing
 
-1. Connect the phone and Windows PC to the same trusted private Wi-Fi/LAN. Guest/client-isolated
-   networks may prevent devices from reaching one another.
+1. Connect the phone over Wi-Fi to the same trusted private LAN as the Windows PC. The PC may use
+   Ethernet or Wi-Fi. Guest/client-isolated Wi-Fi, unrouted VLANs, and a Windows Public network
+   profile prevent the required device-to-device path.
 2. Start `Start-Govor.cmd` on Windows and leave its console open.
 3. Tap **Scan host QR** and point the phone at the QR displayed over the Windows renderer. The app
    validates the version, expiry, addresses, code, and certificate fingerprint locally, then
@@ -80,9 +81,10 @@ stored on Windows and is unaffected by an Android-only update.
 - To pair again without uninstalling, clear govor.ai storage in Android Settings, then obtain a new
   code from a restarted Windows launcher.
 
-## Wi-Fi and release limits
+## Local-network and release limits
 
 Use the PC's private-network IPv4 address, not `127.0.0.1` and not the emulator-only `10.0.2.2`.
-Do not expose ports 8765/8766 to the public internet or forward them on a router. Release WSS,
-pairing, and DTLS-SRTP are implemented, but physical Wi-Fi/firewall behavior, phone acoustics,
-hardware codecs, lifecycle recovery, and bounded stability require the recorded release evidence.
+The PC may be wired while the phone remains on Wi-Fi when the router bridges or routes the two
+links. Do not expose ports 8765/8766 to the public internet or forward them on a router. Release
+WSS, pairing, and DTLS-SRTP are implemented, but each physical network topology still needs direct
+firewall/connectivity evidence; emulator or software tests do not supply it.
