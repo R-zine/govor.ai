@@ -72,6 +72,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.core.ktx)
+    implementation(libs.zxing.android.embedded)
     testImplementation(libs.junit.jupiter)
     debugImplementation(libs.androidx.compose.ui.tooling)
 }

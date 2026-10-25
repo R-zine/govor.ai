@@ -7,6 +7,7 @@ import android.net.Network
 import android.os.Bundle
 import ai.govor.core.LessonCatalogItemPayload
 import ai.govor.core.LessonProgressPayload
+import ai.govor.core.PairingBootstrapCodec
 import ai.govor.core.PronunciationPayload
 import ai.govor.core.SessionState
 import ai.govor.core.SpeechTimeline
@@ -43,10 +44,13 @@ import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Replay
 import androidx.compose.material.icons.filled.Settings
@@ -69,6 +73,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
@@ -81,6 +86,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -104,6 +110,8 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.journeyapps.barcodescanner.ScanContract
+import com.journeyapps.barcodescanner.ScanOptions
 import org.webrtc.RendererCommon
 import org.webrtc.SurfaceViewRenderer
 
@@ -142,6 +150,13 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+private data class ConnectionDetails(
+    val mediaHost: String,
+    val controlHost: String,
+    val pairingCode: String,
+    val certificateFingerprint: String,
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun GovorApp(model: MediaSessionViewModel = viewModel()) {
@@ -150,6 +165,7 @@ private fun GovorApp(model: MediaSessionViewModel = viewModel()) {
     val lessonState by model.lesson.state.collectAsStateWithLifecycle()
     val lessonError by model.lesson.error.collectAsStateWithLifecycle()
     val pairingError by model.pairingError.collectAsStateWithLifecycle()
+    val savedGatewayHosts by model.savedGatewayHosts.collectAsStateWithLifecycle()
     val teacherText by model.lesson.teacherText.collectAsStateWithLifecycle()
     val pronunciations by model.lesson.pronunciations.collectAsStateWithLifecycle()
     val highlightedWordIndex by model.lesson.highlightedWordIndex.collectAsStateWithLifecycle()
@@ -161,16 +177,24 @@ private fun GovorApp(model: MediaSessionViewModel = viewModel()) {
     val lessonActive by model.lesson.lessonActive.collectAsStateWithLifecycle()
 
     var mediaHost by rememberSaveable {
-        mutableStateOf(if (BuildConfig.DEBUG) "127.0.0.1:8766" else "")
+        mutableStateOf(
+            if (BuildConfig.DEBUG) "127.0.0.1:8766"
+            else savedGatewayHosts?.mediaHost.orEmpty(),
+        )
     }
     var controlHost by rememberSaveable {
-        mutableStateOf(if (BuildConfig.DEBUG) "127.0.0.1:8765" else "")
+        mutableStateOf(
+            if (BuildConfig.DEBUG) "127.0.0.1:8765"
+            else savedGatewayHosts?.controlHost.orEmpty(),
+        )
     }
     var token by rememberSaveable { mutableStateOf("") }
     var certificateFingerprint by rememberSaveable { mutableStateOf("") }
     var scenarioId by rememberSaveable { mutableStateOf("") }
     var englishLocale by rememberSaveable { mutableStateOf("en-GB") }
     var spacedReviewEnabled by rememberSaveable { mutableStateOf(false) }
+    var qrError by rememberSaveable { mutableStateOf<String?>(null) }
+    var pendingConnection by remember { mutableStateOf<ConnectionDetails?>(null) }
 
     LaunchedEffect(lessonCatalog) {
         if (lessonCatalog.none { it.scenario_id == scenarioId }) {
@@ -179,29 +203,73 @@ private fun GovorApp(model: MediaSessionViewModel = viewModel()) {
     }
 
     val context = LocalContext.current
-    val connect = {
-        val microphonePermission = ContextCompat.checkSelfPermission(
-            context,
-            Manifest.permission.RECORD_AUDIO,
-        )
-        if (microphonePermission == PackageManager.PERMISSION_GRANTED) {
-            model.connect(mediaHost, controlHost, token, certificateFingerprint)
-        }
-    }
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
     ) { granted ->
-        if (granted) connect()
+        val connection = pendingConnection
+        pendingConnection = null
+        if (granted && connection != null) {
+            model.connect(
+                connection.mediaHost,
+                connection.controlHost,
+                connection.pairingCode,
+                connection.certificateFingerprint,
+            )
+        }
     }
-    val requestConnection = {
+    val requestConnection: (ConnectionDetails) -> Unit = { connection ->
         if (
             ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
             PackageManager.PERMISSION_GRANTED
         ) {
-            connect()
+            model.connect(
+                connection.mediaHost,
+                connection.controlHost,
+                connection.pairingCode,
+                connection.certificateFingerprint,
+            )
         } else {
+            pendingConnection = connection
             permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
         }
+    }
+    val scanLauncher = rememberLauncherForActivityResult(ScanContract()) { result ->
+        val contents = result.contents ?: return@rememberLauncherForActivityResult
+        runCatching {
+            PairingBootstrapCodec.decode(contents, System.currentTimeMillis() / 1_000L)
+        }.onSuccess { pairing ->
+            qrError = null
+            mediaHost = pairing.media_host
+            controlHost = pairing.control_host
+            token = pairing.pairing_code
+            certificateFingerprint = pairing.certificate_sha256
+            requestConnection(
+                ConnectionDetails(
+                    pairing.media_host,
+                    pairing.control_host,
+                    pairing.pairing_code,
+                    pairing.certificate_sha256,
+                ),
+            )
+        }.onFailure { error ->
+            qrError = "That pairing QR could not be used: ${error.message ?: "invalid data"}."
+        }
+    }
+    val scanPairingQr = {
+        scanLauncher.launch(
+            ScanOptions()
+                .setDesiredBarcodeFormats(ScanOptions.QR_CODE)
+                .setPrompt("Point the camera at the QR shown on the govor.ai host")
+                .setBeepEnabled(false)
+                .setBarcodeImageEnabled(false)
+                .setOrientationLocked(false),
+        )
+    }
+    val manualConnection = {
+        qrError = null
+        requestConnection(
+            ConnectionDetails(mediaHost, controlHost, token, certificateFingerprint),
+        )
     }
 
     val screen = resolveGovorScreen(
@@ -228,8 +296,16 @@ private fun GovorApp(model: MediaSessionViewModel = viewModel()) {
                         onTokenChanged = { token = it },
                         certificateFingerprint = certificateFingerprint,
                         onCertificateFingerprintChanged = { certificateFingerprint = it },
-                        onConnect = requestConnection,
-                        errors = listOfNotNull(mediaError, lessonError, pairingError),
+                        onConnect = manualConnection,
+                        onScanQr = scanPairingQr,
+                        hasSavedGateway = savedGatewayHosts != null,
+                        onReconnectSaved = {
+                            qrError = null
+                            requestConnection(
+                                ConnectionDetails(mediaHost, controlHost, "", ""),
+                            )
+                        },
+                        errors = listOfNotNull(mediaError, lessonError, pairingError, qrError),
                     )
 
                     GovorScreen.LESSON_SELECTION -> LessonSelectionScreen(
@@ -312,8 +388,16 @@ private fun ConnectionScreen(
     certificateFingerprint: String,
     onCertificateFingerprintChanged: (String) -> Unit,
     onConnect: () -> Unit,
+    onScanQr: () -> Unit,
+    hasSavedGateway: Boolean,
+    onReconnectSaved: () -> Unit,
     errors: List<String>,
 ) {
+    var showManualPairing by rememberSaveable { mutableStateOf(BuildConfig.DEBUG) }
+    val connectionEnabled = mediaStatus !in setOf(
+        MediaConnectionStatus.SIGNALING,
+        MediaConnectionStatus.CONNECTING,
+    ) && lessonState != SessionState.CONNECTING
     Scaffold(
         containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.96f),
         topBar = {
@@ -334,14 +418,73 @@ private fun ConnectionScreen(
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("Connect to your teacher", style = MaterialTheme.typography.headlineSmall)
                     Text(
-                        "Enter the details shown by the Windows host. Your lessons load after " +
-                            "the secure connection is ready.",
+                        if (BuildConfig.DEBUG) {
+                            "Enter the development connection details."
+                        } else {
+                            "Scan the QR shown by the Windows host. The code is short-lived and " +
+                                "your lessons load after the secure connection is ready."
+                        },
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     ConnectionStatusPill(mediaStatus, lessonState)
                 }
             }
-            item {
+            if (!BuildConfig.DEBUG) {
+                item {
+                    if (hasSavedGateway) {
+                        Button(
+                            onClick = onReconnectSaved,
+                            enabled = connectionEnabled,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(56.dp),
+                        ) {
+                            Icon(Icons.Filled.Wifi, contentDescription = null)
+                            Spacer(Modifier.width(10.dp))
+                            Text("Reconnect to saved host")
+                        }
+                        Spacer(Modifier.height(12.dp))
+                        OutlinedButton(
+                            onClick = onScanQr,
+                            enabled = connectionEnabled,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(56.dp),
+                        ) {
+                            Icon(Icons.Filled.QrCodeScanner, contentDescription = null)
+                            Spacer(Modifier.width(10.dp))
+                            Text("Scan a different host QR")
+                        }
+                    } else {
+                        Button(
+                            onClick = onScanQr,
+                            enabled = connectionEnabled,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(56.dp),
+                        ) {
+                            Icon(Icons.Filled.QrCodeScanner, contentDescription = null)
+                            Spacer(Modifier.width(10.dp))
+                            Text("Scan host QR")
+                        }
+                    }
+                }
+                item {
+                    TextButton(
+                        onClick = { showManualPairing = !showManualPairing },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Icon(
+                            if (showManualPairing) Icons.Filled.ExpandLess
+                            else Icons.Filled.ExpandMore,
+                            contentDescription = null,
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(if (showManualPairing) "Hide manual pairing" else "Pair manually")
+                    }
+                }
+            }
+            if (showManualPairing) item {
                 Card(
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
@@ -384,27 +527,25 @@ private fun ConnectionScreen(
                                 modifier = Modifier.fillMaxWidth(),
                             )
                         }
+                        Button(
+                            onClick = onConnect,
+                            enabled = connectionEnabled,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(56.dp),
+                        ) {
+                            Icon(Icons.Filled.Wifi, contentDescription = null)
+                            Spacer(Modifier.width(10.dp))
+                            Text(
+                                if (BuildConfig.DEBUG) "Connect and load lessons"
+                                else "Connect manually",
+                            )
+                        }
                     }
                 }
             }
             if (errors.isNotEmpty()) {
                 item { ErrorCard(errors) }
-            }
-            item {
-                Button(
-                    onClick = onConnect,
-                    enabled = mediaStatus !in setOf(
-                        MediaConnectionStatus.SIGNALING,
-                        MediaConnectionStatus.CONNECTING,
-                    ) && lessonState != SessionState.CONNECTING,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp),
-                ) {
-                    Icon(Icons.Filled.Wifi, contentDescription = null)
-                    Spacer(Modifier.width(10.dp))
-                    Text("Connect and load lessons")
-                }
             }
         }
     }

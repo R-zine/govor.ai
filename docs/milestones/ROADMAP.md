@@ -384,3 +384,19 @@ unknown-source bypass, or a LAN update endpoint. The historical 0.1.11 acceptanc
 the trust root and needs one complete updater-capable release replacement. Focused tests and a real
 0.1.12 package build verify the new Windows transaction and packaging path; no physical-phone
 update was executed, so prior Milestone 9 evidence is neither replaced nor extended.
+
+## Post-milestone QR-first release pairing
+
+The 2026-10-25 maintenance feature replaces error-prone manual first pairing with one locally
+displayed and locally scanned QR. The launcher creates a strict `pairing.bootstrap` envelope and
+temporary PNG; Godot displays it outside the captured video surface; Android validates it and
+enters the existing certificate-pinned HTTPS/WSS credential lifecycle. Stored-host reconnect is a
+primary action, while all manual fields remain available behind a collapsed diagnostic section.
+ADR-0018 defines the security and UI boundary.
+
+Acceptance requires JSON Schema/launcher/parser tests, a Segno-to-ZXing compatibility fixture,
+Godot build and bounded player smoke, signed-release assembly, release UI/scanner verification,
+dependency audit, full suite, and pre-commit gate. A physical camera scan is valuable regression
+evidence but does not reopen or replace the completed Milestone 9 candidate. The separate mixed
+Ethernet/Wi-Fi assessment is recorded in deployment architecture; deterministic multi-adapter
+selection remains follow-up work and is not part of this feature.

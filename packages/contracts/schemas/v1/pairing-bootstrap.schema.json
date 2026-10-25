@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://govor.ai/contracts/v1/pairing-bootstrap.schema.json",
+  "title": "PairingBootstrap",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["protocol_version", "message_type", "correlation_id", "payload"],
+  "properties": {
+    "protocol_version": { "const": "1.0" },
+    "message_type": { "const": "pairing.bootstrap" },
+    "correlation_id": { "type": "string", "format": "uuid" },
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "control_host",
+        "media_host",
+        "pairing_code",
+        "certificate_sha256",
+        "expires_at_unix"
+      ],
+      "properties": {
+        "control_host": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9.-]{1,253}:[0-9]{1,5}$",
+          "maxLength": 259
+        },
+        "media_host": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9.-]{1,253}:[0-9]{1,5}$",
+          "maxLength": 259
+        },
+        "pairing_code": { "type": "string", "pattern": "^[0-9]{8}$" },
+        "certificate_sha256": {
+          "type": "string",
+          "pattern": "^[0-9A-F]{64}$"
+        },
+        "expires_at_unix": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4102444800
+        }
+      }
+    }
+  }
+}

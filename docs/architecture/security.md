@@ -37,17 +37,24 @@ authentication boundary: the renderer and media peer must run as the same truste
 ## Release gateway posture
 
 The Milestone 8 launcher starts separate HTTPS/WSS control and media gateways on ports 8765/8766.
-It creates a persistent current-user RSA-3072 TLS identity, prints its SHA-256 fingerprint, and
-creates an eight-digit one-time code with a ten-minute lifetime. The code is stored only as a
-PBKDF2-SHA256 salted digest, is consumed on success, is limited to five failed attempts per client
-per minute, and cannot enroll more than eight devices.
+It creates a persistent current-user RSA-3072 TLS identity and an eight-digit one-time code with a
+ten-minute lifetime. A temporary PNG in the protected current-user security directory encodes a
+closed, versioned bootstrap envelope containing the selected LAN endpoints, code, full SHA-256
+fingerprint, and expiry. Godot receives only the image path, displays it outside the streamed
+viewport, and dismisses it when a session starts; the launcher deletes it at shutdown. The same
+values remain in the console for diagnostics. The code is stored only as a PBKDF2-SHA256 salted
+digest, is consumed on success, is limited to five failed attempts per client per minute, and
+cannot enroll more than eight devices.
 
-Android verifies the full user-entered certificate fingerprint for both HTTPS and WSS. The initial
-HTTPS pairing exchange returns a random device credential; Android encrypts the credential and its
-hosts/fingerprint with an Android Keystore AES-GCM key. The Windows store retains only a salted
-credential digest in the protected per-user data directory. Every later phone-facing WebSocket
-authenticates with the device ID and credential. Payload/message bounds and existing timeouts
-remain active after authentication. WebRTC media continues to use DTLS-SRTP.
+Android's camera scanner decodes the QR entirely on-device. The app rejects oversized, expired,
+unknown-version, unknown-message, unknown-field, malformed-address/code/fingerprint bootstrap
+data before networking, then verifies the full fingerprint for both HTTPS and WSS. Manual entry is
+a collapsed diagnostic fallback. The initial HTTPS pairing exchange returns a random device
+credential; Android encrypts the credential and its hosts/fingerprint with an Android Keystore
+AES-GCM key. The Windows store retains only a salted credential digest in the protected per-user
+data directory. Every later phone-facing WebSocket authenticates with the device ID and
+credential. Payload/message bounds and existing timeouts remain active after authentication.
+WebRTC media continues to use DTLS-SRTP.
 
 The launcher forces the three local providers and `offline_only=true`. llama.cpp, internal
 microphone capture, SQLite, and renderer control stay loopback-only. The Windows process tree is

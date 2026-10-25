@@ -18,6 +18,8 @@ earlier emulator evidence is not used as a substitute for any physical row.
    Android-supported distribution route. Do not disable platform security globally.
 5. Open govor.ai and grant microphone permission when the app asks in context. The app has no
    useful hold-to-talk path without that permission.
+6. Grant camera permission when you choose **Scan host QR**. The camera is used only by the local
+   QR scanner; no image is uploaded or retained by govor.ai.
 
 Android installation and developer-verification policy changes independently of govor.ai. Check
 the current official Android guidance for the learner's device and region before distributing an
@@ -28,20 +30,24 @@ APK: <https://developer.android.com/developer-verification>.
 1. Connect the phone and Windows PC to the same trusted private Wi-Fi/LAN. Guest/client-isolated
    networks may prevent devices from reaching one another.
 2. Start `Start-Govor.cmd` on Windows and leave its console open.
-3. In the release app enter:
+3. Tap **Scan host QR** and point the phone at the QR displayed over the Windows renderer. The app
+   validates the version, expiry, addresses, code, and certificate fingerprint locally, then
+   connects without requiring you to transcribe them.
+4. If camera scanning is unavailable, expand **Pair manually** and enter:
    - **Media host:port:** the displayed PC address followed by `:8766`;
    - **Control host:port:** the same PC address followed by `:8765`;
    - **Pairing code:** the current eight-digit one-time code; and
    - **PC certificate SHA-256:** the complete fingerprint shown in the Windows console. Colons and
      spaces are optional, but all 64 hexadecimal characters must match.
-4. Tap **Connect and load lessons**. The lesson list comes from the Windows host.
-5. On **Choose a lesson**, use the list icon to select a lesson and the settings icon to choose the
+5. For manual pairing, tap **Connect manually**. The lesson list comes from the Windows host.
+6. On **Choose a lesson**, use the list icon to select a lesson and the settings icon to choose the
    accent and spaced-review preference, then tap **Start lesson**.
-6. Confirm that both media and lesson state become connected before speaking.
+7. Confirm that both media and lesson state become connected before speaking.
 
 The code expires after ten minutes and is consumed by the first successful exchange. The app
-encrypts the resulting random device credential with Android Keystore. On later starts, enter the
-same media/control addresses and leave the code/fingerprint blank to reuse that credential.
+encrypts the resulting random device credential with Android Keystore. On later starts, tap
+**Reconnect to saved host**. Use **Scan a different host QR** if the host address or identity has
+changed.
 
 ## Lesson controls and microphone
 

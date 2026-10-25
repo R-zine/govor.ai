@@ -30,6 +30,52 @@ data class MessageEnvelope(
 }
 
 @Serializable
+data class PairingBootstrapPayload(
+    val control_host: String,
+    val media_host: String,
+    val pairing_code: String,
+    val certificate_sha256: String,
+    val expires_at_unix: Long,
+) {
+    fun validate(nowUnixSeconds: Long): PairingBootstrapPayload {
+        requireHostPort(control_host)
+        requireHostPort(media_host)
+        require(pairing_code.matches(Regex("^[0-9]{8}$"))) { "Invalid pairing code" }
+        require(certificate_sha256.matches(Regex("^[0-9A-F]{64}$"))) {
+            "Invalid certificate fingerprint"
+        }
+        require(expires_at_unix in 1..4_102_444_800L) { "Invalid pairing expiry" }
+        require(expires_at_unix >= nowUnixSeconds) { "The pairing QR has expired" }
+        return this
+    }
+
+    private fun requireHostPort(value: String) {
+        require(value.length <= 259) { "Gateway address is too long" }
+        val separator = value.lastIndexOf(':')
+        require(separator in 1 until value.lastIndex) { "Invalid gateway address" }
+        val host = value.substring(0, separator)
+        val port = value.substring(separator + 1)
+        require(host.matches(Regex("^[A-Za-z0-9.-]{1,253}$"))) { "Invalid gateway host" }
+        val parsedPort = port.toIntOrNull()
+        require(port.all(Char::isDigit) && parsedPort != null && parsedPort in 1..65_535) {
+            "Invalid gateway port"
+        }
+    }
+}
+
+object PairingBootstrapCodec {
+    fun decode(text: String, nowUnixSeconds: Long): PairingBootstrapPayload {
+        require(text.toByteArray(Charsets.UTF_8).size <= 2_048) {
+            "Pairing QR payload is too large"
+        }
+        val envelope = ControlContractCodec.decodeEnvelope(text)
+        require(envelope.message_type == "pairing.bootstrap") { "Unsupported QR message" }
+        return ControlContractCodec.decodePayload<PairingBootstrapPayload>(envelope)
+            .validate(nowUnixSeconds)
+    }
+}
+
+@Serializable
 enum class SessionState {
     @SerialName("disconnected")
     DISCONNECTED,

@@ -33,9 +33,11 @@ artifacts and accepts each file only after its exact byte length and SHA-256 dig
 normal exit terminates children and listeners.
 
 The launcher creates a self-signed, current-user TLS identity and displays its SHA-256 fingerprint
-plus a short-lived one-time pairing code. The Android release client requires the learner to copy
-that fingerprint out of band, pins the certificate, exchanges the one-time code over HTTPS for a
-random device credential, and encrypts that credential with an Android Keystore AES-GCM key.
+plus a short-lived one-time pairing code. The original Milestone 8 client required manual copying;
+ADR-0018 now transports the same values in a locally displayed/scanned QR by default while
+retaining collapsed manual diagnostics. Android pins the certificate, exchanges the one-time code
+over HTTPS for a random device credential, and encrypts that credential with an Android Keystore
+AES-GCM key.
 Control and signaling then use authenticated WSS; media remains DTLS-SRTP. The server stores only
 PBKDF2-SHA256 salted hashes, limits failed pairing attempts, and permits at most eight devices.
 

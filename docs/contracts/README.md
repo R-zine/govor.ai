@@ -25,6 +25,12 @@ WebSockets begin with `gateway.authenticate`, carrying the device ID and credent
 normal versioned envelope. Invalid codes, unknown fields, and malformed identifiers are rejected
 before dispatch. The debug development token remains outside this release lifecycle.
 
+`pairing-bootstrap.schema.json` is the closed QR bootstrap envelope. It carries bounded control
+and media `host:port` values, the eight-digit code, uppercase certificate SHA-256, and Unix expiry.
+It is generated into a temporary local PNG and decoded entirely on Android before the existing
+HTTPS pairing contract runs. Unknown envelope/payload fields, malformed values, oversized input,
+and expired bootstraps are rejected. It grants no authority beyond the existing one-time code.
+
 Milestone 4 extends the same version with understood additive fields and closed message variants.
 `teacher.turn` contains bounded PCM16 WAV, an explicit sample rate, exact pronunciation ranges,
 accent-specific IPA, nullable provider-derived word/phoneme spans, and `fallback_used`.

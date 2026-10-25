@@ -19,6 +19,7 @@ public partial class RendererSessionController : Node
 
     public string ControlUrl { get; set; } = string.Empty;
     public string? ControlCaPath { get; set; }
+    public PairingQrOverlay? PairingOverlay { get; set; }
 
     public override void _Ready()
     {
@@ -172,6 +173,10 @@ public partial class RendererSessionController : Node
                 _sceneDirector?.ApplyScene(command.Scene);
             }
             _teacher?.ApplySessionAction(command.Action, command.AvatarAnimation);
+            if (command.Action == "session_started")
+            {
+                PairingOverlay?.Dismiss();
+            }
             applied = true;
             GD.Print(
                 $"GOVOR_RENDERER_COMMAND_APPLIED:{command.Action}:" +

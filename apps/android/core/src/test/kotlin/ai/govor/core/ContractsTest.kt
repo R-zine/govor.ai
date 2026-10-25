@@ -10,6 +10,37 @@ import java.util.UUID
 
 class ContractsTest {
     @Test
+    fun `pairing QR fixture decodes strictly`() {
+        val fixture = requireNotNull(
+            javaClass.classLoader.getResource("valid/pairing-bootstrap.json"),
+        ).readText()
+
+        val pairing = PairingBootstrapCodec.decode(fixture, 1_792_930_000)
+
+        assertEquals("192.168.100.72:8765", pairing.control_host)
+        assertEquals("192.168.100.72:8766", pairing.media_host)
+        assertEquals("12345678", pairing.pairing_code)
+        assertEquals(64, pairing.certificate_sha256.length)
+    }
+
+    @Test
+    fun `pairing QR rejects unknown fields and expiry`() {
+        val invalid = requireNotNull(
+            javaClass.classLoader.getResource("invalid/pairing-bootstrap-extra-field.json"),
+        ).readText()
+        val valid = requireNotNull(
+            javaClass.classLoader.getResource("valid/pairing-bootstrap.json"),
+        ).readText()
+
+        assertThrows(SerializationException::class.java) {
+            PairingBootstrapCodec.decode(invalid, 1_792_930_000)
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            PairingBootstrapCodec.decode(valid, 1_792_931_083)
+        }
+    }
+
+    @Test
     fun `envelope deserializes with protocol version`() {
         val value = ControlContractCodec.decodeEnvelope(
             """{"protocol_version":"1.0","message_type":"session.start","correlation_id":"9a352221-6fbd-4dd0-9fee-d14a07998d72","payload":{}}""",

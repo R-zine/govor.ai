@@ -45,6 +45,11 @@ partial commit, preserve unlisted imported content and per-user state, and may c
 release APK for explicit Android installation. Pre-updater releases need one final complete ZIP
 replacement. See ADR-0016 and the Windows user guide.
 
+First release pairing is QR-first: the Windows renderer shows one short-lived QR with the LAN
+endpoints, one-time code, certificate fingerprint, and expiry. The signed Android app scans it
+locally and opens the existing certificate-pinned pairing flow. Stored-credential reconnect remains
+one tap; manual pairing is retained under a collapsed diagnostic section. See ADR-0018.
+
 ## Quick start (Windows PowerShell)
 
 ```powershell

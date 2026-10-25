@@ -19,6 +19,12 @@ class MediaSessionViewModel(application: Application) : AndroidViewModel(applica
     private val mutablePairingError = MutableStateFlow<String?>(null)
     val pairingError: StateFlow<String?> = mutablePairingError
     private val reconnectPolicy = LifecycleReconnectPolicy()
+    private val mutableSavedGatewayHosts = MutableStateFlow(
+        credentialStore.load()?.let {
+            SavedGatewayHosts(controlHost = it.controlHost, mediaHost = it.mediaHost)
+        },
+    )
+    val savedGatewayHosts: StateFlow<SavedGatewayHosts?> = mutableSavedGatewayHosts
     private var connectionJob: Job? = null
     private var networkReconnectJob: Job? = null
     private var lastConnection: ConnectionRequest? = null
@@ -69,6 +75,10 @@ class MediaSessionViewModel(application: Application) : AndroidViewModel(applica
                     request.pairingToken,
                     request.certificateFingerprint,
                 ).also(credentialStore::save)
+                mutableSavedGatewayHosts.value = SavedGatewayHosts(
+                    controlHost = gateway.controlHost,
+                    mediaHost = gateway.mediaHost,
+                )
                 mutablePairingError.value = null
                 session.connect(
                     gateway.mediaHost,
@@ -184,3 +194,8 @@ class MediaSessionViewModel(application: Application) : AndroidViewModel(applica
         private const val NETWORK_RECOVERY_DELAY_MS = 1_000L
     }
 }
+
+data class SavedGatewayHosts(
+    val controlHost: String,
+    val mediaHost: String,
+)

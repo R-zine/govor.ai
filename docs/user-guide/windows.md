@@ -36,15 +36,18 @@ inside the extracted version directory.
 2. Run `Start-Govor.cmd`.
 3. If Windows Firewall prompts, allow the packaged Python runtime on private networks only. The
    phone needs TCP ports 8765 and 8766; local inference remains bound to loopback.
-4. Keep the console open. It shows the PC address, control/media ports, certificate SHA-256
-   fingerprint, model/service status, and a one-time eight-digit code valid for ten minutes.
-5. Follow the Android guide. Compare/copy the complete 64-hex-character fingerprint; do not accept
-   a fingerprint supplied by an unexpected device or network page.
+4. Keep the console and renderer open. The renderer displays a QR containing the PC endpoints,
+   certificate fingerprint, expiry, and one-time eight-digit code. The console shows the same
+   values for manual diagnostics. The code is valid for ten minutes.
+5. In the Android release, tap **Scan host QR** and point the phone at the host display. If the QR
+   cannot be scanned, expand **Pair manually** and copy all values from the console. Do not accept
+   pairing details supplied by an unexpected device or network page.
 6. To stop govor.ai, return to the console and press Enter. Wait for the message confirming that
    managed child processes closed before moving or updating the directory.
 
-The pairing code is single use. A successfully paired Android installation keeps a random device
-credential and normally needs only the same PC address/ports on later starts.
+The pairing code is single use. The temporary QR image is removed when the launcher exits. A
+successfully paired Android installation keeps a random device credential and offers
+**Reconnect to saved host** on later starts.
 
 ## Add lessons
 

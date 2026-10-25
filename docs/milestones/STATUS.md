@@ -1007,6 +1007,57 @@ Limits:
   1280×720 frames. The screenshot supports only the Compose overlay appearance; video evidence
   remains transport/render logs as already documented.
 
+## Post-milestone QR-first release pairing
+
+The 2026-10-25 maintenance feature makes a single locally scanned QR the default first pairing
+path. The Windows launcher creates a strict version 1 bootstrap containing the selected LAN
+endpoints, one-time code, certificate SHA-256, and expiry; Segno writes a temporary PNG below the
+per-user security directory. Godot shows it in an overlay outside the streamed 1280x720 viewport
+and dismisses it after session start. Android validates it locally with ZXing and enters the
+unchanged certificate-pinned HTTPS/WSS credential lifecycle. The release manual form is collapsed
+under **Pair manually**; debug retains expanded controls, and stored credentials expose one-tap
+reconnect. ADR-0018 records the decision.
+
+Implementation and verification:
+
+- Added the closed `pairing-bootstrap.schema.json`, positive/negative fixtures, launcher encoder
+  tests, strict Kotlin payload/parser tests, and an exact Segno-module fixture decoded by ZXing.
+  The focused Python/contract run passed 55 tests; the Android gate passed 29 JVM tests.
+- `./scripts/test.ps1 -Scope all` passed: Ruff/format/mypy, 268 Python tests at 85.18% branch
+  coverage, 29 Kotlin tests, 9 C# tests, 21 real media tests, Godot import/C# build/headless
+  self-test, and Android debug assembly.
+- `./scripts/build.ps1 -Target renderer` passed. A generated QR was loaded by the exported player
+  in a bounded `--mute-local-audio --exit-after-tone` run; it exited 0 after the existing two-
+  second fixture, logged no overlay/runtime error, and left no player/audio running.
+- The final signed `0.1.15`/code-16 package build passed Godot export, Android release lint/build,
+  v2 signature verification with the established signer, embedded Segno installation,
+  source/notices, import checks, prerequisites, and packaged wrapper doctors. Its APK is
+  59,891,893 bytes with SHA-256
+  `a01f9dea01bba8600ced9f5a9085c3991823e22cc9de34a8c0c370b441e52d63`.
+- On the audio-disabled API 34 emulator, that signed release showed **Scan host QR** as the primary
+  action and no manual fields before expansion. Selecting it raised Android's in-context camera
+  permission and opened the ZXing capture Activity with the expected prompt and no fatal error.
+  Expanding **Pair manually** exposed the prior host/code/fingerprint diagnostics.
+- The locked Python dependency audit reported no known vulnerabilities. Segno 1.6.6, ZXing
+  Android Embedded 4.3.0, and transitive ZXing Core 3.4.1 are pinned and documented.
+- The final all-files pre-commit gate passed JSON/YAML, EOF/line-ending/whitespace, private-key and
+  large-file checks, Ruff check/format, contracts, PowerShell syntax, and affected-application
+  tests.
+
+Evidence boundary and next work:
+
+- `adb devices -l` showed no physical device when the final candidate was ready. A real camera
+  focus/scan is therefore **not executed** and is not inferred from the emulator. The exact QR
+  symbol's cross-library decoding is verified in a JVM test, but that is not physical-camera
+  evidence and does not alter the completed Milestone 9 record.
+- Mixed PC Ethernet/phone Wi-Fi should require no media or wire-contract redesign on one routable
+  trusted private LAN, but the launcher still advertises one sorted hostname-resolved address.
+  Deployment architecture records the required active-adapter/private-profile selection,
+  firewall, VLAN/client-isolation, and cross-interface ICE tests. That separate change is assessed,
+  not implemented or claimed here.
+- Exact commands and limitations are in
+  `docs/benchmarks/2026-10-25-qr-first-release-pairing.md`.
+
 ## Renderer evidence and limitations
 
 The current local proof images visibly contain the stylized teacher in four distinct procedural

@@ -60,6 +60,10 @@ public partial class MediaProofScene : Node
         string? controlCaPath = arguments
             .FirstOrDefault(argument => argument.StartsWith(controlCaPrefix, StringComparison.Ordinal))?
             [controlCaPrefix.Length..];
+        const string pairingQrPrefix = "--pairing-qr=";
+        string? pairingQrPath = arguments
+            .FirstOrDefault(argument => argument.StartsWith(pairingQrPrefix, StringComparison.Ordinal))?
+            [pairingQrPrefix.Length..];
         const string proofImagePrefix = "--proof-image=";
         _proofImagePath = arguments
             .FirstOrDefault(argument => argument.StartsWith(proofImagePrefix, StringComparison.Ordinal))?
@@ -70,6 +74,17 @@ public partial class MediaProofScene : Node
         AddChild(_captureViewport);
         _sceneDirector?.ApplyScene(DynamicSceneDirector.DefaultCafeScene());
         AddChild(CreateDisplay(_captureViewport));
+
+        PairingQrOverlay? pairingOverlay = null;
+        if (!string.IsNullOrWhiteSpace(pairingQrPath))
+        {
+            pairingOverlay = new PairingQrOverlay
+            {
+                Name = "PairingQrOverlay",
+                QrImagePath = pairingQrPath,
+            };
+            AddChild(pairingOverlay);
+        }
 
         var videoPublisher = new SharedMemoryVideoPublisher
         {
@@ -91,6 +106,7 @@ public partial class MediaProofScene : Node
                 Name = "RendererSessionController",
                 ControlUrl = controlUrl,
                 ControlCaPath = controlCaPath,
+                PairingOverlay = pairingOverlay,
             });
         }
 

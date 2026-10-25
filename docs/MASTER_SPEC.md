@@ -716,7 +716,14 @@ The Android client should include:
 
 Implement a simple first-run pairing flow.
 
-The PC may display a pairing code or QR code.
+The PC must display a single short-lived QR code containing the versioned control/media addresses,
+one-time pairing code, certificate fingerprint, and expiry. The signed Android release scans and
+validates that QR locally, then starts the existing certificate-pinned pairing exchange. This is
+the default first-run path; the QR must never be sent to a cloud scanning service.
+
+Keep the same values available as a manual diagnostic fallback. In the release Android UI, manual
+pairing fields must be collapsed by default so a learner is not expected to transcribe addresses,
+an eight-digit code, or a 64-character fingerprint.
 
 The Android app should remember an authorized PC using secure device storage.
 

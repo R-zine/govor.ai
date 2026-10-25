@@ -22,15 +22,19 @@
 - **The phone cannot reach the PC:** use the PC's private IPv4 address, confirm both devices are on
   the same non-isolated network, allow the packaged runtime on private Windows Firewall networks,
   and verify ports 8765/8766 were not opened to public networks or the internet.
-- **Pairing is rejected:** use the newest eight-digit code before its ten-minute expiry, copy the
-  complete 64-character certificate fingerprint, and check the two host/port fields. A successful
-  code is single use; restart the launcher for a new one.
+- **QR will not scan:** clean the phone camera, raise the host display brightness, keep the entire
+  square in frame, and confirm the code is no older than ten minutes. If needed, expand
+  **Pair manually** and use the values in the host console.
+- **Pairing is rejected:** restart the host for a fresh QR/code, confirm the phone clock is
+  reasonably correct, and check that both devices are on the trusted private LAN. A successful
+  code cannot be reused. Manual diagnostics still require the complete 64-character certificate
+  fingerprint and both host/port values.
 - **Certificate fingerprint mismatch:** stop. Confirm the fingerprint directly in the Windows
   launcher. If `%LOCALAPPDATA%\govor.ai\security` was intentionally reset, clear Android app
   storage and pair again; otherwise investigate a changed or unexpected host.
-- **A previously paired phone cannot reconnect:** enter the same control/media addresses and leave
-  code/fingerprint blank. If the PC address changed, use the new addresses; if the PC security
-  directory changed, reset Android app storage and pair anew.
+- **A previously paired phone cannot reconnect:** tap **Reconnect to saved host**. If the PC
+  address changed, use **Scan a different host QR**; if the PC security directory changed, reset
+  Android app storage and pair anew.
 - **Models are ready but normal lessons try to use the internet:** the release launcher forces
   local providers and `offline_only=true`. Stop the app and inspect the packaged logs; do not add
   cloud credentials as a workaround.

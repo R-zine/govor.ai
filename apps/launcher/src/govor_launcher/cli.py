@@ -17,6 +17,7 @@ from pathlib import Path
 from govor_gateway_security import PairingAuthority
 
 from .models import artifact_path, install_artifact, load_manifest, verify_artifact
+from .pairing_qr import build_pairing_bootstrap, write_pairing_qr
 from .processes import WindowsKillOnCloseJob
 from .security import ensure_tls_identity
 
@@ -96,6 +97,7 @@ class ReleasePaths:
         self.lessons = install_root / "content" / "lessons"
         self.environments = install_root / "content" / "environments"
         self.credentials = data_root / "security" / "gateway-credentials.json"
+        self.pairing_qr = data_root / "security" / "pairing-bootstrap.png"
         self.progress = data_root / "progress" / "progress.sqlite3"
         self.logs = data_root / "logs"
 
@@ -272,12 +274,24 @@ def _start(paths: ReleasePaths, *, smoke_seconds: float | None) -> int:
     identity = ensure_tls_identity(paths.data_root / "security")
     pairing_code, expires_at = PairingAuthority(paths.credentials).create_pairing_code()
     lan_addresses = _lan_addresses()
+    if not lan_addresses:
+        raise RuntimeError("no LAN IPv4 address was found; connect this PC to a trusted network")
+    pairing_address = lan_addresses[0]
+    pairing_bootstrap = build_pairing_bootstrap(
+        control_host=f"{pairing_address}:{_CONTROL_PORT}",
+        media_host=f"{pairing_address}:{_MEDIA_PORT}",
+        pairing_code=pairing_code,
+        certificate_sha256=identity.fingerprint_sha256,
+        expires_at_unix=expires_at,
+    )
+    write_pairing_qr(paths.pairing_qr, pairing_bootstrap)
     print("govor.ai is starting in local-only mode.")
-    print(f"PC address: {lan_addresses[0] if lan_addresses else 'not found'}")
+    print(f"PC address: {pairing_address}")
     print(f"Control port: {_CONTROL_PORT}   Media port: {_MEDIA_PORT}")
     print(f"Certificate SHA-256: {identity.fingerprint_sha256}")
     print(f"One-time pairing code: {pairing_code} (expires at Unix time {expires_at})")
-    print("The phone must be on the same trusted Wi-Fi network.")
+    print("Scan the QR shown by the renderer, or use these details for manual pairing.")
+    print("The phone must be on the same trusted private LAN; the PC may use Ethernet or Wi-Fi.")
 
     environment = _release_environment(paths, identity.certificate)
     children: list[subprocess.Popen[bytes]] = []
@@ -355,7 +369,7 @@ def _start(paths: ReleasePaths, *, smoke_seconds: float | None) -> int:
                 children,
             )
             renderer = subprocess.Popen(  # noqa: S603 - executable is package-owned
-                _renderer_command(paths, identity.certificate),
+                _renderer_command(paths, identity.certificate, paths.pairing_qr),
                 cwd=paths.install_root / "renderer",
                 env=environment,
             )
@@ -374,10 +388,15 @@ def _start(paths: ReleasePaths, *, smoke_seconds: float | None) -> int:
             _stop_children(children)
             for stream in logs:
                 stream.close()  # type: ignore[attr-defined]
+            paths.pairing_qr.unlink(missing_ok=True)
             print("govor.ai stopped; managed child processes were closed.")
 
 
-def _renderer_command(paths: ReleasePaths, certificate: Path) -> list[str]:
+def _renderer_command(
+    paths: ReleasePaths,
+    certificate: Path,
+    pairing_qr: Path | None = None,
+) -> list[str]:
     command = [str(paths.renderer), "--", "--mute-local-audio"]
     fixture_delay = os.environ.get("GOVOR_RENDERER_FIXTURE_TONE_DELAY_SECONDS")
     if fixture_delay is None:
@@ -396,6 +415,8 @@ def _renderer_command(paths: ReleasePaths, certificate: Path) -> list[str]:
             f"--control-ca={certificate}",
         ]
     )
+    if pairing_qr is not None:
+        command.append(f"--pairing-qr={pairing_qr}")
     return command
 
 

@@ -53,11 +53,30 @@ child ignores the first termination request.
 ## LAN and Android distribution
 
 The Windows gateway binds ports 8765 (control/pairing) and 8766 (media signaling) to the LAN. On
-first run, the launcher creates a current-user self-signed TLS identity and prints its SHA-256
-fingerprint plus an eight-digit, ten-minute, one-time pairing code. The Android release APK pins
-the entered fingerprint, exchanges the code over HTTPS, encrypts its random device credential
-with Android Keystore, and authenticates later HTTPS/WSS requests with that credential. WebRTC
-media uses DTLS-SRTP.
+first run, the launcher creates a current-user self-signed TLS identity and a temporary QR with
+the selected endpoints, its SHA-256 fingerprint, and an eight-digit, ten-minute, one-time pairing
+code. The QR is shown locally by Godot outside the streamed scene. The Android release APK scans
+the bootstrap on-device, pins the fingerprint, exchanges the code over HTTPS, encrypts its random
+device credential with Android Keystore, and authenticates later HTTPS/WSS requests with that
+credential. The console and a collapsed Android section retain manual pairing for diagnostics.
+WebRTC media uses DTLS-SRTP.
+
+### Mixed Ethernet/Wi-Fi topology assessment
+
+The gateway already listens on all IPv4 interfaces, uses interface-independent HTTPS/WSS
+addresses, and lets WebRTC gather host candidates, so a Windows PC on wired Ethernet and a phone
+on Wi-Fi need no wire-contract or lesson/media redesign when both links reach the same trusted
+private LAN. The current launcher, however, advertises one sorted hostname-resolved IPv4 address.
+That is insufficient for a multi-homed PC because the first address may belong to an isolated,
+VPN, virtual, disconnected, or Windows Public-profile interface.
+
+A separate topology change should enumerate active physical adapters with their prefix/gateway and
+Windows network category, exclude loopback/link-local/virtual or Public-profile candidates by
+default, and either select the route that can reach the phone subnet or present the bounded
+private candidates for the user to choose. It must keep firewall rules restricted to the Private
+profile, test TCP 8765/8766 and ICE across the Ethernet-to-access-point path, and document router
+client isolation/VLAN failure modes. QR pairing can then encode the selected reachable address.
+This assessment does not claim that deterministic multi-adapter selection is implemented.
 
 The release APK has application ID `ai.govor.app`, monotonically increasing `versionCode`, a
 human-readable version name, and a stable user-controlled RSA-3072 signing identity. Signing state

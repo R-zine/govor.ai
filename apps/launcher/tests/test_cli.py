@@ -144,6 +144,17 @@ def test_release_renderer_is_silent_by_default(
     assert not any(value.startswith("--startup-tone-delay-seconds=") for value in command)
 
 
+def test_release_renderer_receives_only_the_temporary_qr_path(
+    tmp_path: Path,
+) -> None:
+    paths = ReleasePaths.from_roots(tmp_path, tmp_path / "data")
+
+    command = _renderer_command(paths, tmp_path / "ca.pem", paths.pairing_qr)
+
+    assert f"--pairing-qr={paths.pairing_qr}" in command
+    assert not any("12345678" in value or "certificate_sha256" in value for value in command)
+
+
 def test_vm_fixture_can_schedule_the_bounded_muted_tone(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

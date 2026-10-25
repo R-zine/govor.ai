@@ -1,0 +1,12 @@
+{
+  "protocol_version": "1.0",
+  "message_type": "pairing.bootstrap",
+  "correlation_id": "9a352221-6fbd-4dd0-9fee-d14a07998d72",
+  "payload": {
+    "control_host": "192.168.100.72:8765",
+    "media_host": "192.168.100.72:8766",
+    "pairing_code": "12345678",
+    "certificate_sha256": "445AEF7A40A87ABEC2C7EF87BA62B0276FEFC0EA6FEDA3BE50FA4F286EA6EAE2",
+    "expires_at_unix": 1792931082
+  }
+}
