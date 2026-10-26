@@ -141,7 +141,7 @@ def test_windows_inventory_rejects_malformed_values() -> None:
         (_interface("192.168.1.20", status="Disconnected"), "not connected"),
         (_interface("192.168.1.20", hardware=False, virtual=True), "virtual"),
         (_interface("169.254.1.20"), "not a private RFC1918"),
-        (_interface("192.168.1.20", category="Public"), "Public, not Private"),
+        (_interface("192.168.1.20", category=None), "unidentified"),
     ],
 )
 def test_unsafe_interfaces_are_not_eligible(
@@ -161,6 +161,25 @@ def test_default_selection_uses_the_lowest_windows_route_metric() -> None:
     assert select_lan_interface([wifi, ethernet]) == ethernet
 
 
+def test_private_profile_is_preferred_over_public_when_both_are_eligible() -> None:
+    public_ethernet = _interface(
+        "192.168.1.20",
+        alias="Ethernet",
+        category="Public",
+        interface_metric=10,
+        index=7,
+    )
+    private_wifi = _interface(
+        "192.168.1.21",
+        alias="Wi-Fi",
+        category="Private",
+        interface_metric=50,
+        index=9,
+    )
+
+    assert select_lan_interface([public_ethernet, private_wifi]) == private_wifi
+
+
 def test_explicit_address_selects_another_eligible_physical_adapter() -> None:
     ethernet = _interface("192.168.1.20", alias="Ethernet", index=7)
     wifi = _interface("192.168.1.21", alias="Wi-Fi", index=9)
@@ -168,18 +187,24 @@ def test_explicit_address_selects_another_eligible_physical_adapter() -> None:
     assert select_lan_interface([ethernet, wifi], "192.168.1.21") == wifi
 
 
-def test_explicit_address_cannot_override_the_private_profile_gate() -> None:
+def test_public_profile_rfc1918_address_is_eligible_with_a_warning_marker() -> None:
     public = _interface("192.168.1.20", category="Public")
 
-    with pytest.raises(RuntimeError, match="not safe to advertise.*Public"):
-        select_lan_interface([public], "192.168.1.20")
+    assert select_lan_interface([public]) == public
+    assert public.uses_public_profile is True
 
 
-def test_no_eligible_address_explains_the_windows_profile_fix() -> None:
+def test_explicit_address_can_select_a_public_profile_local_adapter() -> None:
     public = _interface("192.168.1.20", category="Public")
 
-    with pytest.raises(RuntimeError, match="set its Windows network profile to Private"):
-        select_lan_interface([public])
+    assert select_lan_interface([public], "192.168.1.20") == public
+
+
+def test_no_eligible_address_explains_the_local_network_requirement() -> None:
+    unidentified = _interface("192.168.1.20", category=None)
+
+    with pytest.raises(RuntimeError, match="trusted local network"):
+        select_lan_interface([unidentified])
 
 
 def test_inventory_shape_stays_json_serializable_for_fixture_review() -> None:

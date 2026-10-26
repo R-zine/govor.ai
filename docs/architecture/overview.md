@@ -200,11 +200,13 @@ setup/start/media/shutdown run closes Milestone 8's clean-software gate for the 
 image; it does not replace Milestone 9 hardware acceptance.
 
 Before creating pairing artifacts, the launcher inventories Windows IPv4 adapters and advertises
-only an active physical RFC1918 address whose Windows network category is Private. It follows the
-lowest active default-route metric, with a bounded `--lan-address` override that can select only
-another eligible local address. This supports a wired Windows host and Wi-Fi phone on the same
-routable LAN without changing gateway or WebRTC contracts, while refusing Public-profile, VPN,
-virtual, disconnected, and link-local interfaces. See ADR-0019.
+only an active physical RFC1918 address with a recognized Windows network category. It prefers a
+Private profile, then follows the lowest active default-route metric; a bounded `--lan-address`
+override can select only another eligible local address. A Public-profile RFC1918 adapter is
+allowed with an explicit trusted-router/firewall warning because that Windows label does not make
+the address internet-routable. This supports a wired Windows host and Wi-Fi phone on the same LAN
+without changing gateway or WebRTC contracts, while refusing VPN/virtual, disconnected,
+unidentified, non-RFC1918, and link-local interfaces. See ADR-0019.
 
 Updater-capable releases additionally pin an RSA-3072 application-update public key and include a
 stable local patch bootstrap. A `.govorpatch` is data until that installed bootstrap authenticates

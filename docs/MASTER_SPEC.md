@@ -43,7 +43,9 @@ The application runs primarily on a Windows PC containing an NVIDIA RTX 3060 or 
 
 The learner uses a native Android application on a phone connected over Wi-Fi to the same trusted
 private local network as the Windows host. The host may use wired Ethernet or Wi-Fi; guest/client-
-isolated networks and public-network profiles are unsupported.
+isolated networks and public-internet exposure are unsupported. A Windows connection labeled
+Public may still be used when it is an RFC1918 link on the learner's trusted router; the label is
+a firewall/discovery category, not an address-scope determination.
 
 The Windows PC performs:
 

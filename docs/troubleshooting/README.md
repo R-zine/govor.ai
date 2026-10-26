@@ -19,17 +19,19 @@
   add a blanket security exclusion.
 - **Port 8765, 8766, or 8767 is already in use:** stop another govor.ai launcher or the conflicting
   process, then retry. Do not run two launchers against the same data directory.
-- **No safe LAN adapter is available:** in Windows **Settings > Network & internet**, open the
-  connected Ethernet or Wi-Fi network and set its network profile to **Private**. govor.ai does not
-  advertise Public, unidentified, VPN/virtual, disconnected, loopback, or link-local adapters.
+- **No safe LAN adapter is available:** confirm the connected Ethernet or Wi-Fi adapter has an
+  RFC1918 address and a recognized Windows profile. govor.ai does not advertise unidentified,
+  VPN/virtual, disconnected, loopback, link-local, or non-RFC1918 adapters. A Public profile is
+  accepted when it is the trusted router LAN and produces a warning rather than a failure.
 - **The phone cannot reach the PC:** use the selected private IPv4 address, confirm the phone's
-  Wi-Fi and PC Ethernet/Wi-Fi are bridged or routed on the same non-isolated trusted network, allow
-  the packaged runtime on private Windows Firewall networks, and verify ports 8765/8766 were not
-  opened to public networks or the internet. Guest/client isolation and unrouted VLANs must be
-  corrected on the router.
+  Wi-Fi and PC Ethernet/Wi-Fi are bridged or routed on the same non-isolated trusted network, and
+  allow the packaged runtime through Windows Firewall on the selected link's profile. A trusted
+  router labeled Public may need a Public-profile firewall allowance. Never forward ports
+  8765/8766 from the router or expose them to the internet. Guest/client isolation and unrouted
+  VLANs must be corrected on the router.
 - **The wrong address appears on a multi-homed PC:** stop govor.ai and run
-  `Start-Govor.cmd --lan-address <listed-IPv4>`. Only another active physical RFC1918 address on a
-  Windows Private profile is accepted. Scan the new QR rather than reusing saved host details.
+  `Start-Govor.cmd --lan-address <listed-IPv4>`. Only another active physical RFC1918 address with
+  a recognized Windows profile is accepted. Scan the new QR rather than reusing saved host details.
 - **QR will not scan:** clean the phone camera, raise the host display brightness, keep the entire
   square in frame, and confirm the code is no older than ten minutes. If needed, expand
   **Pair manually** and use the values in the host console.

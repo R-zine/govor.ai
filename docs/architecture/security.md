@@ -66,10 +66,17 @@ the package or corresponding-source bundle.
 
 Before either LAN gateway starts or a pairing artifact is written, the launcher queries the
 Windows NetTCPIP inventory. An advertised address must be RFC1918 and belong to an active physical,
-non-virtual adapter whose Windows network category is exactly Private. Public, unidentified,
-disconnected, VPN/virtual, loopback, and link-local candidates fail closed. Windows' lowest active
-default-route metric is deterministic; `--lan-address` can override it only with another address
-that passes the same checks. Firewall instructions remain Private-profile-only. This supports a
+non-virtual adapter with a recognized Windows network category. Disconnected, VPN/virtual,
+unidentified, non-RFC1918, loopback, and link-local candidates fail closed. A Private category is
+preferred; a Public-category RFC1918 link is allowed with an explicit warning because the category
+controls Windows discovery/firewall defaults but does not make that address publicly routable.
+Windows' lowest active default-route metric is deterministic within each category;
+`--lan-address` can override it only with another address that passes the same checks.
+
+On a Public-category link, the operator must confirm it is the learner's trusted router and permit
+the packaged runtime only on the required local network scope. Pairing, rate limits,
+certificate-pinned HTTPS/WSS, gateway authentication, and DTLS-SRTP remain mandatory regardless of
+profile. Router port forwarding and public-internet exposure remain forbidden. This supports a
 host on Ethernet and a phone on Wi-Fi only when the router bridges or routes both links; it does not
 bypass guest isolation, VLAN policy, or Windows Firewall.
 

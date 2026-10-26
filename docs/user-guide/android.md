@@ -28,8 +28,9 @@ APK: <https://developer.android.com/developer-verification>.
 ## First pairing
 
 1. Connect the phone over Wi-Fi to the same trusted private LAN as the Windows PC. The PC may use
-   Ethernet or Wi-Fi. Guest/client-isolated Wi-Fi, unrouted VLANs, and a Windows Public network
-   profile prevent the required device-to-device path.
+   Ethernet or Wi-Fi. Guest/client-isolated Wi-Fi and unrouted VLANs prevent the required device-
+   to-device path. A Windows Public profile is supported on the trusted router but may require a
+   matching Windows Firewall allowance.
 2. Start `Start-Govor.cmd` on Windows and leave its console open.
 3. Tap **Scan host QR** and point the phone at the QR displayed over the Windows renderer. The app
    validates the version, expiry, addresses, code, and certificate fingerprint locally, then

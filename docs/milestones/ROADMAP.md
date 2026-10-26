@@ -411,15 +411,18 @@ and exported Windows executable also use the project-owned govor.ai icon.
 ## Post-milestone mixed Ethernet/Wi-Fi LAN support
 
 The 2026-10-25 maintenance feature replaces sorted hostname lookup with deterministic Windows
-adapter selection. Only active physical RFC1918 adapters on a Windows Private profile are eligible;
-Public, unidentified, virtual/VPN, disconnected, loopback, and link-local candidates fail closed.
-The default follows the lowest active default-route metric. A bounded `--lan-address` override can
-select another eligible address on a multi-homed PC but cannot weaken those controls. The existing
-gateway binds and WebRTC candidate gathering remain unchanged because they already support a wired
-host and Wi-Fi phone on one routable trusted LAN. ADR-0019 records the decision.
+adapter selection. Only active physical RFC1918 adapters with a recognized Windows profile are
+eligible; unidentified, virtual/VPN, disconnected, loopback, link-local, and non-RFC1918
+candidates fail closed. Private profiles are preferred. The 2026-10-26 correction permits a
+Public-category RFC1918 link with a prominent trusted-router/firewall warning because Windows'
+category does not determine address scope. The default follows route metrics within the preferred
+category. A bounded `--lan-address` override can select another eligible address on a multi-homed
+PC but cannot weaken those controls. The existing gateway binds and WebRTC candidate gathering
+remain unchanged because they already support a wired host and Wi-Fi phone on one routable trusted
+LAN. ADR-0019 records the amended decision.
 
 Unit and launcher gates cover inventory parsing, filtering, route preference, explicit selection,
-and failures. Physical acceptance requires the intended Ethernet-to-access-point topology, Private
-Windows profile and Private-only firewall rule, TCP 8765/8766, authenticated WSS, ICE/media, and
-microphone return. Router guest isolation or unrouted VLANs remain documented deployment failures,
-not conditions the application bypasses.
+and failures. Physical acceptance requires the intended Ethernet-to-access-point topology, a
+firewall allowance for the selected Windows profile/local network, TCP 8765/8766, authenticated
+WSS, ICE/media, and microphone return. Router guest isolation or unrouted VLANs remain documented
+deployment failures, not conditions the application bypasses.

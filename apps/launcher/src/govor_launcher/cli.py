@@ -308,11 +308,18 @@ def _start(
     print(
         "LAN adapter: "
         f"{pairing_interface.interface_alias} "
-        f"({pairing_interface.interface_description}, Windows Private profile)"
+        f"({pairing_interface.interface_description}, "
+        f"Windows {pairing_interface.network_category} profile)"
     )
+    if pairing_interface.uses_public_profile:
+        print("WARNING: Windows labels this local connection Public.")
+        print(
+            "Use it only on the trusted router LAN and restrict Windows Firewall access "
+            "to the local subnet; never expose or forward these ports to the internet."
+        )
     alternatives = [str(item.address) for item in lan_addresses if item != pairing_interface]
     if alternatives:
-        print("Other eligible private addresses: " + ", ".join(alternatives))
+        print("Other eligible local RFC1918 addresses: " + ", ".join(alternatives))
         print("Choose one explicitly with Start-Govor.cmd --lan-address <address>.")
     print(f"Control port: {_CONTROL_PORT}   Media port: {_MEDIA_PORT}")
     print(f"Certificate SHA-256: {identity.fingerprint_sha256}")

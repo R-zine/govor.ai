@@ -395,16 +395,32 @@ Ethernet address because its network category was Public. It also rejected the d
 and virtual/link-local candidates. This is verified fail-closed behavior, not mixed-topology media
 acceptance. The application did not change the machine's network category or firewall policy.
 
+### 2026-10-26 profile-category correction
+
+The product owner clarified that `Ethernet 3` is the intended RFC1918 LAN behind the same router as
+the phone Wi-Fi. Windows' Public label describes firewall/discovery defaults, not internet address
+scope. The amended selector now chooses `192.168.100.72`, reports `Ethernet 3` / Public, and emits
+the trusted-router, profile-matched firewall, and no-port-forwarding warning. It still rejects the
+disconnected Wi-Fi and virtual/link-local adapters. The application did not modify the Windows
+profile or firewall.
+
 | Criterion | Result | Direct evidence and limit |
 | --- | --- | --- |
 | Deterministic physical-adapter selection | verified passing in software | Windows inventory plus unit tests select the lowest eligible default-route metric |
-| Public/virtual/disconnected exclusion | verified passing | Real Public Ethernet and disconnected/virtual adapters were refused before QR creation |
-| TCP 8765/8766 from phone Wi-Fi to host Ethernet | blocked/not executed | The intended Ethernet link is currently a Windows Public profile |
-| Authenticated WSS and QR pairing over mixed path | blocked/not executed | No LAN listener or pairing artifact was started after the safety rejection |
-| WebRTC video/audio and phone microphone return | blocked/not executed | Requires the same real mixed path after the operator deliberately selects Private |
+| Public local-profile handling | verified passing in software | Real Public-category `192.168.100.72` Ethernet is selected with the warning marker; Private remains preferred in tests |
+| Unidentified/virtual/disconnected exclusion | verified passing | Disconnected/virtual adapters remain refused; unidentified profiles fail closed |
+| TCP 8765/8766 from phone Wi-Fi to host Ethernet | blocked/not executed | `adb devices -l` found no attached physical phone or emulator on 2026-10-26 |
+| Authenticated WSS and QR pairing over mixed path | blocked/not executed | No LAN listener or pairing artifact was started because no phone was available for the bounded check |
+| WebRTC video/audio and phone microphone return | blocked/not executed | Requires the same real mixed path with the phone attached; the Public Windows category is no longer a blocker |
 | Router bridge/client isolation/VLAN behavior | not executed | Router configuration was not changed or inferred |
 
-To execute the remaining check, set only the intended Ethernet network to Private in Windows
-Settings, retain Private-only firewall access for the packaged runtime, start the exact candidate,
-scan its new QR from the physical Wi-Fi phone, and verify TCP/WSS plus bidirectional WebRTC media.
-Record the phone, router/SSID, exact package, commands, metrics, and cleanup in a new dated entry.
+The signed `0.1.17`/code-18 portable candidate passed release packaging, and its embedded launcher
+selected `192.168.100.72 Ethernet 3 Public` with the warning path active. The companion APK is
+59,891,893 bytes with SHA-256
+`cd7ac297a79871b5c75564168265b0b0e574a6ad12494968335ec659b77bb478`.
+
+To execute the remaining check, attach the physical Wi-Fi phone, permit the packaged runtime in
+Windows Firewall for this trusted router's selected profile/local network, start the exact
+candidate, scan its new QR, and verify TCP/WSS plus bidirectional WebRTC media. Do not configure
+router port forwarding. Record the phone, router/SSID, exact package, commands, metrics, and
+cleanup in a new dated entry.

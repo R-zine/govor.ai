@@ -2,9 +2,10 @@
 
 ## Release connection
 
-1. The Windows launcher inventories active IPv4 adapters, rejects non-physical, non-RFC1918, and
-   non-Private-profile links, and follows Windows' preferred default route unless an eligible
-   address was explicitly selected. It then reuses or creates its current-user TLS identity,
+1. The Windows launcher inventories active IPv4 adapters; rejects non-physical, non-RFC1918, and
+   unidentified links; prefers a Windows Private category; and then follows route metrics unless
+   an eligible address was explicitly selected. A Public-category RFC1918 link remains eligible
+   with a trusted-router/firewall warning. It then reuses or creates its current-user TLS identity,
    creates a ten-minute one-time pairing code, writes a temporary QR and matching bounded JSON
    bootstrap, and passes only their protected local paths to Godot. Godot opens an opaque 2D
    connection screen above, and outside, the captured 1280x720 media viewport. The screen supplies

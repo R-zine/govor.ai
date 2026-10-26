@@ -68,18 +68,21 @@ lets WebRTC gather host candidates, so a Windows PC on wired Ethernet and a phon
 wire-contract or lesson/media redesign when both links reach the same trusted private LAN.
 
 The launcher queries Windows NetTCPIP configuration before creating the QR. It keeps only active
-physical, non-virtual RFC1918 addresses on a Windows Private network profile and chooses the
-candidate with the lowest active default-route plus interface metric. On a multi-homed PC, the
-learner can run `Start-Govor.cmd --lan-address <IPv4>`; the override must already belong to another
-eligible adapter and cannot bypass the Private-profile or physical-adapter gate. The selected
-address is encoded into both HTTPS/WSS endpoints and shown in the host diagnostics.
+physical, non-virtual RFC1918 addresses with a recognized Windows profile, prefers Private over
+Public, and chooses the lowest active default-route plus interface metric within that category. A
+Public-profile RFC1918 adapter is still a local address and is eligible with a prominent trusted-
+router/firewall warning. On a multi-homed PC, the learner can run
+`Start-Govor.cmd --lan-address <IPv4>`; the override must already belong to another eligible
+adapter and cannot bypass the physical/RFC1918/recognized-profile gate. The selected address is
+encoded into both HTTPS/WSS endpoints and shown in the host diagnostics.
 
-This does not reconfigure the network. Windows Firewall access must remain restricted to the
-Private profile, and Ethernet and Wi-Fi must be bridged or routed by the same trusted router.
-Wireless guest/client isolation, separate unrouted VLANs, upstream firewall policy, or a Public
-Windows network profile will prevent connection by design. TCP 8765/8766 and ICE still require an
-end-to-end mixed-topology check on the intended network; software selection tests alone are not
-that evidence.
+This does not reconfigure the network. Windows Firewall must permit the packaged runtime on the
+selected profile and should be scoped to the local network; Ethernet and Wi-Fi must be bridged or
+routed by the same trusted router. Wireless guest/client isolation, separate unrouted VLANs, or
+upstream firewall policy will still prevent connection. A Public Windows category may require a
+separate firewall allowance from an earlier Private-profile run. TCP 8765/8766 and ICE still
+require an end-to-end mixed-topology check on the intended network; software selection tests alone
+are not that evidence.
 
 The release APK has application ID `ai.govor.app`, monotonically increasing `versionCode`, a
 human-readable version name, and a stable user-controlled RSA-3072 signing identity. Signing state

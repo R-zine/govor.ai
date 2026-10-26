@@ -34,12 +34,15 @@ inside the extracted version directory.
 
 1. Put the PC and phone on the same trusted private network. The PC may use Ethernet or Wi-Fi; the
    phone uses Wi-Fi. Do not use a guest/client-isolated wireless network.
-2. In Windows **Settings > Network & internet**, open the connected Ethernet or Wi-Fi network and
-   set **Network profile type** to **Private**. govor.ai refuses to advertise a Public-profile
-   adapter.
+2. In Windows **Settings > Network & internet**, note whether the connected Ethernet or Wi-Fi link
+   is labeled **Private** or **Public**. Private is preferred. Public is supported when this is the
+   learner's trusted router LAN; it does not mean the RFC1918 address is on the public internet.
 3. Run `Start-Govor.cmd`.
-4. If Windows Firewall prompts, allow the packaged Python runtime on private networks only. The
-   phone needs TCP ports 8765 and 8766; local inference remains bound to loopback.
+4. If Windows Firewall prompts, allow the packaged Python runtime on the profile used by this
+   trusted router. A Public-profile Ethernet link may need Public access even though traffic stays
+   on the local subnet. Do not reuse that allowance on an untrusted hotspot and never add router
+   port forwarding. The phone needs TCP ports 8765 and 8766 plus WebRTC media; local inference
+   remains bound to loopback.
 5. Keep the console and host window open. The host starts on a dedicated **Connect your phone**
    screen with instructions, a QR, and an expiry countdown. The 3D lesson remains hidden until a
    lesson starts. The code is valid for ten minutes.
@@ -54,11 +57,12 @@ The pairing code is single use. The temporary QR image is removed when the launc
 successfully paired Android installation keeps a random device credential and offers
 **Reconnect to saved host** on later starts.
 
-The launcher chooses the active Private-profile adapter preferred by Windows. If the console lists
-multiple eligible private addresses and the chosen one is not on the phone-reachable LAN, stop the
-app and run `Start-Govor.cmd --lan-address <listed-IPv4>` from PowerShell or Command Prompt. The
-override cannot select a Public, virtual/VPN, disconnected, or unassigned address. After changing
-the host address, choose **Scan a different host QR** on Android.
+The launcher prefers an active Private-profile adapter, then follows Windows route metrics. An
+active physical Public-profile RFC1918 adapter is allowed with a console warning. If the console
+lists multiple eligible local addresses and the chosen one is not on the phone-reachable LAN, stop
+the app and run `Start-Govor.cmd --lan-address <listed-IPv4>` from PowerShell or Command Prompt.
+The override cannot select a virtual/VPN, disconnected, unidentified, non-RFC1918, or unassigned
+address. After changing the host address, choose **Scan a different host QR** on Android.
 
 ## Add lessons
 

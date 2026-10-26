@@ -1,6 +1,6 @@
 # Current verified status
 
-Last updated: 2026-10-24
+Last updated: 2026-10-26
 
 ## Outcome
 
@@ -731,7 +731,7 @@ result.
 | Teacher audio on phone | verified passing | Phone playback completion advanced the lesson while Windows playback was muted; the learner confirmed that teacher speech was audible, clear, and intelligible on the handset |
 | Phone microphone reaches PC | verified passing | +1,532 physical 48 kHz microphone frames in the exact-candidate smoke; bounded acoustic hold-to-talk turns completed café 3/3 |
 | No PC speaker/microphone dependency | verified architecturally/partially physically | Muted Windows playback did not stop phone lesson playback; capture opens only the phone WebRTC track and no PC microphone. A physical PC-microphone-disable action was not executed |
-| Pairing, WSS, DTLS-SRTP, firewall/private LAN | verified passing on measured candidate | Initial pairing, stored credential reuse, authenticated WSS, connected DTLS, and Private-profile Wi-Fi passed; public-network deployment remains forbidden |
+| Pairing, WSS, DTLS-SRTP, firewall/private LAN | verified passing on measured candidate | Initial pairing, stored credential reuse, authenticated WSS, connected DTLS, and Private-profile Wi-Fi passed; public-internet deployment remains forbidden |
 | Lifecycle/interruption/reconnect/state | verified passing | Background/foreground, Wi-Fi loss/recovery, explicit disconnect/reconnect, and same-process state preservation passed; one deliberate second-Activity harness misuse is excluded |
 | Codec selection/fallback | verified with explicit fallback | Android hardware `c2.unisoc.vp8.decoder`; Windows VP8 software encoding met cadence, and no hardware-encode claim is made |
 | Unfocused/monitor-off/idle-awake | verified passing | Renderer/media/mic/DTLS counters advanced while unfocused and through a monitor-off interval |
@@ -1089,16 +1089,27 @@ The 2026-10-25 maintenance implementation supports a Windows host on Ethernet an
 on Wi-Fi when both links are bridged or routed on the same trusted private LAN. The gateway and
 WebRTC contracts were already topology-neutral; the launcher address advertisement was the missing
 boundary. It now queries Windows NetTCPIP adapter/profile/route data before creating pairing state,
-admits only active physical non-virtual RFC1918 addresses on a Windows Private profile, and follows
-the lowest active default-route plus interface metric. A forwarded
-`Start-Govor.cmd --lan-address <IPv4>` option selects another eligible local adapter without
-bypassing the same checks. ADR-0019 records the decision.
+admits only active physical non-virtual RFC1918 addresses with a recognized Windows profile,
+prefers Private, and follows the lowest active default-route plus interface metric within the
+preferred category. A forwarded `Start-Govor.cmd --lan-address <IPv4>` option selects another
+eligible local adapter without bypassing the same checks. ADR-0019 records the decision.
+
+On 2026-10-26 the product owner clarified that the target Ethernet link is intentionally labeled
+Public by Windows but remains an RFC1918 link behind the same trusted router that supplies phone
+Wi-Fi. The original profile gate incorrectly treated a firewall/discovery category as address-
+scope evidence. The selector now permits that Public-category local link, emits an explicit
+trusted-router/firewall/no-port-forwarding warning, and continues to reject unidentified,
+virtual/VPN, disconnected, link-local, and non-RFC1918 addresses. Private remains preferred when
+both categories are eligible.
 
 Verification and current limitation:
 
-- Focused Ruff, formatting, and launcher tests passed: 32 tests cover inventory parsing and command
-  execution, unsafe/disconnected/virtual/Public filtering, deterministic route preference, bounded
-  explicit selection, QR behavior, and launcher argument forwarding.
+- The original focused run passed 32 tests. The corrected focused run passes 34 tests covering
+  inventory parsing and command execution, unsafe/disconnected/virtual/unidentified filtering,
+  Private-over-Public preference, deterministic route metrics, bounded explicit Public/local
+  selection, QR behavior, and launcher argument forwarding.
+- Corrected `./scripts/test.ps1 -Scope python` passed Ruff, formatting, strict mypy, and 285 tests
+  at 85.20% branch coverage.
 - `./scripts/test.ps1 -Scope python` passed from the beginning after one mypy correction: 283 tests
   at 85.23% branch coverage with strict mypy and Ruff/format checks. The initial run found only an
   `Any` return in the new integer parser; converting the already type-checked value resolved it.
@@ -1106,25 +1117,47 @@ Verification and current limitation:
   Kotlin tests, 9 C# tests, 21 real media tests, Godot import/build/headless self-test, and Android
   debug assembly all completed. Godot/NuGet emitted only the existing certificate/advisory-index
   environment warnings.
+- The corrected final `./scripts/test.ps1 -Scope all` rerun passed with 285 Python tests at 85.20%
+  branch coverage, 29 Kotlin tests, 9 C# tests, 21 real media tests, Godot import/build/headless
+  self-test, and Android debug assembly. The only Python warnings were the existing Starlette
+  deprecation and an environment-specific unreadable pytest cache; NuGet again could not reach its
+  advisory index but the build and tests passed.
 - The frozen media/speech dependency audit reported no known vulnerabilities after the expected
-  sandbox network denial was repeated with approved metadata access.
+  sandbox network denial was repeated with approved metadata access. The corrected final audit
+  also reported no known vulnerabilities.
 - The all-files pre-commit gate passed JSON/YAML, line-ending/whitespace, private-key/large-file,
   Ruff check/format, contract, PowerShell syntax, and affected-application tests after its pinned
   hook environments were initialized with approved network access. A repeat after the last
   documentation edit found an unreadable cached hook manifest; a fresh workspace-local hook cache
-  completed the final all-files pass.
-- A real adapter query on this Windows PC found active physical `Ethernet 3` at `192.168.100.72`,
-  but Windows classifies that link as **Public**. The selector correctly failed before advertising
-  it. Disconnected physical Wi-Fi and virtual/link-local adapters were also rejected.
-- The code did not change the system profile automatically. An end-to-end phone check of TCP
-  8765/8766, authenticated WSS, ICE video/audio, and microphone return over Ethernet-to-access-point
-  is therefore **blocked/not executed** until the operator deliberately changes the intended
-  Ethernet network to Private. No passing mixed-topology claim is inferred from unit tests or the
-  earlier all-Wi-Fi Milestone 9 record.
+  completed the final all-files pass. The corrected Public-profile implementation repeated the
+  same complete all-files gate in a newly initialized workspace-local hook cache and passed.
+- A corrected real adapter query selects active physical `Ethernet 3` at `192.168.100.72`, reports
+  its Windows **Public** category, and marks the warning path active. Disconnected physical Wi-Fi
+  and virtual/link-local adapters remain rejected.
+- Signed portable candidate `0.1.17`/code 18 passed Godot export, Android release lint/build, APK
+  Signature Scheme v2 verification, embedded-runtime import, corresponding-source, and package
+  prerequisite checks. Its packaged launcher independently selected
+  `192.168.100.72 Ethernet 3 Public` with `uses_public_profile=True`. The signed APK is 59,891,893
+  bytes with SHA-256 `cd7ac297a79871b5c75564168265b0b0e574a6ad12494968335ec659b77bb478`.
+  An initial Godot export process failed to exit and was interrupted after its output completed; a
+  later Android attempt hit a stale locked Gradle transform JAR. Stopping the project Gradle daemon
+  released that lock, and the complete offline package command then passed without deleting cache
+  or source data.
+- `adb devices -l` started the local ADB daemon but found no physical phone or emulator. An end-to-
+  end check of TCP 8765/8766, authenticated WSS, ICE video/audio, and microphone return over
+  Ethernet-to-access-point is therefore **blocked/not executed** on device availability, not the
+  Windows profile. No passing mixed-topology claim is inferred from unit tests or the earlier all-
+  Wi-Fi Milestone 9 record.
+- Read-only Windows Firewall inspection found both Public and Private profiles enabled. Historical
+  version-specific Python rules exist, including Public/Any rules for 0.1.0/0.1.1 and Private/Any
+  rules for later old candidates, but no future corrected package path can inherit those rules.
+  No firewall rule was added, removed, or changed; the exact next candidate may trigger the normal
+  Windows prompt and must be allowed only for this trusted router profile.
 
 Exact evidence, commands, and the required follow-up are in
 `docs/benchmarks/2026-10-25-mixed-ethernet-wifi-lan.md`. Router guest/client isolation, unrouted
-VLANs, and Private-only Windows Firewall access remain explicit deployment requirements.
+VLANs, profile-matched local-network Windows Firewall access, and no router port forwarding remain
+explicit deployment requirements.
 
 ## Renderer evidence and limitations
 

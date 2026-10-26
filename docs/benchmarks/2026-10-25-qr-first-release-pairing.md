@@ -68,13 +68,14 @@ may be a VPN, virtual, isolated, disconnected, or Public-profile interface.
 
 The follow-up should enumerate active physical adapters and Windows network categories, exclude
 unsafe candidates, choose or let the user choose a reachable private address, keep firewall scope
-Private-only, and test TCP 8765/8766 plus ICE across the Ethernet-to-access-point path. Router
+on the trusted local network, and test TCP 8765/8766 plus ICE across the Ethernet-to-access-point path. Router
 client isolation and VLAN routing must remain explicit failure modes. This assessment makes no
 mixed-topology acceptance claim.
 
-The subsequent ADR-0019 maintenance change implements deterministic Private-profile physical-
-adapter selection and a bounded override. Its dated LAN benchmark retains the still-pending
-physical Ethernet-to-Wi-Fi evidence boundary.
+The subsequent ADR-0019 maintenance change implements deterministic physical RFC1918 adapter
+selection and a bounded override. Its 2026-10-26 amendment correctly treats Windows Public as a
+firewall/discovery category rather than internet address scope. The dated LAN benchmark retains the
+still-pending physical Ethernet-to-Wi-Fi evidence boundary.
 
 ## Cleanup and limitations
 

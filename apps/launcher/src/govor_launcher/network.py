@@ -12,6 +12,7 @@ _MAX_INVENTORY_BYTES = 256 * 1024
 _PRIVATE_NETWORKS = tuple(
     ipaddress.ip_network(prefix) for prefix in ("10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16")
 )
+_KNOWN_NETWORK_CATEGORIES = frozenset({"private", "public", "domainauthenticated"})
 
 # Windows PowerShell 5.1 and the NetTCPIP module are present on every supported release target.
 # The script is application-owned and accepts no interpolated/user-controlled input.
@@ -84,17 +85,22 @@ class LanInterface:
             return "adapter is virtual"
         if not _is_rfc1918(self.address):
             return "address is not a private RFC1918 address"
-        if (self.network_category or "").casefold() != "private":
-            category = self.network_category or "unidentified"
-            return f"Windows network profile is {category}, not Private"
+        if (self.network_category or "").casefold() not in _KNOWN_NETWORK_CATEGORIES:
+            return "Windows network profile is unidentified"
         return None
 
     @property
-    def route_preference(self) -> tuple[int, int, int, int]:
+    def uses_public_profile(self) -> bool:
+        return (self.network_category or "").casefold() == "public"
+
+    @property
+    def route_preference(self) -> tuple[int, int, int, int, int]:
         has_default_route = self.default_gateway is not None and self.route_metric is not None
         route_metric = self.route_metric if self.route_metric is not None else 1_000_000
         interface_metric = self.interface_metric if self.interface_metric is not None else 1_000_000
+        category_preference = 0 if (self.network_category or "").casefold() == "private" else 1
         return (
+            category_preference,
             0 if has_default_route else 1,
             route_metric + interface_metric,
             self.interface_index,
@@ -128,8 +134,8 @@ def discover_lan_interfaces() -> tuple[LanInterface, ...]:
         ) from error
     if result.returncode != 0:
         raise RuntimeError(
-            "could not inspect Windows network adapters; open Windows Settings and confirm "
-            "the connected Ethernet or Wi-Fi network uses the Private profile"
+            "could not inspect Windows network adapters; confirm the Windows NetTCPIP module "
+            "can read the connected Ethernet or Wi-Fi configuration"
         )
     if len(result.stdout) > _MAX_INVENTORY_BYTES:
         raise RuntimeError("Windows network adapter inventory exceeded its size limit")
@@ -180,11 +186,10 @@ def select_lan_interface(
         for item in candidates
         if _is_rfc1918(item.address)
     ]
-    detail = "; ".join(visible[:6]) or "no private IPv4 adapter was found"
+    detail = "; ".join(visible[:6]) or "no RFC1918 IPv4 adapter was found"
     raise RuntimeError(
-        "no active physical IPv4 adapter on a Windows Private network profile is available; "
-        f"found: {detail}. Connect Ethernet or Wi-Fi to the trusted LAN and set its Windows "
-        "network profile to Private"
+        "no active physical RFC1918 IPv4 adapter with a recognized Windows network profile is "
+        f"available; found: {detail}. Connect Ethernet or Wi-Fi to the trusted local network"
     )
 
 
