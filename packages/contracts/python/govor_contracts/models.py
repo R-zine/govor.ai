@@ -424,6 +424,10 @@ class RendererCommandPayload(SessionScopedPayload):
         return self
 
 
+class RendererTeacherProfileSelectedPayload(StrictModel):
+    profile_id: Literal["elena", "amira", "daniel"]
+
+
 class RendererAckPayload(StrictModel):
     command_id: UUID
     applied: bool

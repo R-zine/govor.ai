@@ -39,12 +39,14 @@ vocabulary review state, difficulty reasons, completion, and interrupted-session
 local SQLite without raw audio or full transcript storage. Android exposes all four scenarios,
 GB/US accent, optional spaced review, and progress. Local view/export/delete tooling is available.
 
-Milestone 6 is complete. Godot now renders a repository-owned CC0 stylized teacher in validated
-procedural café, supermarket, airport, and home environments. The host maps lesson context to a
-closed scene specification and maps actual speech PCM plus real-or-unavailable provider timing to
-bounded avatar animation. Four-scene runtime, cache/video-memory revisit, software-encoding,
-concurrent Qwen3 4B, real Kokoro lip-sync, and native-emulator media paths passed. This is
-development evidence; target-hardware acceptance was deferred to and later passed in Milestone 9.
+Milestone 6 is complete. Its post-milestone presentation path now renders one of three selectable
+CC0 skinned teachers over four packaged CC0 photographic backdrops; installed environment recipes
+remain validated data-only primitives. The host maps lesson context to a closed scene specification
+and maps actual speech PCM plus real-or-unavailable provider timing to bounded facial animation.
+The selected Elena/Amira/Daniel profile also selects a matching female/male speech presentation.
+The original four-scene, software-encoding, concurrent-inference, lip-sync, emulator, and later
+Milestone 9 evidence remains recorded; ADR-0020 distinguishes the current visual build from that
+historical accepted candidate.
 
 Milestone 7 is complete. Independent OpenAI-compatible dialogue, recognition, and speech
 adapters, a double-enforced offline-only gate, separate microphone-upload consent, Windows
@@ -94,6 +96,52 @@ flow with the recognition limitation recorded, not as a human-speech accuracy cl
 then confirmed that the moving café/teacher was visible on the physical phone and that teacher
 speech was audible, clear, and intelligible. The final suite, dependency audit, and all-files
 pre-commit gates pass, so every Milestone 9 acceptance row is closed.
+
+## Post-milestone photographic scenes and selectable teachers
+
+On 2026-10-26 the blocky procedural teacher was removed. The renderer now packages Elena, Amira,
+and Daniel as closed CC0 skinned GLBs generated from Ara 3D Gen/MakeHuman data. Each exposes 34
+facial blend shapes including 14 speech visemes and contains no animation clip. The host
+pre-connect screen has a persistent teacher menu; selection swaps the model before the lesson and
+sends only the closed profile ID over `renderer.teacher_profile_selected` to shared host state.
+The four built-in scene IDs now resolve to local CC0 photographic backdrops. Installed environment
+recipes retain the ADR-0015 data-only primitive boundary.
+
+Speech resolves the same profile at synthesis time. Elena and Amira use female Kokoro voices and
+female eSpeak fallback variants; Daniel uses male Kokoro voices and the available male Bulgarian
+Piper Dimitar voice. Because the installed Piper catalog has no female Bulgarian voice, female
+profiles intentionally use local eSpeak `bg+f3` for Bulgarian rather than silently mismatching the
+model. Optional cloud-compatible speech has independently configurable presentation voice names;
+the application does not claim providers guarantee a speaker identity from those names.
+
+Local verification completed so far:
+
+- 46 focused host, speech, provider-router, and profile tests passed.
+- Godot C# tests passed (10 tests), and Godot import/build/self-test passed before the final visual
+  tuning; final all-scope verification is recorded below.
+- The exported four-scene tour passed with four distinct 1280x720 photographic captures, profiles
+  Elena/Amira/Daniel/Elena, open visemes in every capture, zero fallbacks, zero cache growth, a
+  124-byte reported video-memory revisit delta, and 20 VP8 packets. Software VP8 encode p95 was
+  9.7707 ms on the development RTX 3060 PC.
+- A bounded exported-player UI proof visibly showed the `Teacher: Amira` menu on the opaque host
+  pre-connect screen. It used a non-pairing placeholder image only to exercise layout; it is not QR
+  compatibility, phone-camera, or physical-device evidence.
+- `./scripts/build.ps1 -Target renderer` passed after the build command added Godot's explicit
+  `--quit`; this prevents the headless export console from waiting after a completed package.
+- `./scripts/test.ps1 -Scope all` passed on the final source: 291 Python tests at 85.27% coverage,
+  Kotlin/JVM tests, 10 C# tests, 21 media tests, Godot import/build/self-test, and Android debug
+  assembly. The only warnings were the existing Starlette `httpx` deprecation, inaccessible local
+  pytest cache, and an offline NuGet vulnerability-index warning during the C# build.
+- `uv run --frozen pip-audit` reported no known vulnerabilities.
+- `uv run --frozen pre-commit run --all-files` passed every hygiene, secret/large-file, Ruff,
+  contract, PowerShell, and affected-application test hook.
+
+Asset source pages, authors, licenses, generator inputs, exact GLB/JPEG hashes, and the
+animation-stripping build step are committed beside the assets. ADR-0020 records the current
+architecture and voice mapping. This is software/development-machine evidence only. No new signed
+package, physical phone, camera scan, acoustic judgment, hardware codec, or mixed-LAN acceptance
+was executed, and the historical Milestone 9 record must not be read as acceptance of these new
+visual assets.
 
 ## Post-milestone JSON lesson catalog
 
@@ -305,19 +353,20 @@ performance regressions may still require revisiting it.
 
 ## Current implementation
 
-- `apps/renderer` is a Godot 4.7.2 .NET project with a stylized adult teacher, four built-in plus
-  validated data-only procedural environments, a dedicated 1280x720 `SubViewport`, and the
-  bounded media-test tone.
+- `apps/renderer` is a Godot 4.7.2 .NET project with three selectable CC0 facial teachers, four
+  built-in CC0 photographic backdrops plus validated data-only procedural environments, a
+  dedicated 1280x720 `SubViewport`, and the bounded media-test tone.
 - `packages/scene_planner` owns built-in and installed immutable scene recipes plus actual-PCM/
   provider-timing avatar plans without depending on Godot, FastAPI, Android, or providers.
 - The version 1 renderer contract accepts bounded environment IDs, closed presets, and exactly one
   built-in asset or bounded procedural primitive per object. It rejects arbitrary paths, URLs,
   scripts, resources, and unknown fields.
-- Godot caches 68 mesh/material resources, queues replaced scene trees for cleanup, supplies a
-  predictable internal missing-asset fallback, and writes no generated 3D files at runtime.
-- The teacher blinks/breathes when idle, gestures while speaking, listens/records, thinks during
-  processing, and applies encouraging brows/expressions. PCM energy drives mouth opening; six
-  viseme shapes are used only when real provider phoneme timing exists.
+- Godot caches packaged backdrop textures and procedural mesh/material resources, queues replaced
+  scene trees for cleanup, supplies a predictable internal primitive fallback, and writes no
+  generated 3D files at runtime.
+- Elena, Amira, and Daniel share bounded idle/blink and state expression behavior. PCM energy
+  drives mouth opening; their facial rigs provide 34 blend shapes including 14 speech visemes,
+  which are used only when real provider phoneme timing exists.
 - The tone stops automatically. Runtime smokes are muted by default; the single supervised
   audible check also stopped after two seconds.
 - Godot publishes top-to-bottom RGBA through two alternating latest-frame slots in a Windows named
@@ -602,9 +651,13 @@ is the required focused Milestone 5 commit.
 
 ## Milestone 6 acceptance and handoff
 
+> Historical gate: this table records the original procedural Milestone 6 candidate. ADR-0020 and
+> the post-milestone section above describe the current photographic/selectable-teacher build; no
+> physical evidence from this table is transferred to the replacement assets.
+
 | Acceptance criterion | Status | Direct evidence |
 | --- | --- | --- |
-| Teacher visible in streamed 3D environment | verified passing with emulator limit | Four local 1280x720 captures visibly contain the stylized teacher; renderer-originated non-black video reached native Android at 30 fps with no drops in the final short interval. |
+| Teacher visible in streamed 3D environment | verified passing with emulator limit | Four local 1280x720 captures visibly contain the original stylized teacher; renderer-originated non-black video reached native Android at 30 fps with no drops in the final short interval. |
 | Speaking animation corresponds to teacher audio | verified passing | The host extracts energy from actual PCM sample positions. Real Kokoro delivered 51 energy samples and 23 provider-timed visemes to Godot for a 2,038,666 µs utterance. |
 | At least four environments assemble | verified passing | Exported Godot captured distinct café, supermarket, airport, and home frames with zero fallbacks. |
 | Environment responds to lesson context | verified passing | Host integration maps selected scenario to its deterministic scene; the emulator smokes required the café scene marker, and planner tests cover every scenario. |
@@ -1161,9 +1214,10 @@ explicit deployment requirements.
 
 ## Renderer evidence and limitations
 
-The current local proof images visibly contain the stylized teacher in four distinct procedural
-environments. The live bridge probe observed multiple changing frames and explicitly rejected an
-all-black stream. In the emulator run, the aiortc peer logged non-black input, Android
+The current local proof images visibly contain the selectable facial teachers over four distinct
+photographic backdrops. That post-milestone scene tour is development-machine evidence. The live
+bridge and emulator evidence below predates the new visual assets: the aiortc peer logged non-black
+input, Android
 libwebrtc logged `Reporting first rendered frame` and a 1280x720 resolution change, application
 PCM reached the first peer, and microphone frames returned to Windows before and after reconnect.
 After the two-second tone ended, the second peer correctly received silence rather than a retained
@@ -1185,9 +1239,11 @@ video/audio quality was confirmed by the learner on 2026-10-22. The older emulat
 `c2.goldfish.vp8.decoder` remains emulator-only evidence and is not used for the physical codec
 row.
 
-Initial migration evidence is in `docs/benchmarks/2026-10-09-godot-renderer-migration.md`; current
-avatar/scene evidence is in
-`docs/benchmarks/2026-10-12-avatar-scenes-and-renderer-performance.md`; target evidence is in
+Initial migration evidence is in `docs/benchmarks/2026-10-09-godot-renderer-migration.md`; original
+Milestone 6 avatar/scene evidence is in
+`docs/benchmarks/2026-10-12-avatar-scenes-and-renderer-performance.md`; current selectable-teacher
+evidence is in `docs/benchmarks/2026-10-26-selectable-teachers-and-backdrops.md`; target evidence
+for the earlier signed candidate is in
 `docs/benchmarks/2026-10-21-m9-physical-release-acceptance.md`.
 
 ## Environment and artifacts

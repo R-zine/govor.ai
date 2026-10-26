@@ -6,7 +6,7 @@ import asyncio
 import sys
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Protocol
+from typing import Any, Literal, Protocol
 
 from govor_contracts import ProviderCapabilities
 from govor_provider_interfaces import ProviderUnavailable, SpeechProvider, TeacherTurn
@@ -20,6 +20,10 @@ class SpeechSettings(Protocol):
     kokoro_voices: str
     kokoro_voice_gb: str
     kokoro_voice_us: str
+    kokoro_voice_gb_amira: str
+    kokoro_voice_us_amira: str
+    kokoro_voice_gb_daniel: str
+    kokoro_voice_us_daniel: str
     piper_bg_model: str
     piper_bg_config: str
     provider_timeout_seconds: float
@@ -50,12 +54,21 @@ class KokoroEnglishSpeechProvider:
         *,
         voice_gb: str = "bf_emma",
         voice_us: str = "af_heart",
+        voice_gb_amira: str = "bf_isabella",
+        voice_us_amira: str = "af_bella",
+        voice_gb_daniel: str = "bm_george",
+        voice_us_daniel: str = "am_michael",
+        teacher_profile_provider: Callable[[], str] | None = None,
         engine_factory: Callable[[], Any] | None = None,
     ) -> None:
         self._model_path = str(Path(model_path).resolve())
         self._voices_path = str(Path(voices_path).resolve())
-        self._voice_gb = voice_gb
-        self._voice_us = voice_us
+        self._voices = {
+            "elena": {"en-GB": voice_gb, "en-US": voice_us},
+            "amira": {"en-GB": voice_gb_amira, "en-US": voice_us_amira},
+            "daniel": {"en-GB": voice_gb_daniel, "en-US": voice_us_daniel},
+        }
+        self._teacher_profile_provider = teacher_profile_provider or (lambda: "elena")
         self._engine_factory = engine_factory
         self._engine: Any | None = None
 
@@ -65,7 +78,8 @@ class KokoroEnglishSpeechProvider:
     def _synthesize(self, text: str, locale: str, speed: float) -> TeacherTurn:
         _validate_request(text, locale, speed, allowed_locales={"en-GB", "en-US"})
         engine = self._engine_instance()
-        voice = self._voice_gb if locale == "en-GB" else self._voice_us
+        profile_id = _teacher_profile(self._teacher_profile_provider)
+        voice = self._voices[profile_id][locale]
         language = "en-gb" if locale == "en-GB" else "en-us"
         try:
             samples, sample_rate, timings = engine.create_timed(
@@ -219,8 +233,14 @@ class EspeakFallbackSpeechProvider:
         ),
     )
 
-    def __init__(self, *, timeout_seconds: float = 30.0) -> None:
+    def __init__(
+        self,
+        *,
+        timeout_seconds: float = 30.0,
+        teacher_profile_provider: Callable[[], str] | None = None,
+    ) -> None:
         self._timeout_seconds = timeout_seconds
+        self._teacher_profile_provider = teacher_profile_provider or (lambda: "elena")
 
     async def synthesize(self, text: str, locale: str, *, speed: float = 1.0) -> TeacherTurn:
         _validate_request(
@@ -229,7 +249,9 @@ class EspeakFallbackSpeechProvider:
             speed,
             allowed_locales={"en-GB", "en-US", "bg-BG"},
         )
-        voice = {"en-GB": "en", "en-US": "en-us", "bg-BG": "bg"}[locale]
+        profile_id = _teacher_profile(self._teacher_profile_provider)
+        base_voice = {"en-GB": "en", "en-US": "en-us", "bg-BG": "bg"}[locale]
+        voice = f"{base_voice}+f3" if profile_id in {"elena", "amira"} else base_voice
         rate = round(175 * speed)
         process = await asyncio.create_subprocess_exec(
             sys.executable,
@@ -293,28 +315,48 @@ class LocalSpeechRouter:
         english: SpeechProvider,
         bulgarian: SpeechProvider,
         fallback: SpeechProvider,
+        *,
+        teacher_profile_provider: Callable[[], str] | None = None,
     ) -> None:
         self.english = english
         self.bulgarian = bulgarian
         self.fallback = fallback
+        self._teacher_profile_provider = teacher_profile_provider or (lambda: "elena")
         self._lock = asyncio.Lock()
 
     async def synthesize(self, text: str, locale: str, *, speed: float = 1.0) -> TeacherTurn:
+        profile_id = _teacher_profile(self._teacher_profile_provider)
         preferred = self.bulgarian if locale == "bg-BG" else self.english
+        # Piper currently publishes only the male Bulgarian Dimitar voice. Preserve the selected
+        # female presentation with eSpeak's local f3 variant instead of silently changing gender.
+        if locale == "bg-BG" and profile_id in {"elena", "amira"}:
+            preferred = self.fallback
         async with self._lock:
+            if preferred is self.fallback:
+                return await self.fallback.synthesize(text, locale, speed=speed)
             try:
                 return await preferred.synthesize(text, locale, speed=speed)
             except (ProviderUnavailable, TimeoutError, OSError, ValueError):
                 return await self.fallback.synthesize(text, locale, speed=speed)
 
 
-def build_local_speech_provider(settings: SpeechSettings) -> LocalSpeechRouter:
+def build_local_speech_provider(
+    settings: SpeechSettings,
+    *,
+    teacher_profile_provider: Callable[[], str] | None = None,
+) -> LocalSpeechRouter:
+    profile_provider = teacher_profile_provider or (lambda: "elena")
     return LocalSpeechRouter(
         english=KokoroEnglishSpeechProvider(
             settings.kokoro_model,
             settings.kokoro_voices,
             voice_gb=settings.kokoro_voice_gb,
             voice_us=settings.kokoro_voice_us,
+            voice_gb_amira=getattr(settings, "kokoro_voice_gb_amira", "bf_isabella"),
+            voice_us_amira=getattr(settings, "kokoro_voice_us_amira", "af_bella"),
+            voice_gb_daniel=getattr(settings, "kokoro_voice_gb_daniel", "bm_george"),
+            voice_us_daniel=getattr(settings, "kokoro_voice_us_daniel", "am_michael"),
+            teacher_profile_provider=profile_provider,
         ),
         bulgarian=PiperBulgarianSpeechProvider(
             settings.piper_bg_model,
@@ -322,8 +364,17 @@ def build_local_speech_provider(settings: SpeechSettings) -> LocalSpeechRouter:
         ),
         fallback=EspeakFallbackSpeechProvider(
             timeout_seconds=settings.provider_timeout_seconds,
+            teacher_profile_provider=profile_provider,
         ),
+        teacher_profile_provider=profile_provider,
     )
+
+
+def _teacher_profile(provider: Callable[[], str]) -> Literal["elena", "amira", "daniel"]:
+    profile_id = provider()
+    if profile_id not in {"elena", "amira", "daniel"}:
+        raise ValueError("teacher profile is not allow-listed")
+    return profile_id  # type: ignore[return-value]
 
 
 def _turn_from_audio(

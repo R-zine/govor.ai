@@ -24,6 +24,7 @@
         "learner.recording_submitted",
         "learner.transcript",
         "renderer.ready",
+        "renderer.teacher_profile_selected",
         "renderer.command",
         "renderer.ack",
         "error"
@@ -102,6 +103,14 @@
     {
       "if": { "properties": { "message_type": { "const": "renderer.ready" } } },
       "then": { "properties": { "payload": { "$ref": "#/$defs/rendererReady" } } }
+    },
+    {
+      "if": {
+        "properties": { "message_type": { "const": "renderer.teacher_profile_selected" } }
+      },
+      "then": {
+        "properties": { "payload": { "$ref": "#/$defs/rendererTeacherProfileSelected" } }
+      }
     },
     {
       "if": { "properties": { "message_type": { "const": "renderer.command" } } },
@@ -413,6 +422,14 @@
         "renderer_id": { "$ref": "#/$defs/uuid" },
         "renderer_kind": { "const": "godot" },
         "protocol_version": { "const": "1.0" }
+      }
+    },
+    "rendererTeacherProfileSelected": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["profile_id"],
+      "properties": {
+        "profile_id": { "enum": ["elena", "amira", "daniel"] }
       }
     },
     "rendererCommand": {

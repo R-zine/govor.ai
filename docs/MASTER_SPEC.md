@@ -213,7 +213,11 @@ Do not allow the LLM to directly control application state through unvalidated f
 
 ### 2.6 Immersive 3D environments
 
-The teacher should appear as a 3D avatar in an appropriate environment.
+The teacher should appear as a facially rigged 3D avatar in an appropriate environment. The
+packaged host must provide a pre-connect menu with at least two female profiles and one male
+profile. The choice is persisted locally, is not controlled by lesson/LLM output, and selects a
+matching female or male speech presentation while preserving the learner's independent accent
+setting.
 
 Initial scenes should include:
 
@@ -224,7 +228,10 @@ Initial scenes should include:
 
 The architecture should support later additions such as restaurants, hotels, train stations, medical appointments, workplaces, and city streets.
 
-Scenes should be dynamically assembled based on lesson context.
+Scenes should be selected or dynamically assembled based on lesson context. The four built-in
+scenes use reviewed, locally bundled CC0 photographic 2D backdrops behind the 3D teacher so the
+runtime can prioritize facial detail. Validated installed recipes continue to use procedural 3D
+primitives. Neither path downloads visual assets at runtime.
 
 For example, a café scene could contain a counter, cups, tables, chairs, and a teacher positioned behind the counter.
 
@@ -1292,6 +1299,8 @@ Build the immersive teaching environment.
 ### Implementation
 
 - Introduce a suitable licensed 3D avatar.
+- Provide a closed host-side teacher selector and match speech presentation to the selected
+  model's female/male profile.
 - Add idle animation.
 - Add speaking gestures.
 - Add listening animation.
@@ -1316,6 +1325,7 @@ Never allow the LLM to choose arbitrary file paths, remote downloads, or executa
 ### Acceptance criteria
 
 - The teacher is visible in the streamed 3D environment.
+- Every shipped teacher can be selected before connection and uses a matching female/male voice.
 - Speaking animation corresponds to teacher audio.
 - At least four environments can be assembled.
 - The system can change environments in response to lesson context.
@@ -1870,7 +1880,7 @@ Do not spend early development effort on:
 - App-store publication.
 - Complex avatar customization.
 - Arbitrary AI-generated 3D meshes.
-- Photorealistic environments.
+- Photorealistic fully 3D environments (reviewed photographic 2D backdrops are allowed).
 - Fully conversational interruption handling.
 - Advanced pronunciation scoring without validation.
 - Training custom foundation models.

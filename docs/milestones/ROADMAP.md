@@ -137,8 +137,9 @@ Verified software evidence:
 Godot migration work:
 
 - ADR-0003 selects MIT-licensed Godot 4.7.2 .NET; Unity is no longer part of the repository stack.
-- `apps/renderer` contains the active Godot project, stylized teacher, 1280x720 `SubViewport`,
-  two-second application-owned tone, and shared-memory video/audio publishers.
+- `apps/renderer` contains the active Godot project, three selectable CC0 facial teachers, four
+  local CC0 photographic backdrops, a 1280x720 `SubViewport`, two-second application-owned tone,
+  and shared-memory video/audio publishers.
 - Checksum-pinned bootstrap, headless import, C# build, renderer self-test, and Windows export pass.
 - The bounded local runtime probe passes with changing non-black frames and non-silent PCM; the
   supervised audible tone stopped after two seconds.
@@ -192,14 +193,16 @@ Milestone 9.
 
 Verified software/native-emulator evidence:
 
-- The repository-owned CC0 procedural teacher has idle/blink, speaking gesture, listening,
-  thinking, encouraging-expression, PCM-energy mouth motion, and six closed viseme shapes.
+- Three closed CC0 teacher profiles (Elena, Amira, and Daniel) expose 34 facial blend shapes,
+  including 14 speech visemes. The pre-connect host menu persists the choice; actual PCM energy
+  and provider timing animate its mouth, and speech uses a matching female/male voice.
 - A framework-independent planner produces deterministic validated café, supermarket, airport,
-  and home specifications from lesson context. The renderer accepts only closed catalog IDs and
-  builds all runtime scene data in memory.
+  and home specifications from lesson context. Built-ins resolve to four packaged CC0 photographic
+  backdrops; installed recipes remain bounded data-only primitives assembled in memory.
 - The exported Godot runtime captured four distinct environment frames, transitioned among them,
-  reused 68 cached resources, and showed zero cache or reported video-memory growth on a café
-  revisit. Unknown wire paths are rejected; the internal missing-asset fallback is deterministic.
+  cycled all three teacher profiles, and showed zero cache growth plus a 124-byte reported
+  video-memory delta on a café revisit. Unknown wire paths are rejected; the internal primitive
+  fallback remains deterministic.
 - Real Kokoro playback delivered 51 PCM energy samples and 23 provider-timed viseme cues to Godot.
   The no-alignment test path delivered an empty viseme sequence and remained audio-driven.
 - The renderer scene tour overlapped two real Qwen3 4B requests. Scene build/transition/frame,
@@ -426,3 +429,19 @@ and failures. Physical acceptance requires the intended Ethernet-to-access-point
 firewall allowance for the selected Windows profile/local network, TCP 8765/8766, authenticated
 WSS, ICE/media, and microphone return. Router guest isolation or unrouted VLANs remain documented
 deployment failures, not conditions the application bypasses.
+
+## Post-milestone photographic scenes and selectable teachers
+
+The 2026-10-26 presentation feature replaces the blocky procedural teacher with three selectable
+CC0 skinned models and replaces the four built-in procedural rooms with reviewed CC0 photographic
+2D backdrops. The pre-connect host menu persists Elena, Amira, or Daniel and sends the closed ID to
+the host over the existing loopback renderer-control connection. Local and optional cloud speech
+resolve the active profile at synthesis time; female profiles use female voice presentations and
+Daniel uses male presentations. Accent selection remains independent.
+
+The model, backdrop, and voice mappings are application-owned. Lesson/model output cannot choose a
+resource path or voice name, and environment ZIPs remain data-only primitive recipes. Acceptance
+requires provenance/hashes, schema and language-binding tests, voice-routing tests, Godot
+import/self-test/export, a visual UI proof, the four-scene/profile tour, the full software suite,
+dependency audit, and all-files pre-commit. This maintenance feature does not rewrite the completed
+Milestone 9 physical evidence; ADR-0020 defines the current visual/voice architecture and limits.

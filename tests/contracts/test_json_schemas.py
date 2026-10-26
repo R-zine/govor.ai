@@ -45,6 +45,7 @@ def test_default_lesson_files_match_the_versioned_schema() -> None:
         ("control-message.schema.json", "control-word-audio.json"),
         ("control-message.schema.json", "control-lesson-catalog.json"),
         ("control-message.schema.json", "control-renderer-command.json"),
+        ("control-message.schema.json", "control-teacher-profile-selected.json"),
         ("control-message.schema.json", "control-custom-scene.json"),
         ("environment-definition.schema.json", "environment-hotel-lobby.json"),
         ("application-patch-manifest.schema.json", "application-patch-manifest.json"),

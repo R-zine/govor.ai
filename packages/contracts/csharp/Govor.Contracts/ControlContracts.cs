@@ -9,6 +9,20 @@ public sealed record RendererReadyPayload(
     [property: JsonPropertyName("renderer_kind")] string RendererKind,
     [property: JsonPropertyName("protocol_version")] string ProtocolVersion);
 
+public sealed record RendererTeacherProfileSelectedPayload(
+    [property: JsonPropertyName("profile_id")] string ProfileId)
+{
+    private static readonly HashSet<string> AllowedProfiles = ["elena", "amira", "daniel"];
+
+    public void Validate()
+    {
+        if (!AllowedProfiles.Contains(ProfileId))
+        {
+            throw new InvalidDataException("Teacher profile is not allow-listed.");
+        }
+    }
+}
+
 public sealed record Vector3Payload(
     [property: JsonPropertyName("x")] double X,
     [property: JsonPropertyName("y")] double Y,

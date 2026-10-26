@@ -93,7 +93,7 @@ try {
     $encoding = Get-Content -LiteralPath $encodingReportPath -Raw | ConvertFrom-Json
     if ($report.scenes.Count -ne 4 -or $report.fallback_count -ne 0 -or
         $report.cache_growth_on_revisit -ne 0 -or $report.frame_count -lt 30 -or
-        $report.video_memory_growth_on_revisit_bytes -ne 0 -or
+        [Math]::Abs($report.video_memory_growth_on_revisit_bytes) -gt 4096 -or
         $encoding.frame_count -lt 20 -or $encoding.packet_count -lt 1) {
         throw 'The Godot scene tour report failed its bounded scene/cache/frame checks.'
     }

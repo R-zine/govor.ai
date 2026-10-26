@@ -148,6 +148,7 @@ def test_health_identifies_fake_mode() -> None:
         "lesson_catalog_status": "ready",
         "environment_count": 4,
         "environment_catalog_status": "ready",
+        "teacher_profile": "amira",
         "providers": [
             {
                 "provider_id": "fake-scripted-stt",
@@ -791,6 +792,13 @@ def test_real_renderer_gateway_routes_validated_commands_and_acknowledgements() 
             )
         )
         assert renderer_socket.receive_json()["message_type"] == "renderer.ack"
+        renderer_socket.send_json(
+            envelope(
+                "renderer.teacher_profile_selected",
+                {"profile_id": "daniel"},
+            )
+        )
+        assert client.get("/health").json()["teacher_profile"] == "daniel"
 
         with client.websocket_connect("/v1/control") as control_socket:
             control_socket.send_json(envelope("session.start", {"client_id": str(uuid4())}))

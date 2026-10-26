@@ -15,11 +15,13 @@ public partial class DynamicSceneDirector : Node3D
     public DirectionalLight3D? KeyLight { get; set; }
     public WorldEnvironment? WorldEnvironment { get; set; }
     public ColorRect? TransitionOverlay { get; set; }
-    public StylizedTeacherAvatar? Teacher { get; set; }
+    public FacialTeacherAvatar? Teacher { get; set; }
     public string ActiveSceneId { get; private set; } = string.Empty;
     public long LastSceneBuildUs { get; private set; }
     public int FallbackCount { get; private set; }
-    public int CachedResourceCount => ProceduralSceneAssetCatalog.CachedResourceCount;
+    public int CachedResourceCount =>
+        ProceduralSceneAssetCatalog.CachedResourceCount +
+        PhotographicBackdropCatalog.CachedResourceCount;
     public bool TransitionActive => _fadeStartedAtUs != 0;
     public long LastTransitionDurationUs { get; private set; }
 
@@ -46,25 +48,32 @@ public partial class DynamicSceneDirector : Node3D
         specification.Validate();
         long started = Stopwatch.GetTimestamp();
         var replacement = new Node3D { Name = $"Scene-{specification.SceneId}" };
-        replacement.AddChild(ProceduralSceneAssetCatalog.CreateEnvironment(specification.EnvironmentId));
+        bool usesPhotographicBackdrop =
+            PhotographicBackdropCatalog.HasBackdrop(specification.EnvironmentId);
+        replacement.AddChild(usesPhotographicBackdrop
+            ? PhotographicBackdropCatalog.Create(specification.EnvironmentId)
+            : ProceduralSceneAssetCatalog.CreateEnvironment(specification.EnvironmentId));
         int fallbacks = 0;
-        foreach (SceneObjectPayload item in specification.Objects)
+        if (!usesPhotographicBackdrop)
         {
-            bool usedFallback = false;
-            Node3D node = item.Primitive is not null
-                ? ProceduralSceneAssetCatalog.CreatePrimitive(item.Primitive)
-                : ProceduralSceneAssetCatalog.Create(item.AssetId!, out usedFallback);
-            node.Name = item.InstanceId;
-            node.Position = new Vector3(
-                (float)item.Position.X,
-                (float)item.Position.Y,
-                (float)item.Position.Z);
-            node.RotationDegrees = new Vector3(0, (float)item.YawDegrees, 0);
-            node.Scale = Vector3.One * (float)item.Scale;
-            replacement.AddChild(node);
-            if (usedFallback)
+            foreach (SceneObjectPayload item in specification.Objects)
             {
-                fallbacks++;
+                bool usedFallback = false;
+                Node3D node = item.Primitive is not null
+                    ? ProceduralSceneAssetCatalog.CreatePrimitive(item.Primitive)
+                    : ProceduralSceneAssetCatalog.Create(item.AssetId!, out usedFallback);
+                node.Name = item.InstanceId;
+                node.Position = new Vector3(
+                    (float)item.Position.X,
+                    (float)item.Position.Y,
+                    (float)item.Position.Z);
+                node.RotationDegrees = new Vector3(0, (float)item.YawDegrees, 0);
+                node.Scale = Vector3.One * (float)item.Scale;
+                replacement.AddChild(node);
+                if (usedFallback)
+                {
+                    fallbacks++;
+                }
             }
         }
 
@@ -95,7 +104,9 @@ public partial class DynamicSceneDirector : Node3D
         LastSceneBuildUs = (long)Math.Ceiling(Stopwatch.GetElapsedTime(started).TotalMicroseconds);
         GD.Print(
             $"GOVOR_SCENE_APPLIED:{specification.SceneId}:" +
-            $"objects={specification.Objects.Count}:build_us={LastSceneBuildUs}:" +
+            $"objects={(usesPhotographicBackdrop ? 0 : specification.Objects.Count)}:" +
+            $"background={(usesPhotographicBackdrop ? "photo" : "procedural")}:" +
+            $"build_us={LastSceneBuildUs}:" +
             $"cache={CachedResourceCount}:fallbacks={FallbackCount}");
     }
 
@@ -188,11 +199,12 @@ public partial class DynamicSceneDirector : Node3D
         }
         Vector3 position = preset switch
         {
-            "conversation" => new Vector3(0, 2.25f, 6.3f),
-            "wide" => new Vector3(0, 2.75f, 8.4f),
-            _ => new Vector3(0, 2.35f, 7.15f),
+            "conversation" => new Vector3(0, 1.46f, 0.72f),
+            "wide" => new Vector3(0, 1.46f, 0.92f),
+            _ => new Vector3(0, 1.46f, 0.78f),
         };
-        CaptureCamera.LookAtFromPosition(position, new Vector3(0, 1.35f, 0), Vector3.Up);
+        CaptureCamera.Fov = preset == "wide" ? 32.0f : 30.0f;
+        CaptureCamera.LookAtFromPosition(position, new Vector3(0, 1.48f, -0.5f), Vector3.Up);
     }
 
     private void ConfigureLighting(string preset, string environmentId)
@@ -206,7 +218,7 @@ public partial class DynamicSceneDirector : Node3D
                 "terminal" => new Color(0.72f, 0.84f, 1.0f),
                 _ => new Color(0.9f, 0.96f, 1.0f),
             };
-            KeyLight.LightEnergy = preset == "home" ? 1.18f : 1.36f;
+            KeyLight.LightEnergy = preset == "home" ? 0.72f : 0.82f;
         }
         if (WorldEnvironment?.Environment is not Godot.Environment environment)
         {

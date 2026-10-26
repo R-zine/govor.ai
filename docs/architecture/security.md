@@ -127,6 +127,12 @@ built-in IDs are rejected, and the predictable internal fallback is reachable on
 allow-listed built-in implementation is missing. Avatar commands contain bounded PCM energy
 summaries and actual-or-empty viseme cues, not the audio or transcript.
 
+Teacher selection is a separate closed loopback message. JSON Schema plus Python/C# bindings
+accept only `elena`, `amira`, or `daniel`; the host maps those IDs to application-owned local/cloud
+voice settings. Neither lesson content nor model output can provide a GLB path, resource name, or
+voice name. The three GLBs and four built-in backdrop images are reviewed package resources and
+are never accepted from environment ZIPs or downloaded at runtime.
+
 Lesson JSON is local content but is still treated as untrusted input at the process boundary. The
 loader limits the directory to 64 files and each file to 256 KiB, requires exact fields and bounded
 strings/lists, rejects duplicate scenario/exercise IDs and unsupported schema versions, and

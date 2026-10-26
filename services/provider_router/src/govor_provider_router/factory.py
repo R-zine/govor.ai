@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Literal, Protocol
 
 from govor_domain import LessonCatalog, load_lesson_catalog
@@ -36,6 +37,10 @@ class ProviderSettings(Protocol):
     kokoro_voices: str
     kokoro_voice_gb: str
     kokoro_voice_us: str
+    kokoro_voice_gb_amira: str
+    kokoro_voice_us_amira: str
+    kokoro_voice_gb_daniel: str
+    kokoro_voice_us_daniel: str
     piper_bg_model: str
     piper_bg_config: str
     progress_database: str
@@ -57,6 +62,7 @@ def build_configured_lesson_service(
     *,
     credentials: CredentialStore | None = None,
     lesson_catalog: LessonCatalog | None = None,
+    teacher_profile_provider: Callable[[], str] | None = None,
 ) -> LocalLessonService:
     """Build one pipeline without coupling the three provider choices."""
 
@@ -103,7 +109,10 @@ def build_configured_lesson_service(
         )
     )
     speech = (
-        build_local_speech_provider(settings)
+        build_local_speech_provider(
+            settings,
+            teacher_profile_provider=teacher_profile_provider,
+        )
         if settings.speech_provider == "local"
         else OpenAiCompatibleSpeechProvider(
             settings.cloud_speech_base_url,
@@ -114,6 +123,7 @@ def build_configured_lesson_service(
             policy,
             timeout_seconds=settings.provider_timeout_seconds,
             transport=None,
+            voice_provider=_cloud_voice_provider(settings, teacher_profile_provider),
         )
     )
     return LocalLessonService(
@@ -130,3 +140,24 @@ def _required_store(store: CredentialStore | None) -> CredentialStore:
     if store is None:
         raise RuntimeError("cloud provider composition requires a credential store")
     return store
+
+
+def _cloud_voice_provider(
+    settings: ProviderSettings,
+    teacher_profile_provider: Callable[[], str] | None,
+) -> Callable[[], str] | None:
+    if teacher_profile_provider is None:
+        return None
+    voices = {
+        "elena": settings.cloud_speech_voice,
+        "amira": getattr(settings, "cloud_speech_voice_amira", "nova"),
+        "daniel": getattr(settings, "cloud_speech_voice_daniel", "onyx"),
+    }
+
+    def selected_voice() -> str:
+        profile_id = teacher_profile_provider()
+        if profile_id not in voices:
+            raise ValueError("teacher profile is not allow-listed")
+        return voices[profile_id]
+
+    return selected_voice

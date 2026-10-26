@@ -22,6 +22,7 @@ from .lesson_catalog_registry import LessonCatalogRegistry
 from .microphone import MediaMicrophoneSource, MicrophoneAudioSource, ReferenceOnlyMicrophoneSource
 from .orchestration import ControlSession, LessonService, SessionRegistry
 from .renderer_gateway import RendererControl, RendererGateway
+from .teacher_profiles import TeacherProfileSelection
 
 
 def create_app(
@@ -48,6 +49,7 @@ def create_app(
         scene_planner_provider=lambda: environment_registry.planner,
     )
     control_sessions: set[ControlSession] = set()
+    teacher_profiles = TeacherProfileSelection()
     lesson_factory: Callable[[LessonCatalog], LessonService]
     if lesson is None and runtime.mode == "local":
         from govor_provider_router.factory import build_configured_lesson_service
@@ -55,6 +57,7 @@ def create_app(
         lesson_factory = lambda selected_catalog: build_configured_lesson_service(  # noqa: E731
             runtime,
             lesson_catalog=selected_catalog,
+            teacher_profile_provider=lambda: teacher_profiles.profile_id,
         )
     elif lesson is None:
         lesson_factory = lambda selected_catalog: FakeLessonService(  # noqa: E731
@@ -72,7 +75,8 @@ def create_app(
         else ReferenceOnlyMicrophoneSource()
     )
     renderer_gateway = renderer or RendererGateway(
-        acknowledgement_timeout_seconds=runtime.renderer_ack_timeout_seconds
+        acknowledgement_timeout_seconds=runtime.renderer_ack_timeout_seconds,
+        teacher_profiles=teacher_profiles,
     )
     session_registry = SessionRegistry()
     pairing_authority = (
@@ -116,6 +120,7 @@ def create_app(
     app.state.renderer_gateway = renderer_gateway
     app.state.lesson_catalog_registry = catalog_registry
     app.state.environment_catalog_registry = environment_registry
+    app.state.teacher_profiles = teacher_profiles
 
     @app.get("/health")
     async def health() -> dict[str, Any]:
@@ -131,6 +136,7 @@ def create_app(
             "lesson_catalog_status": catalog_registry.status,
             "environment_count": len(environment_registry.planner.supported_templates),
             "environment_catalog_status": environment_registry.status,
+            "teacher_profile": teacher_profiles.profile_id,
             "providers": [
                 {
                     "provider_id": capability.provider_id,

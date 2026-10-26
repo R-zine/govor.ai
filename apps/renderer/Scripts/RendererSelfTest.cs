@@ -61,6 +61,23 @@ internal static class RendererSelfTest
             ControlContractCodec.DecodePayload<RendererCommandPayload>(envelope);
         command.Validate();
 
+        if (TeacherProfileCatalog.Profiles.Count != 3 ||
+            TeacherProfileCatalog.Profiles.Select(profile => profile.Id).Distinct().Count() != 3 ||
+            TeacherProfileCatalog.Profiles.Any(profile => !ResourceLoader.Exists(profile.AssetPath)))
+        {
+            throw new InvalidOperationException("The selectable teacher profile catalog is incomplete.");
+        }
+        new RendererTeacherProfileSelectedPayload("daniel").Validate();
+        try
+        {
+            new RendererTeacherProfileSelectedPayload("../../arbitrary").Validate();
+            throw new InvalidOperationException("An arbitrary teacher profile was accepted.");
+        }
+        catch (InvalidDataException)
+        {
+            // The cross-process selection is closed to the three installed profiles.
+        }
+
         IReadOnlyList<SceneSpecificationPayload> scenes = DynamicSceneDirector.TourScenes();
         if (scenes.Count != 4 || scenes.Select(scene => scene.EnvironmentId).Distinct().Count() != 4)
         {
@@ -69,6 +86,15 @@ internal static class RendererSelfTest
         foreach (SceneSpecificationPayload scene in scenes)
         {
             scene.Validate();
+            if (!PhotographicBackdropCatalog.HasBackdrop(scene.EnvironmentId))
+            {
+                throw new InvalidOperationException(
+                    $"No audited photographic backdrop is available for {scene.EnvironmentId}.");
+            }
+        }
+        if (PhotographicBackdropCatalog.BackdropCount != 4)
+        {
+            throw new InvalidOperationException("The photographic backdrop catalog is incomplete.");
         }
 
         var customScene = new SceneSpecificationPayload(

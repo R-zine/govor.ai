@@ -25,6 +25,7 @@ if ($Target -in @('all', 'renderer')) {
     New-Item -ItemType Directory -Force -Path (Split-Path -Parent $rendererExecutable) | Out-Null
     Invoke-Checked -FilePath $editor -ArgumentList @(
         '--headless',
+        '--quit',
         '--path', (Join-Path $script:RepositoryRoot 'apps\renderer'),
         '--export-release', 'Windows Desktop', $rendererExecutable,
         '--log-file', $exportLog

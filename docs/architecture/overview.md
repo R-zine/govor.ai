@@ -82,19 +82,21 @@ pre-session route and audio mode are restored on disconnect, background teardown
 
 `packages/scene_planner` combines four built-in templates with strictly validated local recipes
 from `assets/environment-content` in development or `content/environments` in a release. A lesson
-selects one current planner ID independently of its scenario ID. Built-in objects use closed asset
-IDs; imported objects use only closed box/cylinder/sphere primitives, hex colors, and bounded
-dimensions/transforms. Godot assembles both representations entirely in memory, reuses cached
-mesh/material resources, and releases the prior scene tree. Unknown built-in asset IDs are
-rejected; an internal missing catalog implementation produces a predictable magenta fallback.
-Imported data cannot name a path, URL, Godot resource, script, model, texture, or assembly. See
-ADR-0009 and ADR-0015.
+selects one current planner ID independently of its scenario ID. The built-in IDs resolve inside
+Godot to reviewed, packaged CC0 photographic backdrops. Imported objects use only closed
+box/cylinder/sphere primitives, hex colors, and bounded dimensions/transforms. Godot assembles the
+selected backdrop or primitive scene in memory, reuses cached resources, and releases the prior
+scene tree. Unknown built-in asset IDs are rejected; an internal missing primitive implementation
+produces a predictable magenta fallback. Imported data cannot name a path, URL, Godot resource,
+script, model, texture, or assembly. See ADR-0009, ADR-0015, and ADR-0020.
 
-The active teacher is a repository-owned CC0 stylized procedural avatar. It animates idle,
-speaking, listening, thinking, gestures, and basic expressions. The host derives a bounded energy
-envelope from the actual synthesized PCM. Real provider phoneme timing is converted to visemes;
-when that timing is unavailable the viseme list stays empty and only PCM energy drives a generic
-mouth opening. The model cannot select scenes or avatar actions. See ADR-0009.
+The active teacher is one of three packaged CC0 skinned models: Elena, Amira, or Daniel. Each has
+34 facial blend shapes, including 14 speech visemes. The host pre-connect screen persists a closed
+profile ID; the renderer applies that model and the speech router resolves female/male voices from
+the same state. The host derives a bounded energy envelope from actual synthesized PCM. Real
+provider phoneme timing is converted to visemes; when timing is unavailable the viseme list stays
+empty and only PCM energy drives a generic mouth opening. The model cannot select scenes, teacher
+profiles, or avatar actions. See ADR-0009 and ADR-0020.
 
 ## Local AI boundary
 

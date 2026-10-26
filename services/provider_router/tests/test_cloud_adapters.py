@@ -212,3 +212,31 @@ async def test_speech_returns_actual_wav_with_null_timing() -> None:
     assert turn.duration_us == 100_000
     assert turn.word_alignment is None
     assert turn.phoneme_alignment is None
+
+
+@pytest.mark.asyncio
+async def test_speech_uses_current_teacher_profile_voice() -> None:
+    seen_voices: list[str] = []
+    selected_voice = "female-presentation"
+
+    def handler(http_request: httpx.Request) -> httpx.Response:
+        body = json.loads(http_request.content)
+        seen_voices.append(body["voice"])
+        return httpx.Response(200, content=wav_bytes())
+
+    provider = OpenAiCompatibleSpeechProvider(
+        "https://provider.example/v1",
+        "test-tts",
+        "default-presentation",
+        "test-provider",
+        credentials(),
+        CloudAccessPolicy(offline_only=False),
+        transport=httpx.MockTransport(handler),
+        voice_provider=lambda: selected_voice,
+    )
+
+    await provider.synthesize("Hello.", "en-GB")
+    selected_voice = "male-presentation"
+    await provider.synthesize("Hello again.", "en-GB")
+
+    assert seen_voices == ["female-presentation", "male-presentation"]

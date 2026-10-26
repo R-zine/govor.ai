@@ -1,0 +1,8 @@
+{
+  "protocol_version": "1.0",
+  "message_type": "renderer.teacher_profile_selected",
+  "correlation_id": "f7442701-101f-47d7-8f37-1ce7e6e3c298",
+  "payload": {
+    "profile_id": "amira"
+  }
+}

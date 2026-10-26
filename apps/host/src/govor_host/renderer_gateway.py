@@ -14,8 +14,11 @@ from govor_contracts import (
     RendererAckPayload,
     RendererCommandPayload,
     RendererReadyPayload,
+    RendererTeacherProfileSelectedPayload,
 )
 from pydantic import ValidationError
+
+from .teacher_profiles import TeacherProfileSelection
 
 LOGGER = logging.getLogger("uvicorn.error")
 SendJson = Callable[[dict[str, object]], Awaitable[None]]
@@ -33,12 +36,18 @@ class RendererControl(Protocol):
 
 
 class RendererGateway:
-    def __init__(self, *, acknowledgement_timeout_seconds: float) -> None:
+    def __init__(
+        self,
+        *,
+        acknowledgement_timeout_seconds: float,
+        teacher_profiles: TeacherProfileSelection | None = None,
+    ) -> None:
         self._acknowledgement_timeout_seconds = acknowledgement_timeout_seconds
         self._send_json: SendJson | None = None
         self._renderer_id: UUID | None = None
         self._pending: dict[UUID, asyncio.Future[bool]] = {}
         self._send_lock = asyncio.Lock()
+        self._teacher_profiles = teacher_profiles or TeacherProfileSelection()
 
     @property
     def connected(self) -> bool:
@@ -124,8 +133,13 @@ class RendererGateway:
 
     def _handle_renderer_message(self, raw: str) -> None:
         envelope = MessageEnvelope.model_validate_json(raw)
+        if envelope.message_type == "renderer.teacher_profile_selected":
+            selection = RendererTeacherProfileSelectedPayload.model_validate(envelope.payload)
+            self._teacher_profiles.select(selection.profile_id)
+            LOGGER.info("teacher profile selected profile_id=%s", selection.profile_id)
+            return
         if envelope.message_type != "renderer.ack":
-            raise ValueError("only renderer.ack is accepted after renderer.ready")
+            raise ValueError("unsupported renderer control message")
         acknowledgement = RendererAckPayload.model_validate(envelope.payload)
         pending = self._pending.get(acknowledgement.command_id)
         if pending is not None and not pending.done():

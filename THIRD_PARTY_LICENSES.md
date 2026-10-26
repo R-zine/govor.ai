@@ -23,6 +23,9 @@ files.
 | ZXing Core | 3.4.1 (transitive) | github.com/zxing/zxing | Apache-2.0 | QR decoding used only on-device; retain notice |
 | xUnit.net | pinned by project | xunit.net | Apache-2.0 | Retain notice |
 | Godot Engine .NET editor/export templates | 4.7.2 | github.com/godotengine/godot | MIT | Release ships only the exported player; exact Godot license/copyright notices are hash-pinned and bundled |
+| Ara 3D Gen build tooling | commit `0c3473d` | github.com/olatunde85/3d-gen | MIT | Build-time only; generator source and optional animation library are not bundled |
+| Ara/MakeHuman teacher character data | September 2020 CC0 release | github.com/olatunde85/3d-gen; makehumancommunity.org | CC0-1.0 | Three generated GLBs are bundled; inputs, hashes, attribution, and animation-stripping step are recorded beside the assets |
+| Built-in photographic backdrops | repository copies dated 2026-10-26 | commons.wikimedia.org | CC0-1.0 | Four 1280-pixel-wide JPEG derivatives are bundled; source pages, authors, and exact hashes are recorded in `Assets/Backdrops/README.md` |
 | QEMU clean-Windows test fixture | 11.0.50 | qemu.org | GPL-2.0-only | System-installed development/test tool; not copied into either release artifact |
 | llama.cpp Windows Vulkan runtime | b11540 | github.com/ggml-org/llama.cpp | MIT | Distributed runtime is pinned; exact license plus LLVM OpenMP license are bundled |
 | whisper.cpp Windows x64 runtime | b5454 | github.com/ggml-org/whisper.cpp | MIT | Distributed runtime is pinned; exact license is bundled |
@@ -40,9 +43,10 @@ files.
 | espeakng-loader / bundled eSpeak NG | 0.2.4 / 1.52.0 library | pypi.org/project/espeakng-loader, github.com/espeak-ng/espeak-ng | Loader wheel metadata does not declare a wrapper license; bundled eSpeak NG is GPL-3.0-or-later | Conservatively distributed with installed notices and pinned source archives for loader and eSpeak NG |
 
 Model weights and voices are not embedded in the portable archive; the guided setup downloads the
-exact artifacts listed in `config/release-models.json`. The Milestone 6 avatar and environments are
-original procedural source assets dedicated to CC0 in
-`apps/renderer/Assets/Teacher/README.md`.
+exact artifacts listed in `config/release-models.json`. The current teacher GLBs and photographic
+backdrops are bundled CC0 assets with provenance, build inputs, and exact hashes under
+`apps/renderer/Assets/Teacher` and `apps/renderer/Assets/Backdrops`. Installed custom environments
+remain application-authored data-only primitive recipes.
 
 The release archive includes installed Python package licenses, exact hash-pinned runtime notices,
 the complete govor.ai source shipped for that version, and the upstream source snapshots listed in

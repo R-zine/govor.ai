@@ -101,7 +101,11 @@ def synthesize(text: str, voice: str, rate: int) -> bytes:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--voice", required=True, choices=("en", "en-us", "bg"))
+    parser.add_argument(
+        "--voice",
+        required=True,
+        choices=("en", "en-us", "bg", "en+f3", "en-us+f3", "bg+f3"),
+    )
     parser.add_argument("--rate", required=True, type=int)
     args = parser.parse_args()
     text = sys.stdin.buffer.read(8_193).decode("utf-8")

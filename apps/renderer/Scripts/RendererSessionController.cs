@@ -12,7 +12,7 @@ public partial class RendererSessionController : Node
 {
     private readonly Guid _rendererId = Guid.NewGuid();
     private WebSocketPeer? _socket;
-    private StylizedTeacherAvatar? _teacher;
+    private FacialTeacherAvatar? _teacher;
     private DynamicSceneDirector? _sceneDirector;
     private bool _readySent;
     private ulong _nextConnectAtUs;
@@ -20,11 +20,12 @@ public partial class RendererSessionController : Node
     public string ControlUrl { get; set; } = string.Empty;
     public string? ControlCaPath { get; set; }
     public HostPairingScreen? PairingScreen { get; set; }
+    public string SelectedTeacherProfileId { get; set; } = TeacherProfileCatalog.DefaultProfileId;
 
     public override void _Ready()
     {
-        _teacher = GetNode<StylizedTeacherAvatar>(
-            "../CaptureViewport1280x720/World/StylizedTeacherAvatar");
+        _teacher = GetNode<FacialTeacherAvatar>(
+            "../CaptureViewport1280x720/World/FacialTeacherAvatar");
         _sceneDirector = GetNode<DynamicSceneDirector>(
             "../CaptureViewport1280x720/World/DynamicSceneDirector");
         ConnectIfDue();
@@ -139,6 +140,26 @@ public partial class RendererSessionController : Node
         _socket?.SendText(message);
     }
 
+    public void SelectTeacherProfile(string profileId)
+    {
+        _ = TeacherProfileCatalog.Get(profileId);
+        SelectedTeacherProfileId = profileId;
+        if (_readySent && _socket?.GetReadyState() == WebSocketPeer.State.Open)
+        {
+            SendTeacherProfileSelection();
+        }
+    }
+
+    private void SendTeacherProfileSelection()
+    {
+        Guid correlationId = Guid.NewGuid();
+        string message = ControlContractCodec.EncodeEnvelope(
+            "renderer.teacher_profile_selected",
+            correlationId,
+            new RendererTeacherProfileSelectedPayload(SelectedTeacherProfileId));
+        _socket?.SendText(message);
+    }
+
     private void HandleMessage(string text)
     {
         Guid correlationId = Guid.NewGuid();
@@ -156,6 +177,7 @@ public partial class RendererSessionController : Node
                 {
                     throw new InvalidDataException("Renderer registration was not acknowledged.");
                 }
+                SendTeacherProfileSelection();
                 return;
             }
 

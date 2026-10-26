@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import io
 import wave
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from typing import Any
 from urllib.parse import urlparse
@@ -233,6 +233,7 @@ class OpenAiCompatibleSpeechProvider(_CloudAdapter):
         *,
         timeout_seconds: float = 30.0,
         transport: httpx.AsyncBaseTransport | None = None,
+        voice_provider: Callable[[], str] | None = None,
     ) -> None:
         super().__init__(
             base_url,
@@ -244,6 +245,7 @@ class OpenAiCompatibleSpeechProvider(_CloudAdapter):
         )
         self._model = _bounded_name(model, "speech model")
         self._voice = _bounded_name(voice, "speech voice")
+        self._voice_provider = voice_provider
         self.capabilities = ProviderCapabilities(
             provider_id="cloud-openai-compatible-tts",
             provider_kind="speech_synthesis",
@@ -256,7 +258,10 @@ class OpenAiCompatibleSpeechProvider(_CloudAdapter):
             "/audio/speech",
             json_body={
                 "model": self._model,
-                "voice": self._voice,
+                "voice": _bounded_name(
+                    self._voice_provider() if self._voice_provider is not None else self._voice,
+                    "speech voice",
+                ),
                 "input": text,
                 "response_format": "wav",
                 "speed": speed,

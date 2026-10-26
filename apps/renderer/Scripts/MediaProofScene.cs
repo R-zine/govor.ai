@@ -10,7 +10,7 @@ public partial class MediaProofScene : Node
 {
     private SubViewport? _captureViewport;
     private DynamicSceneDirector? _sceneDirector;
-    private StylizedTeacherAvatar? _teacher;
+    private FacialTeacherAvatar? _teacher;
     private string? _proofImagePath;
     private string? _uiProofImagePath;
     private bool _exitAfterUiProof;
@@ -86,8 +86,9 @@ public partial class MediaProofScene : Node
             "--show-manual-pairing",
             StringComparer.Ordinal);
         _runtimeStartedAtUs = Time.GetTicksUsec();
+        string selectedTeacherProfileId = TeacherProfileCatalog.LoadPreference();
 
-        _captureViewport = CreateCaptureViewport();
+        _captureViewport = CreateCaptureViewport(selectedTeacherProfileId);
         AddChild(_captureViewport);
         _sceneDirector?.ApplyScene(DynamicSceneDirector.DefaultCafeScene());
         AddChild(CreateDisplay(_captureViewport));
@@ -101,6 +102,7 @@ public partial class MediaProofScene : Node
                 QrImagePath = pairingQrPath,
                 BootstrapPath = pairingBootstrapPath ?? string.Empty,
                 ShowManualDetailsOnReady = showManualPairing,
+                InitialTeacherProfileId = selectedTeacherProfileId,
             };
             AddChild(pairingScreen);
         }
@@ -118,15 +120,26 @@ public partial class MediaProofScene : Node
         };
         AddChild(audioPublisher);
 
+        RendererSessionController? sessionController = null;
         if (!string.IsNullOrWhiteSpace(controlUrl))
         {
-            AddChild(new RendererSessionController
+            sessionController = new RendererSessionController
             {
                 Name = "RendererSessionController",
                 ControlUrl = controlUrl,
                 ControlCaPath = controlCaPath,
                 PairingScreen = pairingScreen,
-            });
+                SelectedTeacherProfileId = selectedTeacherProfileId,
+            };
+            AddChild(sessionController);
+        }
+        if (pairingScreen is not null)
+        {
+            pairingScreen.TeacherProfileSelected += profileId =>
+            {
+                _teacher?.SelectProfile(profileId);
+                sessionController?.SelectTeacherProfile(profileId);
+            };
         }
 
         if (!string.IsNullOrWhiteSpace(sceneTourOutput) && _sceneDirector is not null &&
@@ -204,7 +217,7 @@ public partial class MediaProofScene : Node
         }
     }
 
-    private SubViewport CreateCaptureViewport()
+    private SubViewport CreateCaptureViewport(string teacherProfileId)
     {
         var viewport = new SubViewport
         {
@@ -220,9 +233,10 @@ public partial class MediaProofScene : Node
         var world = new Node3D { Name = "World" };
         viewport.AddChild(world);
 
-        _teacher = new StylizedTeacherAvatar
+        _teacher = new FacialTeacherAvatar
         {
-            Name = "StylizedTeacherAvatar",
+            Name = "FacialTeacherAvatar",
+            InitialProfileId = teacherProfileId,
         };
         world.AddChild(_teacher);
 
@@ -230,10 +244,21 @@ public partial class MediaProofScene : Node
         {
             Name = "KeyLight",
             RotationDegrees = new Vector3(-52.0f, -28.0f, 0.0f),
-            LightEnergy = 1.35f,
+            LightEnergy = 0.82f,
             ShadowEnabled = true,
         };
         world.AddChild(light);
+
+        var faceLight = new OmniLight3D
+        {
+            Name = "FaceFillLight",
+            Position = new Vector3(0.35f, 1.8f, 1.4f),
+            LightColor = new Color(1.0f, 0.91f, 0.83f),
+            LightEnergy = 0.65f,
+            OmniRange = 4.5f,
+            ShadowEnabled = false,
+        };
+        world.AddChild(faceLight);
 
         var environment = new WorldEnvironment
         {
@@ -244,7 +269,7 @@ public partial class MediaProofScene : Node
                 BackgroundColor = new Color(0.025f, 0.04f, 0.075f),
                 AmbientLightSource = Godot.Environment.AmbientSource.Color,
                 AmbientLightColor = new Color(0.3f, 0.38f, 0.5f),
-                AmbientLightEnergy = 0.75f,
+                AmbientLightEnergy = 0.45f,
             },
         };
         world.AddChild(environment);
@@ -253,10 +278,12 @@ public partial class MediaProofScene : Node
         {
             Name = "CaptureCamera",
             Current = true,
+            Fov = 30.0f,
+            Near = 0.05f,
         };
         camera.LookAtFromPosition(
-            new Vector3(0.0f, 2.1f, 6.0f),
-            new Vector3(0.0f, 1.15f, 0.0f),
+            new Vector3(0.0f, 1.44f, 1.2f),
+            new Vector3(0.0f, 1.42f, -0.5f),
             Vector3.Up);
         world.AddChild(camera);
 

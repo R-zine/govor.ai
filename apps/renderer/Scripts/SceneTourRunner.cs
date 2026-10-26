@@ -12,6 +12,8 @@ public partial class SceneTourRunner : Node
     private readonly List<double> _frameTimesMs = [];
     private readonly List<long> _sceneBuildUs = [];
     private readonly List<long> _transitionUs = [];
+    private readonly List<string> _capturedVisemes = [];
+    private readonly List<string> _capturedTeacherProfiles = [];
     private IReadOnlyList<SceneSpecificationPayload> _scenes = [];
     private int _sceneIndex;
     private ulong _sceneAppliedAtUs;
@@ -22,7 +24,7 @@ public partial class SceneTourRunner : Node
 
     public required DynamicSceneDirector Director { get; init; }
     public required SubViewport CaptureViewport { get; init; }
-    public required StylizedTeacherAvatar Teacher { get; init; }
+    public required FacialTeacherAvatar Teacher { get; init; }
     public required string OutputDirectory { get; init; }
 
     public override void _Ready()
@@ -33,7 +35,6 @@ public partial class SceneTourRunner : Node
         _memoryBeforeBytes = OS.GetStaticMemoryUsage();
         _videoMemoryBeforeBytes = RenderingServer.GetRenderingInfo(
             RenderingServer.RenderingInfo.VideoMemUsed);
-        Teacher.ApplySessionAction("teacher_speaking", BenchmarkAnimation());
         ApplyCurrentScene();
     }
 
@@ -61,7 +62,11 @@ public partial class SceneTourRunner : Node
 
     private void ApplyCurrentScene()
     {
+        TeacherProfileDefinition profile = TeacherProfileCatalog.Profiles[
+            _sceneIndex % TeacherProfileCatalog.Profiles.Count];
+        Teacher.SelectProfile(profile.Id);
         Director.ApplyScene(_scenes[_sceneIndex]);
+        Teacher.ApplySessionAction("teacher_speaking", BenchmarkAnimation());
         _sceneBuildUs.Add(Director.LastSceneBuildUs);
         _sceneAppliedAtUs = Time.GetTicksUsec();
     }
@@ -69,6 +74,8 @@ public partial class SceneTourRunner : Node
     private void SaveCurrentProof()
     {
         SceneSpecificationPayload scene = _scenes[_sceneIndex];
+        _capturedVisemes.Add(Teacher.CurrentViseme);
+        _capturedTeacherProfiles.Add(Teacher.CurrentProfileId);
         string path = Path.Combine(OutputDirectory, $"{_sceneIndex + 1}-{scene.EnvironmentId}.png");
         Image image = CaptureViewport.GetTexture().GetImage();
         try
@@ -111,9 +118,16 @@ public partial class SceneTourRunner : Node
             {
                 scene_id = scene.SceneId,
                 environment_id = scene.EnvironmentId,
-                object_count = scene.Objects.Count,
+                background_kind = PhotographicBackdropCatalog.HasBackdrop(scene.EnvironmentId)
+                    ? "photographic"
+                    : "procedural",
+                rendered_object_count = PhotographicBackdropCatalog.HasBackdrop(scene.EnvironmentId)
+                    ? 0
+                    : scene.Objects.Count,
                 build_us = _sceneBuildUs[index],
                 transition_us = _transitionUs[index],
+                captured_viseme = _capturedVisemes[index],
+                teacher_profile_id = _capturedTeacherProfiles[index],
             }),
             frame_count = sortedFrames.Length,
             frame_time_ms_p50 = Percentile(sortedFrames, 0.50),
@@ -152,7 +166,7 @@ public partial class SceneTourRunner : Node
     private static AvatarAnimationPayload BenchmarkAnimation()
     {
         return new AvatarAnimationPayload(
-            2_000_000,
+            10_000_000,
             "speaking",
             "encouraging",
             "provider_phoneme_alignment",

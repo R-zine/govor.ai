@@ -1,14 +1,16 @@
-# Stylized teacher avatar
+# Teacher profiles
 
-The active teacher is an original low-poly procedural design built by
-`Scripts/StylizedTeacherAvatar.cs` from Godot primitive meshes. It includes a recognizable adult
-humanoid silhouette, eyes, brows, hair, a mouth, idle motion, speaking gestures, listening and
-thinking poses, expressions, PCM-energy mouth movement, and six bounded viseme shapes.
+The renderer ships three selectable, high-detail teacher profiles: Elena, Amira, and Daniel.
+They share a real facial rig with 34 blend shapes and 14 speech visemes. Selection is available in
+the host pairing screen's **Teacher** menu, is persisted locally, and is sent to the loopback host
+through the closed `renderer.teacher_profile_selected` contract.
 
-No downloaded model, texture, remote resource, or generated binary asset is used. The visual
-design and its scene recipe are dedicated to the public domain under
-[CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/). The C# implementation
-remains part of the govor.ai source tree under the repository's normal source terms.
+The host resolves the profile at synthesis time. Elena uses Kokoro `bf_emma`/`af_heart`, Amira
+uses `bf_isabella`/`af_bella`, and Daniel uses `bm_george`/`am_michael` for British/American
+English respectively. Bulgarian has only the bundled male Piper Dimitar voice: Daniel uses it,
+while Elena and Amira use the local eSpeak NG `f3` female variant. Cloud-compatible presentation
+voices are independently configurable and default to `coral`, `nova`, and `onyx`; provider voice
+names are presentation settings rather than a provider guarantee about speaker identity.
 
-The separation is intentional: a future avatar may replace this asset through an audited,
-deterministic catalog entry without changing lesson, media, or Android contracts.
+See `Ara/README.md` for provenance, licenses, reproducible profile inputs, asset checksums, and the
+animation-stripping build step.

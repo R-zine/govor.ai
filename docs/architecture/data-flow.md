@@ -9,8 +9,9 @@
    creates a ten-minute one-time pairing code, writes a temporary QR and matching bounded JSON
    bootstrap, and passes only their protected local paths to Godot. Godot opens an opaque 2D
    connection screen above, and outside, the captured 1280x720 media viewport. The screen supplies
-   instructions, countdown, QR, and a manual fallback; the console retains the same values for
-   diagnostics.
+   instructions, countdown, QR, a closed teacher selector, and a manual fallback; the console
+   retains the same pairing values for diagnostics. The selected teacher profile is persisted in
+   Godot's per-user settings and sent to the loopback host after renderer registration.
 2. Android scans and strictly validates the bootstrap locally, pins its certificate fingerprint,
    and sends the code/device identity to the HTTPS pairing endpoint. The server consumes the code
    and returns a random device credential. Manual release entry remains collapsed unless opened.
@@ -93,20 +94,24 @@ change when appropriate. Every `teacher.turn` carries the resulting progress sna
 completed lesson's final audio finishes, the host ends the session with reason `completed`.
 
 The host also asks the pure scene planner for the selected lesson's validated scene-template
-specification and includes it only with `session_started`. Godot validates either closed built-in
-asset IDs or closed primitive shapes with bounded colors, dimensions, and transforms, builds the
-scene from cached procedural resources, fades from the previous environment, and queues the
-replaced node tree for cleanup. No generated `.tscn`, model file, texture, script, or other 3D
-resource is loaded or written at runtime.
+specification and includes it only with `session_started`. Godot validates either a closed built-in
+environment ID or closed primitive shapes with bounded colors, dimensions, and transforms. A
+built-in ID selects one packaged photographic backdrop; an installed recipe builds only cached
+primitive resources. Godot fades from the previous environment and queues the replaced node tree
+for cleanup. No generated `.tscn`, model file, texture, script, or other 3D resource is loaded or
+written at runtime.
 
 The local dialogue adapter sends the recognized utterance, lesson context, deterministic intent
 hint, and at most the configured number of recent turns to llama.cpp. Closed structured output is
 parsed, then the domain policy can reject unsafe locale/progress choices and use a deterministic
 fallback. The bounded WAV in `teacher.turn` is local synthesized PCM16 speech. The speech router
-uses Kokoro for explicit `en-GB`/`en-US`, Piper for `bg-BG`, and deterministic eSpeak NG when a
-neural provider fails. The turn also carries exact word/IPA character ranges and nullable model
-timing. Android plays the WAV with `AudioTrack`; playback-head frames define media time for
-subtitle highlighting. Missing alignment disables highlighting without blocking playback.
+uses the current teacher profile to choose a female or male Kokoro voice for explicit
+`en-GB`/`en-US`. Daniel uses the available male Piper voice for `bg-BG`; Elena and Amira use the
+local eSpeak NG female variant because no female Bulgarian Piper voice is bundled. Provider
+failure routes to the same profile-appropriate eSpeak presentation. The turn also carries exact
+word/IPA character ranges and nullable model timing. Android plays the WAV with `AudioTrack`;
+playback-head frames define media time for subtitle highlighting. Missing alignment disables
+highlighting without blocking playback.
 
 When explicitly enabled, the provider router may instead send the bounded transcript, lesson
 context, and recent history to the selected cloud dialogue endpoint; the bounded utterance WAV to

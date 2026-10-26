@@ -19,12 +19,15 @@ public partial class HostPairingScreen : Control
     private Label? _expiryLabel;
     private Label? _statusLabel;
     private Control? _manualDialog;
+    private MenuButton? _teacherMenu;
     private PairingBootstrapDetails? _details;
     private ulong _lastCountdownUpdateMs;
 
     public string QrImagePath { get; set; } = string.Empty;
     public string BootstrapPath { get; set; } = string.Empty;
     public bool ShowManualDetailsOnReady { get; set; }
+    public string InitialTeacherProfileId { get; set; } = TeacherProfileCatalog.DefaultProfileId;
+    public event Action<string>? TeacherProfileSelected;
 
     public override void _Ready()
     {
@@ -105,12 +108,55 @@ public partial class HostPairingScreen : Control
         brand.AddChild(StyledLabel("Private local English tutor", 14, MutedText));
         header.AddChild(brand);
         header.AddChild(new Control { SizeFlagsHorizontal = SizeFlags.ExpandFill });
+        header.AddChild(CreateTeacherMenu());
 
         var statusPanel = StyledPanel(PanelRaised, 18, 14, 10);
         _statusLabel = StyledLabel("Waiting for your phone", 15, Primary, FontWeight.SemiBold);
         statusPanel.AddChild(_statusLabel);
         header.AddChild(statusPanel);
         return header;
+    }
+
+    private Control CreateTeacherMenu()
+    {
+        string selectedId = TeacherProfileCatalog.IsAllowed(InitialTeacherProfileId)
+            ? InitialTeacherProfileId
+            : TeacherProfileCatalog.DefaultProfileId;
+        TeacherProfileDefinition selected = TeacherProfileCatalog.Get(selectedId);
+        _teacherMenu = new MenuButton
+        {
+            Text = $"Teacher · {selected.DisplayName}",
+            TooltipText = "Choose the teacher model and matching voice",
+            CustomMinimumSize = new Vector2(210.0f, 46.0f),
+        };
+        PopupMenu popup = _teacherMenu.GetPopup();
+        for (int index = 0; index < TeacherProfileCatalog.Profiles.Count; index++)
+        {
+            TeacherProfileDefinition profile = TeacherProfileCatalog.Profiles[index];
+            popup.AddRadioCheckItem(
+                $"{profile.DisplayName} — {profile.VoiceDescription}",
+                index);
+            popup.SetItemChecked(index, profile.Id == selectedId);
+        }
+        popup.IdPressed += id => SelectTeacherProfile(checked((int)id));
+        return _teacherMenu;
+    }
+
+    private void SelectTeacherProfile(int index)
+    {
+        if (index < 0 || index >= TeacherProfileCatalog.Profiles.Count || _teacherMenu is null)
+        {
+            return;
+        }
+        TeacherProfileDefinition selected = TeacherProfileCatalog.Profiles[index];
+        PopupMenu popup = _teacherMenu.GetPopup();
+        for (int item = 0; item < TeacherProfileCatalog.Profiles.Count; item++)
+        {
+            popup.SetItemChecked(item, item == index);
+        }
+        _teacherMenu.Text = $"Teacher · {selected.DisplayName}";
+        TeacherProfileCatalog.SavePreference(selected.Id);
+        TeacherProfileSelected?.Invoke(selected.Id);
     }
 
     private Control CreateMainContent()

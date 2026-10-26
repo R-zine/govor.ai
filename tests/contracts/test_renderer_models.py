@@ -9,6 +9,7 @@ from govor_contracts import (
     AvatarAnimationPayload,
     PrimitivePayload,
     RendererCommandPayload,
+    RendererTeacherProfileSelectedPayload,
     SceneObjectPayload,
     SceneSpecificationPayload,
     SpeechEnergySamplePayload,
@@ -30,6 +31,12 @@ def test_shared_renderer_fixture_validates_scene_animation_model() -> None:
 
     assert command.avatar_animation is not None
     assert command.avatar_animation.visemes[0].viseme == "closed"
+
+
+def test_teacher_profile_selection_is_closed() -> None:
+    assert RendererTeacherProfileSelectedPayload(profile_id="amira").profile_id == "amira"
+    with pytest.raises(ValidationError):
+        RendererTeacherProfileSelectedPayload(profile_id="../../arbitrary")  # type: ignore[arg-type]
 
 
 def test_shared_custom_scene_fixture_validates_primitive_model() -> None:

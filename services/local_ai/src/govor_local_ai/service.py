@@ -53,6 +53,10 @@ class LocalAiSettings(Protocol):
     kokoro_voices: str
     kokoro_voice_gb: str
     kokoro_voice_us: str
+    kokoro_voice_gb_amira: str
+    kokoro_voice_us_amira: str
+    kokoro_voice_gb_daniel: str
+    kokoro_voice_us_daniel: str
     piper_bg_model: str
     piper_bg_config: str
     progress_database: str

@@ -3,7 +3,13 @@
 - Status: accepted
 - Date: 2026-10-12
 - Amended: 2026-10-23 (bounded custom procedural primitives)
+- Amended: 2026-10-26 (built-in visuals and avatar superseded by ADR-0020)
 - Milestone: 6
+
+> ADR-0020 replaces the built-in procedural rooms and stylized procedural teacher with packaged
+> CC0 photographic backdrops and three selectable facially rigged CC0 teachers. The validation,
+> scene-planner, custom primitive, PCM-energy, provider-timing, caching, and cleanup decisions in
+> this ADR remain active. This document preserves the original Milestone 6 decision and evidence.
 
 ## Context
 

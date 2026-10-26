@@ -86,6 +86,25 @@ async def test_kokoro_uses_accent_voice_speed_and_actual_timings() -> None:
 
 
 @pytest.mark.asyncio
+async def test_kokoro_voice_follows_the_selected_teacher_profile() -> None:
+    engine = FakeKokoro()
+    selected = "amira"
+    provider = KokoroEnglishSpeechProvider(
+        "missing.onnx",
+        "missing.bin",
+        teacher_profile_provider=lambda: selected,
+        engine_factory=lambda: engine,
+    )
+
+    await provider.synthesize("Welcome.", "en-GB")
+    selected = "daniel"
+    await provider.synthesize("Welcome.", "en-US")
+
+    assert engine.calls[0]["voice"] == "bf_isabella"
+    assert engine.calls[1]["voice"] == "am_michael"
+
+
+@pytest.mark.asyncio
 async def test_piper_uses_speed_and_model_sample_alignment() -> None:
     engine = FakePiper()
     provider = PiperBulgarianSpeechProvider(
@@ -134,6 +153,33 @@ async def test_router_falls_back_only_when_preferred_is_unavailable() -> None:
 
     assert turn.fallback_used
     assert turn.provider_id.startswith("espeak-ng-")
+
+
+@pytest.mark.asyncio
+async def test_female_bulgarian_uses_gendered_fallback_and_male_uses_piper() -> None:
+    calls: list[str] = []
+    selected = "amira"
+
+    class RecordingProvider:
+        def __init__(self, name: str) -> None:
+            self.name = name
+
+        async def synthesize(self, text: str, locale: str, *, speed: float = 1.0) -> Any:
+            calls.append(self.name)
+            return SimpleNamespace(text=text, locale=locale, speed=speed)
+
+    router = LocalSpeechRouter(
+        RecordingProvider("english"),
+        RecordingProvider("piper"),
+        RecordingProvider("gendered-fallback"),
+        teacher_profile_provider=lambda: selected,
+    )
+
+    await router.synthesize("Добър ден.", "bg-BG")
+    selected = "daniel"
+    await router.synthesize("Добър ден.", "bg-BG")
+
+    assert calls == ["gendered-fallback", "piper"]
 
 
 def test_curated_ipa_is_accent_aware_and_bulgarian_is_not_empty() -> None:

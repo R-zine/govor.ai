@@ -103,6 +103,14 @@ public sealed class MessageEnvelopeTests
     }
 
     [Fact]
+    public void TeacherProfileSelectionIsClosed()
+    {
+        new RendererTeacherProfileSelectedPayload("amira").Validate();
+        Assert.Throws<InvalidDataException>(
+            () => new RendererTeacherProfileSelectedPayload("../../arbitrary").Validate());
+    }
+
+    [Fact]
     public void NonAllowListedRendererActionIsRejected()
     {
         var payload = new RendererCommandPayload(

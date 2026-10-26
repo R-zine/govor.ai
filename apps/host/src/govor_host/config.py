@@ -43,6 +43,10 @@ class Settings(BaseSettings):
     kokoro_voices: str = ".tools/models/speech/voices-v1.0.bin"
     kokoro_voice_gb: str = "bf_emma"
     kokoro_voice_us: str = "af_heart"
+    kokoro_voice_gb_amira: str = "bf_isabella"
+    kokoro_voice_us_amira: str = "af_bella"
+    kokoro_voice_gb_daniel: str = "bm_george"
+    kokoro_voice_us_daniel: str = "am_michael"
     piper_bg_model: str = ".tools/models/speech/bg_BG-dimitar-medium.onnx"
     piper_bg_config: str = ".tools/models/speech/bg_BG-dimitar-medium.onnx.json"
     progress_database: str = "data/progress.sqlite3"
@@ -61,6 +65,8 @@ class Settings(BaseSettings):
     cloud_speech_base_url: str = "https://api.openai.com/v1"
     cloud_speech_model: str = "gpt-4o-mini-tts"
     cloud_speech_voice: str = "coral"
+    cloud_speech_voice_amira: str = "nova"
+    cloud_speech_voice_daniel: str = "onyx"
     cloud_speech_credential_target: str = Field(
         default="openai-speech", pattern=r"^[a-z][a-z0-9._-]{1,63}$"
     )
