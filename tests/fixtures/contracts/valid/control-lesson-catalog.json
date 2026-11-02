@@ -4,6 +4,24 @@
   "correlation_id": "a2c37e0e-65c4-4e4b-9a32-63d6ba46b591",
   "payload": {
     "default_scenario_id": "cafe-ordering",
+    "selected_teacher_profile_id": "amira",
+    "teacher_profiles": [
+      {
+        "profile_id": "elena",
+        "display_name": "Elena",
+        "voice_gender": "female"
+      },
+      {
+        "profile_id": "amira",
+        "display_name": "Amira",
+        "voice_gender": "female"
+      },
+      {
+        "profile_id": "daniel",
+        "display_name": "Daniel",
+        "voice_gender": "male"
+      }
+    ],
     "lessons": [
       {
         "scenario_id": "cafe-ordering",

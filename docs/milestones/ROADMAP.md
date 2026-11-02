@@ -477,3 +477,11 @@ state: not started, in progress, or completed; successful and total exercise cou
 completion count. The phone refreshes this catalog after a lesson ends and displays the summary on
 the selected card and in the lesson browser. This makes completed lessons and interrupted progress
 visible without retaining a separate Android-side history or exposing transcript/audio data.
+
+## Post-milestone Android teacher selection
+
+The authenticated lesson catalog now includes the three closed teacher profiles and the current
+selection. Android exposes them in the lesson-preferences sheet and on the selected lesson card.
+A pre-lesson change is applied to the host speech route and Godot model as one operation, then
+confirmed by a replacement catalog; mid-lesson changes and arbitrary profile/path values are
+rejected. The host pre-connect selector remains available and uses the same process state.

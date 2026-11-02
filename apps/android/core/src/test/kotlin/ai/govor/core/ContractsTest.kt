@@ -89,6 +89,11 @@ class ContractsTest {
         assertEquals("Ordering at a café", catalog.lessons.first().title)
         assertEquals("completed", catalog.lessons.first().progress.status)
         assertEquals(2, catalog.lessons.first().progress.completed_count)
+        assertEquals("amira", catalog.selected_teacher_profile_id)
+        assertEquals(
+            listOf("elena", "amira", "daniel"),
+            catalog.teacher_profiles.map { it.profile_id },
+        )
     }
 
     @Test

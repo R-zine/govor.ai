@@ -22,14 +22,18 @@ model path, voice name, download, or LLM-controlled renderer choice.
 Ship three closed CC0 teacher profiles: Elena and Amira are female; Daniel is male. Their GLBs are
 generated from Ara 3D Gen's CC0 MakeHuman data, contain a skinned mesh and 34 facial blend shapes,
 and contain no animation clips. Godot owns bounded idle/blink and speech animation. A host-side
-menu on the pre-connect screen persists one profile ID and applies the corresponding model before
-the lesson begins.
+menu on the pre-connect screen and the Android lesson-preferences sheet expose the same profile
+catalog. A profile change is allowed only before a lesson and applies the corresponding model and
+voice together.
 
 Send that ID over the existing loopback renderer-control connection as the versioned
 `renderer.teacher_profile_selected` envelope. The JSON Schema, Python, and C# bindings accept only
 `elena`, `amira`, or `daniel`. The host keeps the current selection in thread-safe process memory;
 health may expose the non-sensitive ID. It is not part of lesson content and cannot be produced by
-the dialogue model.
+the dialogue model. The authenticated Android control channel receives the closed catalog and
+current ID inside `lesson.catalog`; `teacher.profile.select` contains only one advertised ID. The
+host forwards a validated phone selection to Godot over loopback and returns the updated catalog
+as confirmation. Godot persists selections received from either UI.
 
 Resolve speech voices at synthesis time from the same selection:
 
@@ -53,8 +57,8 @@ resources.
 
 ## Consequences
 
-- The face and mouth occupy more of the frame, and users can change teacher appearance before
-  connecting without rebuilding or restarting the host.
+- The face and mouth occupy more of the frame, and users can change teacher appearance from the
+  host pairing screen or phone lesson screen without rebuilding or restarting the host.
 - Appearance, English accent, and voice presentation are separate concerns: accent remains the
   learner's setting, while the chosen profile supplies the matching female/male voice within that
   accent.
@@ -90,3 +94,8 @@ development-machine evidence. On 2026-11-02 the implementation was included in t
 physical realme installation updated and cold-launched successfully. Pairing and lesson media were
 not run, so the deployment is not yet physical-phone evidence for the new models, backdrops, or
 voice mapping.
+
+The later Android selector extension passed the versioned JSON Schema fixtures, 302 Python tests,
+29 Kotlin/JVM tasks, 10 C# contract tests, and the Godot import/build/headless self-test on
+2026-11-02. The real renderer-control test proves phone-to-host-to-renderer propagation, but no
+new physical-device or subjective voice-quality claim is inferred from those software checks.

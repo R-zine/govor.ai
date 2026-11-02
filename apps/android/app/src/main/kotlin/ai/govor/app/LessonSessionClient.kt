@@ -17,6 +17,8 @@ import ai.govor.core.SessionStartPayload
 import ai.govor.core.SessionState
 import ai.govor.core.SessionStatePayload
 import ai.govor.core.TeacherPlaybackCompletedPayload
+import ai.govor.core.TeacherProfileItemPayload
+import ai.govor.core.TeacherProfileSelectPayload
 import ai.govor.core.TeacherTurnPayload
 import ai.govor.core.TeacherWordAudioPayload
 import ai.govor.core.TeacherWordReplayRequestPayload
@@ -94,6 +96,12 @@ class LessonSessionClient {
     private val mutableLessonCatalog = MutableStateFlow<List<LessonCatalogItemPayload>>(emptyList())
     val lessonCatalog: StateFlow<List<LessonCatalogItemPayload>> = mutableLessonCatalog
 
+    private val mutableTeacherProfiles = MutableStateFlow<List<TeacherProfileItemPayload>>(emptyList())
+    val teacherProfiles: StateFlow<List<TeacherProfileItemPayload>> = mutableTeacherProfiles
+
+    private val mutableSelectedTeacherProfileId = MutableStateFlow("")
+    val selectedTeacherProfileId: StateFlow<String> = mutableSelectedTeacherProfileId
+
     private val mutableLessonActive = MutableStateFlow(false)
     val lessonActive: StateFlow<Boolean> = mutableLessonActive
 
@@ -116,6 +124,8 @@ class LessonSessionClient {
             LessonSelection(it, englishLocale, spacedReviewEnabled)
         }
         mutableLessonCatalog.value = emptyList()
+        mutableTeacherProfiles.value = emptyList()
+        mutableSelectedTeacherProfileId.value = ""
         if (secure && (deviceId == null || credential == null || certificateFingerprint == null)) {
             fail("Secure pairing information is incomplete.")
             return
@@ -163,6 +173,14 @@ class LessonSessionClient {
         mutableLessonActive.value = true
         mutableState.value = SessionState.CONNECTING
         sendSessionStart()
+    }
+
+    fun selectTeacherProfile(profileId: String) {
+        require(sessionId == null) { "The teacher cannot change during an active lesson" }
+        require(mutableTeacherProfiles.value.any { it.profile_id == profileId }) {
+            "Teacher profile is not present in the host catalog"
+        }
+        send("teacher.profile.select", TeacherProfileSelectPayload(profileId))
     }
 
     fun beginRecording() {
@@ -279,6 +297,8 @@ class LessonSessionClient {
     private fun applyLessonCatalog(payload: LessonCatalogPayload) {
         payload.validate()
         mutableLessonCatalog.value = payload.lessons
+        mutableTeacherProfiles.value = payload.teacher_profiles
+        mutableSelectedTeacherProfileId.value = payload.selected_teacher_profile_id
         val selection = pendingStart
         if (selection != null) {
             pendingStart = null
@@ -469,6 +489,8 @@ class LessonSessionClient {
         utteranceId = null
         pendingStart = null
         mutableLessonCatalog.value = emptyList()
+        mutableTeacherProfiles.value = emptyList()
+        mutableSelectedTeacherProfileId.value = ""
         mutableLessonActive.value = false
         clearSpeechUi()
         transientUiState.disconnect()
@@ -543,6 +565,8 @@ class LessonSessionClient {
                 socket = null
                 pendingStart = null
                 mutableLessonCatalog.value = emptyList()
+                mutableTeacherProfiles.value = emptyList()
+                mutableSelectedTeacherProfileId.value = ""
                 mutableLessonActive.value = false
                 transientUiState.showError("Control connection failed.")
                 mutableState.value = SessionState.DISCONNECTED
@@ -554,6 +578,8 @@ class LessonSessionClient {
                 socket = null
                 pendingStart = null
                 mutableLessonCatalog.value = emptyList()
+                mutableTeacherProfiles.value = emptyList()
+                mutableSelectedTeacherProfileId.value = ""
                 mutableLessonActive.value = false
                 mutableState.value = SessionState.DISCONNECTED
             }

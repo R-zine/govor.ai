@@ -120,9 +120,21 @@ class LessonCatalogItemPayload(StrictModel):
     progress: LessonCatalogProgressPayload
 
 
+class TeacherProfileItemPayload(StrictModel):
+    profile_id: Literal["elena", "amira", "daniel"]
+    display_name: str = Field(min_length=1, max_length=64)
+    voice_gender: Literal["female", "male"]
+
+
+class TeacherProfileSelectPayload(StrictModel):
+    profile_id: Literal["elena", "amira", "daniel"]
+
+
 class LessonCatalogPayload(StrictModel):
     default_scenario_id: str = Field(pattern=r"^[a-z][a-z0-9-]{2,63}$", max_length=64)
     lessons: list[LessonCatalogItemPayload] = Field(min_length=1, max_length=64)
+    teacher_profiles: list[TeacherProfileItemPayload] = Field(min_length=1, max_length=8)
+    selected_teacher_profile_id: Literal["elena", "amira", "daniel"]
 
     @model_validator(mode="after")
     def validate_catalog(self) -> LessonCatalogPayload:
@@ -137,6 +149,11 @@ class LessonCatalogPayload(StrictModel):
         )
         if self.lessons != expected:
             raise ValueError("lesson catalog must use display order")
+        profile_ids = [profile.profile_id for profile in self.teacher_profiles]
+        if len(profile_ids) != len(set(profile_ids)):
+            raise ValueError("teacher profile IDs must be unique")
+        if self.selected_teacher_profile_id not in profile_ids:
+            raise ValueError("selected teacher profile must be present in the catalog")
         return self
 
 

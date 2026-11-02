@@ -4,9 +4,10 @@
 
 The runtime owns a 1280x720, 30 fps `SubViewport`, three bundled CC0 facially rigged 3D teachers,
 and four local CC0 photographic backdrops (café, supermarket, airport, and home). The pre-connect
-screen lets the user choose Elena, Amira, or Daniel and persists the choice. Each model has 34
-facial blend shapes, including 14 speech visemes; actual PCM energy plus provider timing drive the
-mouth. Validated data-only custom environments continue to use bounded procedural primitives.
+screen and Android lesson-preferences sheet let the user choose Elena, Amira, or Daniel before a
+lesson and persist the choice. Each model has 34 facial blend shapes, including 14 speech visemes;
+actual PCM energy plus provider timing drive the mouth. Validated data-only custom environments
+continue to use bounded procedural primitives.
 Scene specifications, animation timelines, and the closed teacher selection arrive through the
 validated loopback renderer-control contract; no command can name a path, URL, download, or script.
 
@@ -29,7 +30,8 @@ implementation.
 scene, avatar, and teacher-profile data, and acknowledges each command. The host derives mouth
 energy from the actual speech WAV and sends visemes only when the provider supplied phoneme
 timing. The host uses the same selected profile to choose a matching female or male speech voice;
-accent selection remains independent.
+accent selection remains independent. A closed selection arriving from Android is sent back over
+this loopback connection, updates the model and host menu, and is persisted by the same catalog.
 
 Install the pinned editor/export templates, validate, export, and run the bounded checks:
 

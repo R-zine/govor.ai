@@ -22,6 +22,7 @@ from .teacher_profiles import TeacherProfileSelection
 
 LOGGER = logging.getLogger("uvicorn.error")
 SendJson = Callable[[dict[str, object]], Awaitable[None]]
+SelectionChanged = Callable[[], Awaitable[None]]
 
 
 class RendererUnavailable(RuntimeError):
@@ -34,6 +35,8 @@ class RendererControl(Protocol):
 
     async def dispatch(self, payload: RendererCommandPayload, correlation_id: UUID) -> None: ...
 
+    async def select_teacher_profile(self, profile_id: str, correlation_id: UUID) -> None: ...
+
 
 class RendererGateway:
     def __init__(
@@ -41,6 +44,7 @@ class RendererGateway:
         *,
         acknowledgement_timeout_seconds: float,
         teacher_profiles: TeacherProfileSelection | None = None,
+        on_teacher_profile_selected: SelectionChanged | None = None,
     ) -> None:
         self._acknowledgement_timeout_seconds = acknowledgement_timeout_seconds
         self._send_json: SendJson | None = None
@@ -48,6 +52,7 @@ class RendererGateway:
         self._pending: dict[UUID, asyncio.Future[bool]] = {}
         self._send_lock = asyncio.Lock()
         self._teacher_profiles = teacher_profiles or TeacherProfileSelection()
+        self._on_teacher_profile_selected = on_teacher_profile_selected
 
     @property
     def connected(self) -> bool:
@@ -89,7 +94,7 @@ class RendererGateway:
                 if len(raw.encode("utf-8")) > max_message_bytes:
                     await websocket.close(code=1009, reason="renderer message too large")
                     return
-                self._handle_renderer_message(raw)
+                await self._handle_renderer_message(raw)
         except WebSocketDisconnect:
             return
         except (ValidationError, ValueError):
@@ -131,12 +136,33 @@ class RendererGateway:
         finally:
             self._pending.pop(payload.command_id, None)
 
-    def _handle_renderer_message(self, raw: str) -> None:
+    async def select_teacher_profile(self, profile_id: str, correlation_id: UUID) -> None:
+        """Apply a closed teacher selection to speech state and the connected renderer."""
+
+        self._teacher_profiles.select(profile_id)
+        sender = self._send_json
+        if sender is None:
+            return
+        try:
+            async with self._send_lock:
+                await sender(
+                    _envelope(
+                        "renderer.teacher_profile_selected",
+                        correlation_id,
+                        {"profile_id": profile_id},
+                    )
+                )
+        except RuntimeError as error:
+            raise RendererUnavailable("Godot renderer connection failed") from error
+
+    async def _handle_renderer_message(self, raw: str) -> None:
         envelope = MessageEnvelope.model_validate_json(raw)
         if envelope.message_type == "renderer.teacher_profile_selected":
             selection = RendererTeacherProfileSelectedPayload.model_validate(envelope.payload)
             self._teacher_profiles.select(selection.profile_id)
             LOGGER.info("teacher profile selected profile_id=%s", selection.profile_id)
+            if self._on_teacher_profile_selected is not None:
+                await self._on_teacher_profile_selected()
             return
         if envelope.message_type != "renderer.ack":
             raise ValueError("unsupported renderer control message")

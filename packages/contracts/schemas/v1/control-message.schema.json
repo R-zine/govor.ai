@@ -12,6 +12,7 @@
         "session.start",
         "lesson.catalog.request",
         "lesson.catalog",
+        "teacher.profile.select",
         "session.state",
         "session.cancel",
         "session.retry",
@@ -41,6 +42,10 @@
     {
       "if": { "properties": { "message_type": { "const": "lesson.catalog" } } },
       "then": { "properties": { "payload": { "$ref": "#/$defs/lessonCatalog" } } }
+    },
+    {
+      "if": { "properties": { "message_type": { "const": "teacher.profile.select" } } },
+      "then": { "properties": { "payload": { "$ref": "#/$defs/teacherProfileSelect" } } }
     },
     {
       "if": { "properties": { "message_type": { "const": "session.start" } } },
@@ -169,7 +174,9 @@
     "lessonCatalog": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["default_scenario_id", "lessons"],
+      "required": [
+        "default_scenario_id", "lessons", "teacher_profiles", "selected_teacher_profile_id"
+      ],
       "properties": {
         "default_scenario_id": {
           "type": "string",
@@ -181,7 +188,32 @@
           "minItems": 1,
           "maxItems": 64,
           "items": { "$ref": "#/$defs/lessonCatalogItem" }
-        }
+        },
+        "teacher_profiles": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 8,
+          "items": { "$ref": "#/$defs/teacherProfileItem" }
+        },
+        "selected_teacher_profile_id": { "enum": ["elena", "amira", "daniel"] }
+      }
+    },
+    "teacherProfileItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["profile_id", "display_name", "voice_gender"],
+      "properties": {
+        "profile_id": { "enum": ["elena", "amira", "daniel"] },
+        "display_name": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "voice_gender": { "enum": ["female", "male"] }
+      }
+    },
+    "teacherProfileSelect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["profile_id"],
+      "properties": {
+        "profile_id": { "enum": ["elena", "amira", "daniel"] }
       }
     },
     "sessionStart": {

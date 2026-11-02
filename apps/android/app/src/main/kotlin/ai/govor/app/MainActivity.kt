@@ -12,6 +12,7 @@ import ai.govor.core.PairingBootstrapCodec
 import ai.govor.core.PronunciationPayload
 import ai.govor.core.SessionState
 import ai.govor.core.SpeechTimeline
+import ai.govor.core.TeacherProfileItemPayload
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -51,10 +52,10 @@ import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Replay
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Wifi
@@ -175,6 +176,8 @@ private fun GovorApp(model: MediaSessionViewModel = viewModel()) {
     val transcript by model.lesson.transcript.collectAsStateWithLifecycle()
     val lessonProgress by model.lesson.lessonProgress.collectAsStateWithLifecycle()
     val lessonCatalog by model.lesson.lessonCatalog.collectAsStateWithLifecycle()
+    val teacherProfiles by model.lesson.teacherProfiles.collectAsStateWithLifecycle()
+    val selectedTeacherProfileId by model.lesson.selectedTeacherProfileId.collectAsStateWithLifecycle()
     val lessonActive by model.lesson.lessonActive.collectAsStateWithLifecycle()
 
     var mediaHost by rememberSaveable {
@@ -311,6 +314,9 @@ private fun GovorApp(model: MediaSessionViewModel = viewModel()) {
 
                     GovorScreen.LESSON_SELECTION -> LessonSelectionScreen(
                         lessonCatalog = lessonCatalog,
+                        teacherProfiles = teacherProfiles,
+                        selectedTeacherProfileId = selectedTeacherProfileId,
+                        onTeacherProfileChanged = model.lesson::selectTeacherProfile,
                         selectedScenarioId = scenarioId,
                         onScenarioSelected = { scenarioId = it },
                         englishLocale = englishLocale,
@@ -556,6 +562,9 @@ private fun ConnectionScreen(
 @Composable
 private fun LessonSelectionScreen(
     lessonCatalog: List<LessonCatalogItemPayload>,
+    teacherProfiles: List<TeacherProfileItemPayload>,
+    selectedTeacherProfileId: String,
+    onTeacherProfileChanged: (String) -> Unit,
     selectedScenarioId: String,
     onScenarioSelected: (String) -> Unit,
     englishLocale: String,
@@ -583,7 +592,7 @@ private fun LessonSelectionScreen(
                         Icon(Icons.AutoMirrored.Filled.List, contentDescription = "Choose lesson")
                     }
                     IconButton(onClick = { showPreferences = true }) {
-                        Icon(Icons.Filled.Settings, contentDescription = "Lesson preferences")
+                        Icon(Icons.Filled.Person, contentDescription = "Choose teacher")
                     }
                     Box {
                         IconButton(onClick = { showMore = true }) {
@@ -668,6 +677,15 @@ private fun LessonSelectionScreen(
                             selectedLesson?.progress?.let { progress ->
                                 LessonCatalogProgressStatus(progress)
                             }
+                            teacherProfiles
+                                .firstOrNull { it.profile_id == selectedTeacherProfileId }
+                                ?.let { teacher ->
+                                    TextButton(onClick = { showPreferences = true }) {
+                                        Icon(Icons.Filled.Person, contentDescription = null)
+                                        Spacer(Modifier.width(8.dp))
+                                        Text("Teacher · ${teacher.display_name}")
+                                    }
+                                }
                             TextButton(onClick = { showLessonPicker = true }) {
                                 Icon(Icons.AutoMirrored.Filled.List, contentDescription = null)
                                 Spacer(Modifier.width(8.dp))
@@ -745,6 +763,9 @@ private fun LessonSelectionScreen(
 
     if (showPreferences) {
         LessonPreferencesSheet(
+            teacherProfiles = teacherProfiles,
+            selectedTeacherProfileId = selectedTeacherProfileId,
+            onTeacherProfileChanged = onTeacherProfileChanged,
             englishLocale = englishLocale,
             onEnglishLocaleChanged = onEnglishLocaleChanged,
             spacedReviewEnabled = spacedReviewEnabled,
@@ -803,6 +824,9 @@ internal fun lessonCatalogProgressLabel(progress: LessonCatalogProgressPayload):
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun LessonPreferencesSheet(
+    teacherProfiles: List<TeacherProfileItemPayload>,
+    selectedTeacherProfileId: String,
+    onTeacherProfileChanged: (String) -> Unit,
     englishLocale: String,
     onEnglishLocaleChanged: (String) -> Unit,
     spacedReviewEnabled: Boolean,
@@ -817,6 +841,25 @@ private fun LessonPreferencesSheet(
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text("Lesson preferences", style = MaterialTheme.typography.titleLarge)
+            Text("Teacher and voice", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            teacherProfiles.forEach { profile ->
+                ListItem(
+                    headlineContent = { Text(profile.display_name) },
+                    supportingContent = {
+                        Text("${profile.voice_gender.replaceFirstChar(Char::uppercase)} teacher")
+                    },
+                    leadingContent = {
+                        RadioButton(
+                            selected = selectedTeacherProfileId == profile.profile_id,
+                            onClick = null,
+                        )
+                    },
+                    modifier = Modifier.clickable {
+                        onTeacherProfileChanged(profile.profile_id)
+                    },
+                )
+            }
+            HorizontalDivider()
             Text("Teacher accent", color = MaterialTheme.colorScheme.onSurfaceVariant)
             listOf(
                 "en-GB" to "British English",

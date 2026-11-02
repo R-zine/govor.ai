@@ -181,6 +181,20 @@ public partial class RendererSessionController : Node
                 return;
             }
 
+            if (envelope.MessageType == "renderer.teacher_profile_selected")
+            {
+                RendererTeacherProfileSelectedPayload selection =
+                    ControlContractCodec.DecodePayload<RendererTeacherProfileSelectedPayload>(
+                        envelope);
+                selection.Validate();
+                _teacher?.SelectProfile(selection.ProfileId);
+                SelectedTeacherProfileId = selection.ProfileId;
+                TeacherProfileCatalog.SavePreference(selection.ProfileId);
+                PairingScreen?.ApplyTeacherProfile(selection.ProfileId);
+                GD.Print($"GOVOR_TEACHER_PROFILE_APPLIED:{selection.ProfileId}");
+                return;
+            }
+
             if (envelope.MessageType != "renderer.command")
             {
                 throw new InvalidDataException("Unsupported renderer message type.");

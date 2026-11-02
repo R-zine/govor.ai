@@ -19,7 +19,10 @@ Unknown message types and payload fields are rejected. Session, turn, utterance,
 and correlation identifiers are UUIDs; media durations and offsets are integer microseconds.
 The renderer may send `renderer.teacher_profile_selected` after registration; its payload is one
 closed profile ID (`elena`, `amira`, or `daniel`). It carries no path or voice name. The host uses
-the same selection for visual-state reporting and speech presentation.
+the same selection for visual-state reporting and speech presentation. `lesson.catalog` also
+advertises those closed profile IDs and the current selection to authenticated Android clients.
+Before a lesson, Android may send `teacher.profile.select`; the host rejects unadvertised IDs and
+mid-lesson changes, forwards the closed ID to Godot, and confirms it with a replacement catalog.
 
 `gateway-auth-message.schema.json` is the closed Milestone 8 release-pairing contract. A
 `pairing.request` contains the one-time eight-digit code, UUID device ID, and bounded device name;

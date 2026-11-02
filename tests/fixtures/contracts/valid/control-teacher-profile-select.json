@@ -1,0 +1,8 @@
+{
+  "protocol_version": "1.0",
+  "message_type": "teacher.profile.select",
+  "correlation_id": "03cdf35d-83d3-4846-af4e-f5d088a63cf5",
+  "payload": {
+    "profile_id": "daniel"
+  }
+}

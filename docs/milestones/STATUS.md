@@ -1303,6 +1303,22 @@ documented non-daemon fallback and completed successfully. The complete Python g
 Ruff, formatting, strict mypy, and 300 tests at 85.17% branch coverage. No physical-device claim is
 made from these software tests.
 
+## Post-milestone Android teacher selection
+
+The phone can now find and select Elena, Amira, or Daniel from the lesson-preferences sheet before
+starting a lesson. `lesson.catalog` carries the closed profiles and current ID; the authenticated
+`teacher.profile.select` message updates the shared host voice selection and sends the same ID to
+Godot, which changes and persists the avatar. The selected lesson card shows the current teacher,
+the host pairing-screen menu remains available, and mid-lesson changes are rejected.
+
+Verification on 2026-11-02: the contract scope passed 45 tests; the Python gate passed Ruff,
+formatting, strict mypy, and 302 tests at 84.98% reported branch coverage; the configured gate
+accepted that rounded threshold. The Kotlin scope passed all core/application JVM tasks after the
+managed shell forced Gradle's in-process compiler fallback. The C# scope passed 10 tests, and the
+Godot import, renderer build, and headless self-test passed. Godot/NuGet emitted the existing
+offline advisory-index warning. This is software evidence only; phone UI usability and the
+subjective match between each visible teacher and speech still require an end-to-end listening run.
+
 ## Renderer evidence and limitations
 
 The current local proof images visibly contain the selectable facial teachers over four distinct

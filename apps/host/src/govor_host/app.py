@@ -14,6 +14,7 @@ from govor_contracts import (
     LessonCatalogProgressPayload,
     MessageEnvelope,
     PairingRequestPayload,
+    TeacherProfileItemPayload,
 )
 from govor_domain import LessonCatalog, load_lesson_catalog
 from govor_gateway_security import PairingAuthority, PairingRejected
@@ -28,7 +29,7 @@ from .lesson_catalog_registry import LessonCatalogRegistry
 from .microphone import MediaMicrophoneSource, MicrophoneAudioSource, ReferenceOnlyMicrophoneSource
 from .orchestration import ControlSession, LessonService, SessionRegistry
 from .renderer_gateway import RendererControl, RendererGateway
-from .teacher_profiles import TeacherProfileSelection
+from .teacher_profiles import PROFILES, TeacherProfileSelection
 
 
 def create_app(
@@ -60,6 +61,16 @@ def create_app(
     progress_store = progress_repository or (
         SQLiteProgressRepository(runtime.progress_database) if runtime.mode == "local" else None
     )
+
+    async def broadcast_lesson_catalog() -> None:
+        results = await asyncio.gather(
+            *(session.send_lesson_catalog_update() for session in tuple(control_sessions)),
+            return_exceptions=True,
+        )
+        for result in results:
+            if isinstance(result, Exception):
+                # A failed socket send is cleaned up by its connection handler.
+                continue
 
     def lesson_progress(catalog_snapshot: LessonCatalog) -> dict[str, LessonCatalogProgressPayload]:
         exercise_counts = {
@@ -113,7 +124,23 @@ def create_app(
     renderer_gateway = renderer or RendererGateway(
         acknowledgement_timeout_seconds=runtime.renderer_ack_timeout_seconds,
         teacher_profiles=teacher_profiles,
+        on_teacher_profile_selected=broadcast_lesson_catalog,
     )
+
+    async def select_teacher_profile(profile_id: str, correlation_id: UUID) -> None:
+        teacher_profiles.select(profile_id)
+        await renderer_gateway.select_teacher_profile(profile_id, correlation_id)
+
+    def teacher_profile_catalog() -> list[TeacherProfileItemPayload]:
+        return [
+            TeacherProfileItemPayload(
+                profile_id=profile.profile_id,
+                display_name=profile.display_name,
+                voice_gender=profile.voice_gender,
+            )
+            for profile in PROFILES.values()
+        ]
+
     session_registry = SessionRegistry()
     pairing_authority = (
         PairingAuthority(runtime.gateway_credentials_file)
@@ -134,14 +161,7 @@ def create_app(
                 )
                 if catalog_registry.refresh(force=retry_failed_lessons) is None:
                     continue
-                results = await asyncio.gather(
-                    *(session.send_lesson_catalog_update() for session in tuple(control_sessions)),
-                    return_exceptions=True,
-                )
-                for result in results:
-                    if isinstance(result, Exception):
-                        # A failed socket send is cleaned up by its connection handler.
-                        continue
+                await broadcast_lesson_catalog()
 
         watcher = asyncio.create_task(watch_lesson_catalog())
         try:
@@ -250,6 +270,9 @@ def create_app(
             lesson_factory=lesson_factory,
             lesson_catalog_provider=lambda: catalog_registry.catalog,
             lesson_progress_provider=lesson_progress,
+            teacher_profile_provider=lambda: teacher_profiles.profile_id,
+            teacher_profiles_provider=teacher_profile_catalog,
+            teacher_profile_selector=select_teacher_profile,
             scene_planner_provider=lambda: environment_registry.planner,
             microphone=microphone_source,
             settings=runtime,

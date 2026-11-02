@@ -43,6 +43,8 @@ from govor_contracts import (
     SessionStatePayload,
     SpeechEnergySamplePayload,
     TeacherPlaybackCompletedPayload,
+    TeacherProfileItemPayload,
+    TeacherProfileSelectPayload,
     TeacherTurnPayload,
     TeacherWordAudioPayload,
     TeacherWordReplayRequestPayload,
@@ -120,6 +122,7 @@ class SessionRegistry:
 
 INBOUND_PAYLOADS: dict[str, type[BaseModel]] = {
     "lesson.catalog.request": LessonCatalogRequestPayload,
+    "teacher.profile.select": TeacherProfileSelectPayload,
     "session.start": SessionStartPayload,
     "teacher.playback_completed": TeacherPlaybackCompletedPayload,
     "teacher.word_replay_requested": TeacherWordReplayRequestPayload,
@@ -141,6 +144,9 @@ class ControlSession:
         lesson_progress_provider: Callable[
             [LessonCatalog], dict[str, LessonCatalogProgressPayload]
         ],
+        teacher_profile_provider: Callable[[], str],
+        teacher_profiles_provider: Callable[[], list[TeacherProfileItemPayload]],
+        teacher_profile_selector: Callable[[str, UUID], Awaitable[None]],
         microphone: MicrophoneAudioSource,
         settings: Settings,
         registry: SessionRegistry,
@@ -151,6 +157,9 @@ class ControlSession:
         self._lesson_factory = lesson_factory
         self._lesson_catalog_provider = lesson_catalog_provider
         self._lesson_progress_provider = lesson_progress_provider
+        self._teacher_profile_provider = teacher_profile_provider
+        self._teacher_profiles_provider = teacher_profiles_provider
+        self._teacher_profile_selector = teacher_profile_selector
         self._lesson: LessonService | None = None
         self._lesson_catalog: LessonCatalog | None = None
         self._microphone = microphone
@@ -227,6 +236,13 @@ class ControlSession:
     async def _dispatch(self, envelope: MessageEnvelope, payload: BaseModel) -> None:
         if envelope.message_type == "lesson.catalog.request":
             _require(payload, LessonCatalogRequestPayload)
+            await self._send_lesson_catalog(envelope.correlation_id)
+            return
+        if envelope.message_type == "teacher.profile.select":
+            if self._session_id is not None:
+                raise ValueError("teacher profile cannot change during an active lesson")
+            selection = _require(payload, TeacherProfileSelectPayload)
+            await self._teacher_profile_selector(selection.profile_id, envelope.correlation_id)
             await self._send_lesson_catalog(envelope.correlation_id)
             return
         if envelope.message_type == "session.start":
@@ -323,6 +339,8 @@ class ControlSession:
             correlation_id,
             LessonCatalogPayload(
                 default_scenario_id=catalog.default_scenario_id,
+                teacher_profiles=self._teacher_profiles_provider(),
+                selected_teacher_profile_id=self._teacher_profile_provider(),
                 lessons=[
                     LessonCatalogItemPayload(
                         scenario_id=lesson.scenario_id,

@@ -168,15 +168,38 @@ data class LessonCatalogItemPayload(
 }
 
 @Serializable
+data class TeacherProfileItemPayload(
+    val profile_id: String,
+    val display_name: String,
+    val voice_gender: String,
+) {
+    fun validate(): TeacherProfileItemPayload {
+        require(profile_id in setOf("elena", "amira", "daniel"))
+        require(display_name.isNotBlank() && display_name.length <= 64)
+        require(voice_gender in setOf("female", "male"))
+        return this
+    }
+}
+
+@Serializable
+data class TeacherProfileSelectPayload(val profile_id: String)
+
+@Serializable
 data class LessonCatalogPayload(
     val default_scenario_id: String,
     val lessons: List<LessonCatalogItemPayload>,
+    val teacher_profiles: List<TeacherProfileItemPayload>,
+    val selected_teacher_profile_id: String,
 ) {
     fun validate(): LessonCatalogPayload {
         require(lessons.size in 1..64)
         lessons.forEach { it.validate() }
         require(lessons.map { it.scenario_id }.distinct().size == lessons.size)
         require(default_scenario_id in lessons.map { it.scenario_id })
+        require(teacher_profiles.size in 1..8)
+        teacher_profiles.forEach { it.validate() }
+        require(teacher_profiles.map { it.profile_id }.distinct().size == teacher_profiles.size)
+        require(selected_teacher_profile_id in teacher_profiles.map { it.profile_id })
         require(
             lessons == lessons.sortedWith(
                 compareBy<LessonCatalogItemPayload> { it.display_order }

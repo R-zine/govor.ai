@@ -34,6 +34,7 @@ class FakeRendererControl:
     commands: list[RendererCommandPayload] = field(default_factory=list)
     connected: bool = True
     failure: bool = False
+    selected_teacher_profiles: list[str] = field(default_factory=list)
 
     async def dispatch(self, payload: RendererCommandPayload, correlation_id: Any) -> None:
         _ = correlation_id
@@ -42,6 +43,14 @@ class FakeRendererControl:
 
             raise RendererUnavailable("injected renderer failure")
         self.commands.append(payload)
+
+    async def select_teacher_profile(self, profile_id: str, correlation_id: Any) -> None:
+        _ = correlation_id
+        if self.failure:
+            from govor_host.renderer_gateway import RendererUnavailable
+
+            raise RendererUnavailable("injected renderer failure")
+        self.selected_teacher_profiles.append(profile_id)
 
 
 class FailingLessonService(FakeLessonService):
@@ -191,6 +200,26 @@ def test_control_returns_the_startup_lesson_catalog() -> None:
     assert all(
         item["progress"]["status"] == "not_started" for item in catalog["payload"]["lessons"]
     )
+    assert catalog["payload"]["selected_teacher_profile_id"] == "amira"
+    assert [profile["profile_id"] for profile in catalog["payload"]["teacher_profiles"]] == [
+        "elena",
+        "amira",
+        "daniel",
+    ]
+
+
+def test_control_selects_teacher_for_voice_renderer_and_catalog() -> None:
+    renderer = FakeRendererControl()
+    app = create_app(Settings(mode="fake"), renderer=renderer)
+
+    with TestClient(app).websocket_connect("/v1/control") as socket:
+        socket.send_json(envelope("teacher.profile.select", {"profile_id": "daniel"}))
+        updated = socket.receive_json()
+
+    assert updated["message_type"] == "lesson.catalog"
+    assert updated["payload"]["selected_teacher_profile_id"] == "daniel"
+    assert app.state.teacher_profiles.profile_id == "daniel"
+    assert renderer.selected_teacher_profiles == ["daniel"]
 
 
 def test_control_catalog_includes_persisted_lesson_progress(tmp_path: Path) -> None:
@@ -837,6 +866,22 @@ def test_real_renderer_gateway_routes_validated_commands_and_acknowledgements() 
         assert client.get("/health").json()["teacher_profile"] == "daniel"
 
         with client.websocket_connect("/v1/control") as control_socket:
+            control_socket.send_json(envelope("teacher.profile.select", {"profile_id": "elena"}))
+            renderer_selection = renderer_socket.receive_json()
+            selected_catalog = control_socket.receive_json()
+            assert renderer_selection["message_type"] == "renderer.teacher_profile_selected"
+            assert renderer_selection["payload"] == {"profile_id": "elena"}
+            assert selected_catalog["payload"]["selected_teacher_profile_id"] == "elena"
+
+            renderer_socket.send_json(
+                envelope(
+                    "renderer.teacher_profile_selected",
+                    {"profile_id": "amira"},
+                )
+            )
+            host_menu_catalog = control_socket.receive_json()
+            assert host_menu_catalog["payload"]["selected_teacher_profile_id"] == "amira"
+
             control_socket.send_json(envelope("session.start", {"client_id": str(uuid4())}))
             acknowledge_next_renderer_command(renderer_socket, "session_started")
             ready = control_socket.receive_json()

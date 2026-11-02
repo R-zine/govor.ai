@@ -138,11 +138,24 @@ public partial class HostPairingScreen : Control
                 index);
             popup.SetItemChecked(index, profile.Id == selectedId);
         }
-        popup.IdPressed += id => SelectTeacherProfile(checked((int)id));
+        popup.IdPressed += id => SelectTeacherProfile(checked((int)id), notifyHost: true);
         return _teacherMenu;
     }
 
-    private void SelectTeacherProfile(int index)
+    public void ApplyTeacherProfile(string profileId)
+    {
+        int index = TeacherProfileCatalog.Profiles
+            .Select((profile, itemIndex) => (profile, itemIndex))
+            .FirstOrDefault(item => item.profile.Id == profileId)
+            .itemIndex;
+        if (!TeacherProfileCatalog.IsAllowed(profileId))
+        {
+            throw new InvalidDataException("Teacher profile is not allow-listed.");
+        }
+        SelectTeacherProfile(index, notifyHost: false);
+    }
+
+    private void SelectTeacherProfile(int index, bool notifyHost)
     {
         if (index < 0 || index >= TeacherProfileCatalog.Profiles.Count || _teacherMenu is null)
         {
@@ -156,7 +169,10 @@ public partial class HostPairingScreen : Control
         }
         _teacherMenu.Text = $"Teacher · {selected.DisplayName}";
         TeacherProfileCatalog.SavePreference(selected.Id);
-        TeacherProfileSelected?.Invoke(selected.Id);
+        if (notifyHost)
+        {
+            TeacherProfileSelected?.Invoke(selected.Id);
+        }
     }
 
     private Control CreateMainContent()
