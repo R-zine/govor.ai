@@ -48,6 +48,11 @@ after a normal host state confirms recovery. Starting/ending a lesson or disconn
 an obsolete error. This avoids hiding a real failure on button press while preventing a recovered
 failure or the previous lesson's final answer from leaking into a healthy UI.
 
+The correction shipped in matching signed release 0.1.19/code 20. Its portable Windows host passed
+both entry-point doctors, and Android accepted the in-place physical-phone update from 0.1.18/code
+19 and cold-launched the Activity. That verifies package/update compatibility, not the two lesson
+interactions; they remain subject to direct learner retesting.
+
 ## Consequences
 
 - Controls appear only in the context where they are meaningful, while every prior learner action

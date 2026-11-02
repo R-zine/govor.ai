@@ -48,6 +48,10 @@ The 2026-11-02 Android state-lifecycle correction makes learner transcripts and 
 messages explicitly lesson-scoped. Completing or starting a lesson clears the prior answer, while
 a recoverable error remains visible only until a later non-error host state confirms recovery.
 This is an app-only maintenance fix with no control-contract or host change.
+Matching signed release 0.1.19/code 20 was then built, its portable Windows host passed both
+learner entry-point doctors with all models ready, and the physical realme updated in place and
+cold-launched. The two corrected UI sequences still require a user-driven lesson/retry check; an
+accepted package update is not substituted for that interaction evidence.
 
 ## Milestone 2 acceptance tracking
 

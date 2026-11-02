@@ -1103,8 +1103,22 @@ Verification:
   supported in-process fallback compiled production and test Kotlin and the build completed.
 - `./scripts/build.ps1 -Target android`: verified passing. The debug APK is 66,058,580 bytes with
   SHA-256 `0b0f1a5a698d9f0b7b6291f8df963423996c3606732c968e7e62062fde9f011a`.
-- No emulator or physical lesson was run for this correction. The signed 0.1.18 APK installed on
-  the physical phone predates it; a later signed package/install is required before user retesting.
+- `./scripts/package.ps1 -Version 0.1.19 -VersionCode 20 -NoArchive`: verified passing. Godot
+  export, Android release lint/build, APK Signature Scheme v2 verification with the established
+  signer, embedded runtime/source/import checks, prerequisites, and packaged wrapper doctors all
+  completed. The signed APK is 59,891,893 bytes with SHA-256
+  `30e2dc991b04d85abdebfccd01b51515ff9b853f8380f7c12807b5093d4c57ca`.
+- The matching `.cache/dist/govor.ai-0.1.19-windows-x64` host passed both learner-facing doctors;
+  Qwen3, Whisper, Kokoro model/voices, and Piper model/config all reported `ready`. The prior
+  versioned host remains available as a rollback copy.
+- The authorized physical realme updated in place from 0.1.18/code 19 to 0.1.19/code 20 with
+  `adb install -r --no-streaming`, preserving application data. Android returned `Success`, the
+  package query reported the new version, and `ai.govor.app/.MainActivity` completed a cold launch
+  with `Status: ok` in 666 ms.
+- No lesson or recovery interaction was automated after installation, so the two visible fixes
+  still require direct user retesting. No host gateway/audio was started; TCP 8765/8766 remained
+  closed. Exact deployment evidence is in
+  `docs/benchmarks/2026-11-02-release-0.1.19-ui-fix-deployment.md`.
 
 ## Post-milestone QR-first release pairing
 
