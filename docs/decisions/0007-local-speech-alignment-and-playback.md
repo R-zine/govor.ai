@@ -6,7 +6,7 @@
 
 ## Context
 
-The teacher needs natural English and Bulgarian speech, deterministic offline recovery,
+The teacher needs natural English and Bulgarian speech, bounded offline recovery,
 accent-aware IPA, synchronized word highlighting, speed control, and isolated-word replay. Timing
 must come from the provider rather than character proportions or fabricated timestamps. The
 Android client must keep playing when timing is unavailable, and locale identity must remain
@@ -24,7 +24,7 @@ Use pinned `kokoro-onnx==0.6.1` with the full Kokoro v1.0 ONNX model for English
 `bg_BG-dimitar-medium` for Bulgarian. Model and voice files are checksum-pinned, downloaded to
 ignored tooling storage, and never committed.
 
-Use eSpeak NG 1.52 from `espeakng-loader==0.2.4` as the deterministic fallback. It runs in a
+Use eSpeak NG 1.52 from `espeakng-loader==0.2.4` as the process-isolated offline fallback. It runs in a
 short-lived child process, receives bounded text over standard input, and returns WAV over standard
 output. This keeps eSpeak's process-global C state out of the host and keeps teacher text out of
 process arguments and logs. It does not change the GPL obligations if the component is distributed.
@@ -67,7 +67,7 @@ messages. WAV payloads are limited to 1,500,044 decoded bytes and 30 seconds.
   generated audio are required as well.
 - Using ordinary STT output as pronunciation scoring: transcription is not authoritative phonetic
   assessment.
-- Running eSpeak's process-global library in the long-lived host: a subprocess gives deterministic
+- Running eSpeak's process-global library in the long-lived host: a subprocess gives bounded
   teardown and avoids interfering with Phonemizer's own library instance.
 - Silently mapping `en` to one English voice: explicit `en-GB` and `en-US` are retained end to end.
 - Calling process isolation a GPL exception: Milestone 8 must comply with the GPL stack or select a
@@ -77,8 +77,9 @@ messages. WAV payloads are limited to 1,500,044 decoded bytes and 30 seconds.
 
 `./scripts/benchmark.ps1 -Profile speech` generated English GB/US, Bulgarian, and fallback WAVs.
 Both neural engines returned real word and phoneme alignment for the benchmark phrases; all three
-speed settings changed duration in the expected order. The eSpeak repeat was byte-identical and
-reported timing as null. Curated `water thought schedule` IPA differed consistently between
+speed settings changed duration in the expected order. The eSpeak fallback produced consistently
+shaped WAV output and reported timing as null; exact PCM bytes are not a provider guarantee.
+Curated `water thought schedule` IPA differed consistently between
 British and American English, and the Bulgarian fixture returned non-empty per-word IPA.
 
 `./scripts/emulator-speech-smoke.ps1` then delivered Kokoro speech to the API 34 native emulator.

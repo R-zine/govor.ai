@@ -1,4 +1,4 @@
-"""Offline English/Bulgarian speech synthesis and deterministic fallback."""
+"""Offline English/Bulgarian speech synthesis and process-isolated fallback."""
 
 from __future__ import annotations
 
@@ -221,7 +221,7 @@ class EspeakFallbackSpeechProvider:
         local=True,
         features=frozenset(
             {
-                "deterministic_fallback",
+                "offline_fallback",
                 "en-GB",
                 "en-US",
                 "bg-BG",
@@ -296,7 +296,7 @@ class LocalSpeechRouter:
             {
                 "natural_english",
                 "bulgarian",
-                "deterministic_fallback",
+                "offline_fallback",
                 "en-GB",
                 "en-US",
                 "bg-BG",

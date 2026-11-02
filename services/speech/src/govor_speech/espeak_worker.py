@@ -1,4 +1,4 @@
-"""Process-isolated eSpeak NG WAV synthesis used by the deterministic fallback."""
+"""Process-isolated eSpeak NG WAV synthesis used by the offline fallback."""
 
 from __future__ import annotations
 

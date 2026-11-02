@@ -70,7 +70,7 @@ This starts the pinned Qwen3 4B model with llama.cpp on port 8767, renderer-back
 Godot, and the host on 8765. It stops child processes when the foreground host exits. Control is
 still unauthenticated and all services deliberately remain loopback-only; use `adb reverse` for
 emulator development. Local teacher turns use Kokoro for `en-GB`/`en-US`, Piper for `bg-BG`, and
-the deterministic eSpeak NG fallback when a neural provider is unavailable.
+the process-isolated eSpeak NG fallback when a neural provider is unavailable.
 An alternate GGUF can be supplied with `-LlamaModelPath` together with an accurate
 `-DialogueProviderId`; `-ContextSize` and `-GpuLayers` are also configurable. The selected pinned
 4B model remains the default and alternate models require their own evaluation record.

@@ -12,7 +12,7 @@ acoustic judgment, release package, hardware codec, or mixed Ethernet/Wi-Fi path
 - NVIDIA GeForce RTX 3060, driver 560.94.
 - Godot 4.7.2 stable .NET (`ed1daf0bf`) with repository-local export templates.
 - Renderer: Compatibility/OpenGL 3.3, 1280x720, 30 fps.
-- Voice tests: local deterministic/fake engine boundaries; the focused eSpeak test invoked the
+- Voice tests: local fake-engine boundaries; the focused eSpeak test invoked the
   installed local worker. No paid/cloud speech request was sent.
 
 ## Assets and provenance
