@@ -85,4 +85,8 @@ exported scene tour cycles Elena, Amira, Daniel, and Elena through the four back
 distinct 1280x720 frames with an open viseme, and checks cache/video-memory revisit bounds. Python
 tests cover closed selection, live host propagation, Kokoro voice switching, female Bulgarian
 fallback, male Piper routing, and dynamic cloud presentation voice selection. This is local
-development-machine evidence, not a new physical-phone or release-package acceptance result.
+development-machine evidence. On 2026-11-02 the implementation was included in the matching signed
+0.1.18/code-19 Windows/Android release, the portable host passed its entry-point doctors, and the
+physical realme installation updated and cold-launched successfully. Pairing and lesson media were
+not run, so the deployment is not yet physical-phone evidence for the new models, backdrops, or
+voice mapping.

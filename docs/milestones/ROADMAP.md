@@ -445,3 +445,10 @@ requires provenance/hashes, schema and language-binding tests, voice-routing tes
 import/self-test/export, a visual UI proof, the four-scene/profile tour, the full software suite,
 dependency audit, and all-files pre-commit. This maintenance feature does not rewrite the completed
 Milestone 9 physical evidence; ADR-0020 defines the current visual/voice architecture and limits.
+
+The current visual/voice source was subsequently packaged on 2026-11-02 as signed release
+0.1.18/code 19. The matching portable Windows host passed both learner-entry-point doctors and
+found all local models ready; the physical realme installation updated in place and cold-launched.
+That deployment is package/update evidence only. Pairing, media, teacher/voice presentation, and
+mixed Ethernet/Wi-Fi still require an explicit end-to-end run of this candidate before making a
+candidate-specific runtime claim.

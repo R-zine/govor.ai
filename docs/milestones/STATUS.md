@@ -1,6 +1,6 @@
 # Current verified status
 
-Last updated: 2026-10-26
+Last updated: 2026-11-02
 
 ## Outcome
 
@@ -142,6 +142,29 @@ architecture and voice mapping. This is software/development-machine evidence on
 package, physical phone, camera scan, acoustic judgment, hardware codec, or mixed-LAN acceptance
 was executed, and the historical Milestone 9 record must not be read as acceptance of these new
 visual assets.
+
+### Signed 0.1.18 deployment amendment
+
+On 2026-11-02 the current source was packaged as matching Windows and Android release 0.1.18
+(Android version code 19). The package command passed Godot export, Android release lint/build,
+APK Signature Scheme v2 verification with the established release certificate, embedded-runtime
+imports, corresponding-source/prerequisite checks, and both packaged wrapper doctors. The signed
+APK is 59,891,893 bytes with SHA-256
+`b19c983697abc4282f65e4d8d9734696f34fe8b93b2b594fc579b5b12235fdb8`.
+
+ADB identified the connected physical realme RMX3939 and updated the existing installation in
+place from 0.1.14/code 15 to 0.1.18/code 19 with `adb install -r --no-streaming`; Android returned
+`Success`. A subsequent package query reported the new version, and the resolved
+`ai.govor.app/.MainActivity` completed a cold launch with `Status: ok`. The matching portable host
+is `.cache/dist/govor.ai-0.1.18-windows-x64`; both `Setup-Govor.cmd --doctor-only` and
+`Start-Govor.cmd --doctor-only` passed, and all required local models reported `ready`. The older
+portable directory was retained as a rollback copy.
+
+This deployment proves build, signature, update compatibility, package metadata, prerequisite/model
+availability, and Android Activity startup. It did not start the host gateway or renderer, scan the
+pairing QR, send media, exercise the selected teacher/voice on the phone, or test the mixed
+Ethernet/Wi-Fi path. No server or audio was left running. Exact commands and results are in
+`docs/benchmarks/2026-11-02-release-0.1.18-deployment.md`.
 
 ## Post-milestone JSON lesson catalog
 
