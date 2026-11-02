@@ -156,7 +156,7 @@ async def test_router_falls_back_only_when_preferred_is_unavailable() -> None:
 
 
 @pytest.mark.asyncio
-async def test_female_bulgarian_uses_gendered_fallback_and_male_uses_piper() -> None:
+async def test_bulgarian_prefers_neural_piper_for_every_teacher() -> None:
     calls: list[str] = []
     selected = "amira"
 
@@ -171,7 +171,7 @@ async def test_female_bulgarian_uses_gendered_fallback_and_male_uses_piper() -> 
     router = LocalSpeechRouter(
         RecordingProvider("english"),
         RecordingProvider("piper"),
-        RecordingProvider("gendered-fallback"),
+        RecordingProvider("fallback"),
         teacher_profile_provider=lambda: selected,
     )
 
@@ -179,7 +179,32 @@ async def test_female_bulgarian_uses_gendered_fallback_and_male_uses_piper() -> 
     selected = "daniel"
     await router.synthesize("Добър ден.", "bg-BG")
 
-    assert calls == ["gendered-fallback", "piper"]
+    assert calls == ["piper", "piper"]
+
+
+@pytest.mark.asyncio
+async def test_bulgarian_provider_failure_keeps_profile_aware_fallback() -> None:
+    calls: list[str] = []
+
+    class BrokenBulgarian:
+        async def synthesize(self, text: str, locale: str, *, speed: float = 1.0) -> Any:
+            raise ProviderUnavailable(f"unavailable: {text} {locale} {speed}")
+
+    class RecordingFallback:
+        async def synthesize(self, text: str, locale: str, *, speed: float = 1.0) -> Any:
+            calls.append(f"{text}:{locale}:{speed}")
+            return SimpleNamespace(text=text, locale=locale, speed=speed)
+
+    router = LocalSpeechRouter(
+        BrokenBulgarian(),
+        BrokenBulgarian(),
+        RecordingFallback(),
+        teacher_profile_provider=lambda: "amira",
+    )
+
+    await router.synthesize("Добър ден.", "bg-BG")
+
+    assert calls == ["Добър ден.:bg-BG:1.0"]
 
 
 def test_curated_ipa_is_accent_aware_and_bulgarian_is_not_empty() -> None:

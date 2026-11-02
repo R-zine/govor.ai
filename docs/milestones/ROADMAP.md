@@ -485,3 +485,10 @@ selection. Android exposes them in the lesson-preferences sheet and on the selec
 A pre-lesson change is applied to the host speech route and Godot model as one operation, then
 confirmed by a replacement catalog; mid-lesson changes and arbitrary profile/path values are
 rejected. The host pre-connect selector remains available and uses the same process state.
+
+## Post-milestone Bulgarian neural voice correction
+
+All teacher profiles now prefer the installed neural Piper Bulgarian provider. This replaces the
+female profiles' poorly intelligible eSpeak normal path while retaining profile-aware eSpeak only
+for provider failure. The temporary female-model/male-voice mismatch is explicitly documented;
+adding a reviewed female Bulgarian neural provider remains a future quality improvement.

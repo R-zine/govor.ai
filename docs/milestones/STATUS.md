@@ -107,12 +107,12 @@ sends only the closed profile ID over `renderer.teacher_profile_selected` to sha
 The four built-in scene IDs now resolve to local CC0 photographic backdrops. Installed environment
 recipes retain the ADR-0015 data-only primitive boundary.
 
-Speech resolves the same profile at synthesis time. Elena and Amira use female Kokoro voices and
-female eSpeak fallback variants; Daniel uses male Kokoro voices and the available male Bulgarian
-Piper Dimitar voice. Because the installed Piper catalog has no female Bulgarian voice, female
-profiles intentionally use local eSpeak `bg+f3` for Bulgarian rather than silently mismatching the
-model. Optional cloud-compatible speech has independently configurable presentation voice names;
-the application does not claim providers guarantee a speaker identity from those names.
+Speech resolves the same profile at synthesis time. English uses profile-matched female or male
+Kokoro voices. All profiles now use the available neural Bulgarian Piper Dimitar voice because the
+earlier eSpeak `bg+f3` route for female profiles failed the product-owner intelligibility check.
+The temporary female-model/male-voice mismatch is explicit; eSpeak remains a gender-aware failure
+fallback. Optional cloud-compatible speech has independently configurable presentation voice
+names; the application does not claim providers guarantee a speaker identity from those names.
 
 Local verification completed so far:
 
@@ -1318,6 +1318,19 @@ managed shell forced Gradle's in-process compiler fallback. The C# scope passed 
 Godot import, renderer build, and headless self-test passed. Godot/NuGet emitted the existing
 offline advisory-index warning. This is software evidence only; phone UI usability and the
 subjective match between each visible teacher and speech still require an end-to-end listening run.
+
+## Post-milestone Bulgarian neural voice correction
+
+Bulgarian synthesis now always prefers the installed neural Piper `bg_BG-dimitar-medium` provider.
+The former Elena/Amira path selected eSpeak `bg+f3` to preserve gender presentation, but the product
+owner found that output barely understandable. Intelligibility therefore takes priority until a
+reviewed female Bulgarian neural voice is integrated. Provider failure still uses the selected
+profile's female or male eSpeak variant. Automated checks prove routing and WAV/provider behavior;
+they do not prove subjective improvement, so the new route still needs a learner listening run.
+The speech scope passed mypy and 14 tests. The real installed-model benchmark generated three
+non-empty, aligned Piper WAVs at 0.75/1.0/1.25 speed with no fallback; warm synthesis measured
+961.6 ms and 922.2 ms. It played no audio and left no media listener/player running. Exact evidence
+and limits are in `docs/benchmarks/2026-11-02-bulgarian-neural-routing.md`.
 
 ## Renderer evidence and limitations
 

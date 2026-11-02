@@ -325,12 +325,8 @@ class LocalSpeechRouter:
         self._lock = asyncio.Lock()
 
     async def synthesize(self, text: str, locale: str, *, speed: float = 1.0) -> TeacherTurn:
-        profile_id = _teacher_profile(self._teacher_profile_provider)
+        _teacher_profile(self._teacher_profile_provider)
         preferred = self.bulgarian if locale == "bg-BG" else self.english
-        # Piper currently publishes only the male Bulgarian Dimitar voice. Preserve the selected
-        # female presentation with eSpeak's local f3 variant instead of silently changing gender.
-        if locale == "bg-BG" and profile_id in {"elena", "amira"}:
-            preferred = self.fallback
         async with self._lock:
             if preferred is self.fallback:
                 return await self.fallback.synthesize(text, locale, speed=speed)

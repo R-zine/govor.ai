@@ -42,6 +42,14 @@ The closed profile ID is shared by the renderer and speech factory. Elena maps t
 `bg+f3`. Cloud-compatible profile voice names are configurable; mock transport tests verify the
 dynamic selection without calling a cloud service.
 
+## Bulgarian route supersession (2026-11-02)
+
+The voice mapping and limitation below describe the 2026-10-26 implementation. Product-owner
+listening later found the Elena/Amira eSpeak Bulgarian output barely understandable. Current code
+therefore prefers the neural Piper Dimitar provider for all three profiles and retains the
+gender-aware eSpeak voice only for provider failure. This dated benchmark is preserved as
+historical evidence and is not evidence that the newer route passed a subjective listening check.
+
 ## Commands and results
 
 | Command/check | Result |

@@ -39,14 +39,16 @@ Resolve speech voices at synthesis time from the same selection:
 
 | Profile | English `en-GB` | English `en-US` | Bulgarian |
 | --- | --- | --- | --- |
-| Elena | Kokoro `bf_emma` | Kokoro `af_heart` | eSpeak NG `bg+f3` |
-| Amira | Kokoro `bf_isabella` | Kokoro `af_bella` | eSpeak NG `bg+f3` |
+| Elena | Kokoro `bf_emma` | Kokoro `af_heart` | Piper `bg_BG-dimitar-medium` |
+| Amira | Kokoro `bf_isabella` | Kokoro `af_bella` | Piper `bg_BG-dimitar-medium` |
 | Daniel | Kokoro `bm_george` | Kokoro `am_michael` | Piper `bg_BG-dimitar-medium` |
 
-The female Bulgarian route deliberately uses the less-natural local eSpeak female variant because
-there is no bundled female Piper Bulgarian voice. It must not silently pair a female model with
-Dimitar. Provider failure still uses the gender-matched eSpeak variant. Optional cloud-compatible
-speech uses independently configurable presentation voice names; those names are not treated as a
+Use the installed neural Bulgarian Piper voice for every profile. The earlier gender-matched
+eSpeak route for Elena and Amira was barely understandable in the product-owner listening run;
+intelligibility now takes precedence over speaker/model gender until a reviewed female neural
+Bulgarian provider is integrated. This mismatch is explicit, not presented as a matched voice.
+Provider failure still uses the gender-matched eSpeak variant. Optional cloud-compatible speech
+uses independently configurable presentation voice names; those names are not treated as a
 provider guarantee about speaker identity.
 
 Replace the four built-in procedural rooms with four locally bundled CC0 photographic 2D
@@ -60,8 +62,8 @@ resources.
 - The face and mouth occupy more of the frame, and users can change teacher appearance from the
   host pairing screen or phone lesson screen without rebuilding or restarting the host.
 - Appearance, English accent, and voice presentation are separate concerns: accent remains the
-  learner's setting, while the chosen profile supplies the matching female/male voice within that
-  accent.
+  learner's setting, and English uses profile-matched voices. The single bundled Bulgarian neural
+  voice is shared until a suitable female neural voice passes review.
 - Profile assets and built-in backdrops increase the packaged renderer size. Their exact source,
   license, generation inputs, and hashes are committed beside the assets.
 - The selection is intentionally closed to three profiles. Adding a teacher requires reviewed
@@ -77,8 +79,9 @@ resources.
   security boundary.
 - Download avatars or backgrounds at runtime: this would weaken offline behavior, reviewability,
   and licensing control.
-- Use the male Bulgarian Piper voice for every profile: this would visibly mismatch the female
-  teachers.
+- Keep gender-matched eSpeak as the normal Bulgarian route for female profiles: listening feedback
+  found it barely understandable, which is a worse product failure than an explicitly documented
+  temporary presentation mismatch.
 - Treat cloud voice names as guaranteed gender metadata: compatible providers control the meaning
   of those names.
 
@@ -87,8 +90,8 @@ resources.
 The Godot self-test validates all three allow-listed resources and required speech morphs. The
 exported scene tour cycles Elena, Amira, Daniel, and Elena through the four backdrops, captures
 distinct 1280x720 frames with an open viseme, and checks cache/video-memory revisit bounds. Python
-tests cover closed selection, live host propagation, Kokoro voice switching, female Bulgarian
-fallback, male Piper routing, and dynamic cloud presentation voice selection. This is local
+tests cover closed selection, live host propagation, Kokoro voice switching, Bulgarian Piper
+routing, gender-aware failure fallback, and dynamic cloud presentation voice selection. This is local
 development-machine evidence. On 2026-11-02 the implementation was included in the matching signed
 0.1.18/code-19 Windows/Android release, the portable host passed its entry-point doctors, and the
 physical realme installation updated and cold-launched successfully. Pairing and lesson media were

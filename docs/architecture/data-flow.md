@@ -109,9 +109,10 @@ hint, and at most the configured number of recent turns to llama.cpp. Closed str
 parsed, then the domain policy can reject unsafe locale/progress choices and use a deterministic
 fallback. The bounded WAV in `teacher.turn` is local synthesized PCM16 speech. The speech router
 uses the current teacher profile to choose a female or male Kokoro voice for explicit
-`en-GB`/`en-US`. Daniel uses the available male Piper voice for `bg-BG`; Elena and Amira use the
-local eSpeak NG female variant because no female Bulgarian Piper voice is bundled. Provider
-failure routes to the same profile-appropriate eSpeak presentation. The turn also carries exact
+`en-GB`/`en-US`. All profiles use the substantially clearer neural Piper Dimitar voice for
+`bg-BG`; this temporary gender mismatch is explicit because no reviewed female Bulgarian neural
+voice is bundled and the prior eSpeak route failed the product-owner intelligibility check.
+Provider failure routes to the profile-appropriate eSpeak presentation. The turn also carries exact
 word/IPA character ranges and nullable model timing. Android plays the WAV with `AudioTrack`;
 playback-head frames define media time for subtitle highlighting. Missing alignment disables
 highlighting without blocking playback.
