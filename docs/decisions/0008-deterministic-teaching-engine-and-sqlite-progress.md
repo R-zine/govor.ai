@@ -66,6 +66,13 @@ snapshot. The host ends a completed session only after Android reports that the 
 finished. `scripts/progress.ps1` provides local view, JSON export, and confirmation-gated history
 deletion; deletion preserves explicit learner settings.
 
+The host also projects a bounded summary into every `lesson.catalog` item: `not_started`,
+`in_progress`, or `completed`, successful versus total exercises, and the historical completion
+count. This projection is read from the same SQLite authority and contains no transcript, audio, or
+per-exercise history. Android requests a fresh catalog after every session boundary and shows the
+summary both on the selected lesson card and in the lesson picker; it does not invent or persist a
+second progress source.
+
 ## Security and privacy consequences
 
 - The database has no network listener and remains owned by the trusted Windows user.
@@ -97,7 +104,8 @@ correction, difficulty decrease/increase, and complete lesson progression. SQLit
 reopen the database, resume the next exercise, record vocabulary/help/adaptation, schedule optional
 review, export structured JSON, delete history, and prove a sentinel transcript is absent.
 
-Host tests cover scenario selection, progress delivery, and completion only after final playback.
+Host tests cover scenario selection, catalog progress projection, progress delivery, and completion
+only after final playback.
 The local lesson integration completes a café lesson through recognition/dialogue/speech-shaped
 boundaries and restarts against the same SQLite file. Kotlin and C# decode the shared progress
 fixture, and the Android debug application compiles with scenario/settings controls and progress

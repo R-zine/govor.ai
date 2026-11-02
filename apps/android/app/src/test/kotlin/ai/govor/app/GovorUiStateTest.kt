@@ -1,5 +1,6 @@
 package ai.govor.app
 
+import ai.govor.core.LessonCatalogProgressPayload
 import ai.govor.core.SessionState
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -8,6 +9,28 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 class GovorUiStateTest {
+    @Test
+    fun `lesson catalog labels completed and partial progress`() {
+        assertEquals(
+            "Completed 2 times",
+            lessonCatalogProgressLabel(
+                LessonCatalogProgressPayload("completed", 3, 3, 2),
+            ),
+        )
+        assertEquals(
+            "In progress · 1/3 complete · completed 1 before",
+            lessonCatalogProgressLabel(
+                LessonCatalogProgressPayload("in_progress", 1, 3, 1),
+            ),
+        )
+        assertEquals(
+            "Not started",
+            lessonCatalogProgressLabel(
+                LessonCatalogProgressPayload("not_started", 0, 3, 0),
+            ),
+        )
+    }
+
     @Test
     fun `connection UI is isolated until media connects`() {
         assertEquals(

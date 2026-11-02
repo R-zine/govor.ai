@@ -129,17 +129,40 @@ data class SessionStartPayload(
 class LessonCatalogRequestPayload
 
 @Serializable
+data class LessonCatalogProgressPayload(
+    val status: String,
+    val successful_exercises: Int,
+    val exercise_count: Int,
+    val completed_count: Int,
+) {
+    fun validate(): LessonCatalogProgressPayload {
+        require(status in setOf("not_started", "in_progress", "completed"))
+        require(exercise_count in 1..64)
+        require(successful_exercises in 0..exercise_count)
+        require(completed_count in 0..1_000_000)
+        require(status != "not_started" || (successful_exercises == 0 && completed_count == 0))
+        require(
+            status != "completed" ||
+                (successful_exercises == exercise_count && completed_count >= 1),
+        )
+        return this
+    }
+}
+
+@Serializable
 data class LessonCatalogItemPayload(
     val scenario_id: String,
     val title: String,
     val description: String,
     val display_order: Int,
+    val progress: LessonCatalogProgressPayload,
 ) {
     fun validate(): LessonCatalogItemPayload {
         require(scenario_id.matches(Regex("^[a-z][a-z0-9-]{2,63}$")))
         require(title.isNotBlank() && title.length <= 128)
         require(description.isNotBlank() && description.length <= 512)
         require(display_order in 0..9_999)
+        progress.validate()
         return this
     }
 }

@@ -1288,6 +1288,21 @@ coverage; its only warning was the existing Starlette TestClient deprecation. Th
 packaged runtime check remain to be rerun after the related progress, teacher-selection,
 host-management, and Bulgarian-speech fixes are integrated.
 
+## Post-milestone lesson-catalog progress
+
+The Windows progress adapter now returns one bounded summary per installed lesson from the same
+SQLite state used for resume and completion. `lesson.catalog` carries that summary through strict
+JSON Schema, Python, and Kotlin models. Android shows **Not started**, partial `x/y` progress, prior
+completion count, or a completed status in both the selected lesson card and lesson browser, and
+requests a fresh catalog after every session boundary.
+
+Verification on 2026-11-02: the focused progress/host/schema run passed 69 tests with only the
+existing Starlette TestClient deprecation. The Kotlin scope passed core and application JVM tests;
+the managed environment denied the Kotlin daemon marker under the user profile, so Gradle used its
+documented non-daemon fallback and completed successfully. The complete Python gate then passed
+Ruff, formatting, strict mypy, and 300 tests at 85.17% branch coverage. No physical-device claim is
+made from these software tests.
+
 ## Renderer evidence and limitations
 
 The current local proof images visibly contain the selectable facial teachers over four distinct

@@ -91,11 +91,33 @@ class LessonCatalogRequestPayload(StrictModel):
     pass
 
 
+class LessonCatalogProgressPayload(StrictModel):
+    status: Literal["not_started", "in_progress", "completed"]
+    successful_exercises: int = Field(ge=0, le=64)
+    exercise_count: int = Field(ge=1, le=64)
+    completed_count: int = Field(ge=0, le=1_000_000)
+
+    @model_validator(mode="after")
+    def validate_counts(self) -> LessonCatalogProgressPayload:
+        if self.successful_exercises > self.exercise_count:
+            raise ValueError("catalog progress exceeds the lesson exercise count")
+        if self.status == "not_started" and (
+            self.successful_exercises != 0 or self.completed_count != 0
+        ):
+            raise ValueError("an unstarted lesson cannot contain progress")
+        if self.status == "completed" and (
+            self.successful_exercises != self.exercise_count or self.completed_count < 1
+        ):
+            raise ValueError("completed catalog progress is inconsistent")
+        return self
+
+
 class LessonCatalogItemPayload(StrictModel):
     scenario_id: str = Field(pattern=r"^[a-z][a-z0-9-]{2,63}$", max_length=64)
     title: str = Field(min_length=1, max_length=128)
     description: str = Field(min_length=1, max_length=512)
     display_order: int = Field(ge=0, le=9_999)
+    progress: LessonCatalogProgressPayload
 
 
 class LessonCatalogPayload(StrictModel):

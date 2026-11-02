@@ -9,13 +9,25 @@
         "scenario_id": "cafe-ordering",
         "title": "Ordering at a café",
         "description": "Make a polite drink order.",
-        "display_order": 1
+        "display_order": 1,
+        "progress": {
+          "status": "completed",
+          "successful_exercises": 3,
+          "exercise_count": 3,
+          "completed_count": 2
+        }
       },
       {
         "scenario_id": "airport-travel",
         "title": "Traveling through an airport",
         "description": "State a destination at check-in.",
-        "display_order": 3
+        "display_order": 3,
+        "progress": {
+          "status": "in_progress",
+          "successful_exercises": 1,
+          "exercise_count": 3,
+          "completed_count": 0
+        }
       }
     ]
   }

@@ -9,9 +9,15 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import FastAPI, Request, Response, WebSocket, WebSocketDisconnect
-from govor_contracts import DeviceAuthPayload, MessageEnvelope, PairingRequestPayload
+from govor_contracts import (
+    DeviceAuthPayload,
+    LessonCatalogProgressPayload,
+    MessageEnvelope,
+    PairingRequestPayload,
+)
 from govor_domain import LessonCatalog, load_lesson_catalog
 from govor_gateway_security import PairingAuthority, PairingRejected
+from govor_progress import SQLiteProgressRepository
 from govor_scene_planner import ScenePlanner
 from pydantic import ValidationError
 
@@ -32,6 +38,7 @@ def create_app(
     lesson_catalog: LessonCatalog | None = None,
     microphone: MicrophoneAudioSource | None = None,
     renderer: RendererControl | None = None,
+    progress_repository: SQLiteProgressRepository | None = None,
 ) -> FastAPI:
     runtime = settings or get_settings()
     catalog = lesson_catalog or load_lesson_catalog(runtime.lesson_directory)
@@ -50,6 +57,34 @@ def create_app(
     )
     control_sessions: set[ControlSession] = set()
     teacher_profiles = TeacherProfileSelection()
+    progress_store = progress_repository or (
+        SQLiteProgressRepository(runtime.progress_database) if runtime.mode == "local" else None
+    )
+
+    def lesson_progress(catalog_snapshot: LessonCatalog) -> dict[str, LessonCatalogProgressPayload]:
+        exercise_counts = {
+            lesson_definition.scenario_id: len(lesson_definition.exercises)
+            for lesson_definition in catalog_snapshot.lessons
+        }
+        summaries = (
+            progress_store.lesson_summaries(exercise_counts) if progress_store is not None else {}
+        )
+        return {
+            scenario_id: LessonCatalogProgressPayload(
+                status=(
+                    summaries[scenario_id].status if scenario_id in summaries else "not_started"
+                ),
+                successful_exercises=(
+                    summaries[scenario_id].successful_exercises if scenario_id in summaries else 0
+                ),
+                exercise_count=exercise_count,
+                completed_count=(
+                    summaries[scenario_id].completed_count if scenario_id in summaries else 0
+                ),
+            )
+            for scenario_id, exercise_count in exercise_counts.items()
+        }
+
     lesson_factory: Callable[[LessonCatalog], LessonService]
     if lesson is None and runtime.mode == "local":
         from govor_provider_router.factory import build_configured_lesson_service
@@ -58,6 +93,7 @@ def create_app(
             runtime,
             lesson_catalog=selected_catalog,
             teacher_profile_provider=lambda: teacher_profiles.profile_id,
+            progress_repository=progress_store,
         )
     elif lesson is None:
         lesson_factory = lambda selected_catalog: FakeLessonService(  # noqa: E731
@@ -213,6 +249,7 @@ def create_app(
             renderer=renderer_gateway,
             lesson_factory=lesson_factory,
             lesson_catalog_provider=lambda: catalog_registry.catalog,
+            lesson_progress_provider=lesson_progress,
             scene_planner_provider=lambda: environment_registry.planner,
             microphone=microphone_source,
             settings=runtime,

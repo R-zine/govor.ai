@@ -13,11 +13,12 @@ from uuid import uuid4
 import pytest
 from fastapi.testclient import TestClient
 from govor_contracts import RendererCommandPayload
-from govor_domain import DetectedLanguage, LearnerIntent, import_lesson_bundle
+from govor_domain import DetectedLanguage, LearnerIntent, TeachingEngine, import_lesson_bundle
 from govor_gateway_security import PairingAuthority
 from govor_host.app import create_app
 from govor_host.config import Settings
 from govor_host.fake_lesson import FakeLessonService
+from govor_progress import SQLiteProgressRepository
 from govor_provider_interfaces import LessonResult, Pronunciation, TeacherTurn, UtteranceAudio
 from govor_provider_router import (
     CloudAccessPolicy,
@@ -187,6 +188,41 @@ def test_control_returns_the_startup_lesson_catalog() -> None:
         "airport-travel",
         "home-conversation",
     ]
+    assert all(
+        item["progress"]["status"] == "not_started" for item in catalog["payload"]["lessons"]
+    )
+
+
+def test_control_catalog_includes_persisted_lesson_progress(tmp_path: Path) -> None:
+    progress = SQLiteProgressRepository(tmp_path / "progress.sqlite3")
+    lesson = FakeLessonService().catalog.get("cafe-ordering")
+    state, _ = progress.load_or_start(lesson.scenario_id, len(lesson.exercises))
+    engine = TeachingEngine(lesson, state)
+    outcome = engine.evaluate(
+        "I would like coffee, please.",
+        DetectedLanguage.ENGLISH,
+        LearnerIntent.ENGLISH_ANSWER,
+    )
+    progress.record_outcome(outcome, engine.state)
+    app = create_app(
+        Settings(mode="fake"),
+        renderer=FakeRendererControl(),
+        progress_repository=progress,
+    )
+
+    with TestClient(app).websocket_connect("/v1/control") as socket:
+        socket.send_json(envelope("lesson.catalog.request", {}))
+        catalog = socket.receive_json()
+
+    cafe = next(
+        item for item in catalog["payload"]["lessons"] if item["scenario_id"] == "cafe-ordering"
+    )
+    assert cafe["progress"] == {
+        "status": "in_progress",
+        "successful_exercises": 1,
+        "exercise_count": 3,
+        "completed_count": 0,
+    }
 
 
 def test_external_lesson_is_advertised_and_startable(tmp_path: Path) -> None:

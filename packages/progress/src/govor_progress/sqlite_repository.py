@@ -7,11 +7,12 @@ Raw audio and transcript text never cross this boundary.
 from __future__ import annotations
 
 import sqlite3
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterator, Mapping
 from contextlib import contextmanager
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from govor_domain import (
     Difficulty,
@@ -21,6 +22,15 @@ from govor_domain import (
     TeachingOutcome,
     TeachingState,
 )
+
+
+@dataclass(frozen=True, slots=True)
+class ScenarioProgressSummary:
+    scenario_id: str
+    status: Literal["not_started", "in_progress", "completed"]
+    successful_exercises: int
+    exercise_count: int
+    completed_count: int
 
 
 class SQLiteProgressRepository:
@@ -257,6 +267,50 @@ class SQLiteProgressRepository:
             "vocabulary": [dict(row) for row in vocabulary],
             "difficulty_changes": [dict(row) for row in changes],
         }
+
+    def lesson_summaries(
+        self,
+        exercise_counts: Mapping[str, int],
+    ) -> dict[str, ScenarioProgressSummary]:
+        """Return bounded catalog summaries without exposing exercise history or transcripts."""
+
+        if not 1 <= len(exercise_counts) <= 64:
+            raise ValueError("lesson summaries require between one and 64 scenarios")
+        if any(not 1 <= count <= 64 for count in exercise_counts.values()):
+            raise ValueError("lesson summary exercise counts must be between one and 64")
+        with self._connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT scenario_id, successful_exercises, completed_count, active
+                FROM scenario_progress
+                """
+            ).fetchall()
+        stored = {str(row["scenario_id"]): row for row in rows}
+        summaries: dict[str, ScenarioProgressSummary] = {}
+        for scenario_id, exercise_count in exercise_counts.items():
+            row = stored.get(scenario_id)
+            active = row is not None and bool(row["active"])
+            completed_count = int(row["completed_count"]) if row is not None else 0
+            status: Literal["not_started", "in_progress", "completed"]
+            if active:
+                status = "in_progress"
+            elif completed_count > 0:
+                status = "completed"
+            else:
+                status = "not_started"
+            successful = int(row["successful_exercises"]) if row is not None else 0
+            if status == "completed":
+                successful = exercise_count
+            else:
+                successful = min(successful, exercise_count - 1)
+            summaries[scenario_id] = ScenarioProgressSummary(
+                scenario_id=scenario_id,
+                status=status,
+                successful_exercises=successful,
+                exercise_count=exercise_count,
+                completed_count=completed_count,
+            )
+        return summaries
 
     def delete_history(self) -> None:
         """Delete learner history while preserving the learner's explicit settings."""

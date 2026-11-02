@@ -423,6 +423,7 @@ class LessonSessionClient {
         transientUiState.endLesson()
         mutableLessonActive.value = false
         mutableState.value = SessionState.DISCONNECTED
+        requestLessonCatalog()
     }
 
     private fun applyError(payload: SessionErrorPayload) {

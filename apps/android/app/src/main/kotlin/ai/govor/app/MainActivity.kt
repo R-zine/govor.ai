@@ -6,6 +6,7 @@ import android.net.ConnectivityManager
 import android.net.Network
 import android.os.Bundle
 import ai.govor.core.LessonCatalogItemPayload
+import ai.govor.core.LessonCatalogProgressPayload
 import ai.govor.core.LessonProgressPayload
 import ai.govor.core.PairingBootstrapCodec
 import ai.govor.core.PronunciationPayload
@@ -664,6 +665,9 @@ private fun LessonSelectionScreen(
                             selectedLesson?.description?.let {
                                 Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
+                            selectedLesson?.progress?.let { progress ->
+                                LessonCatalogProgressStatus(progress)
+                            }
                             TextButton(onClick = { showLessonPicker = true }) {
                                 Icon(Icons.AutoMirrored.Filled.List, contentDescription = null)
                                 Spacer(Modifier.width(8.dp))
@@ -709,7 +713,20 @@ private fun LessonSelectionScreen(
                 lessonCatalog.forEach { lesson ->
                     ListItem(
                         headlineContent = { Text(lesson.title) },
-                        supportingContent = { Text(lesson.description) },
+                        supportingContent = {
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Text(lesson.description)
+                                Text(
+                                    lessonCatalogProgressLabel(lesson.progress),
+                                    color = if (lesson.progress.status == "completed") {
+                                        MaterialTheme.colorScheme.primary
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                    },
+                                    style = MaterialTheme.typography.labelMedium,
+                                )
+                            }
+                        },
                         leadingContent = {
                             RadioButton(
                                 selected = lesson.scenario_id == selectedScenarioId,
@@ -736,6 +753,52 @@ private fun LessonSelectionScreen(
         )
     }
 }
+
+@Composable
+private fun LessonCatalogProgressStatus(progress: LessonCatalogProgressPayload) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Icon(
+            if (progress.status == "completed") {
+                Icons.Filled.CheckCircle
+            } else {
+                Icons.Filled.PlayArrow
+            },
+            contentDescription = null,
+            tint = if (progress.status == "completed") {
+                MaterialTheme.colorScheme.primary
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            },
+            modifier = Modifier.size(18.dp),
+        )
+        Text(
+            lessonCatalogProgressLabel(progress),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.labelLarge,
+        )
+    }
+}
+
+internal fun lessonCatalogProgressLabel(progress: LessonCatalogProgressPayload): String =
+    when (progress.status) {
+        "completed" -> if (progress.completed_count == 1) {
+            "Completed once"
+        } else {
+            "Completed ${progress.completed_count} times"
+        }
+
+        "in_progress" -> buildString {
+            append("In progress · ${progress.successful_exercises}/${progress.exercise_count} complete")
+            if (progress.completed_count > 0) {
+                append(" · completed ${progress.completed_count} before")
+            }
+        }
+
+        else -> "Not started"
+    }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

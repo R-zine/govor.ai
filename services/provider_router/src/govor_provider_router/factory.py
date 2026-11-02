@@ -7,7 +7,7 @@ from typing import Literal, Protocol
 
 from govor_domain import LessonCatalog, load_lesson_catalog
 from govor_local_ai.llama_cpp import LlamaCppDialogueProvider
-from govor_local_ai.service import LocalLessonService
+from govor_local_ai.service import LocalLessonService, ProgressRepository
 from govor_local_ai.whisper_cpp import WhisperCppRecognizer
 from govor_progress import SQLiteProgressRepository
 from govor_speech import build_local_speech_provider
@@ -63,6 +63,7 @@ def build_configured_lesson_service(
     credentials: CredentialStore | None = None,
     lesson_catalog: LessonCatalog | None = None,
     teacher_profile_provider: Callable[[], str] | None = None,
+    progress_repository: ProgressRepository | None = None,
 ) -> LocalLessonService:
     """Build one pipeline without coupling the three provider choices."""
 
@@ -130,7 +131,8 @@ def build_configured_lesson_service(
         recognizer=recognizer,
         dialogue=dialogue,
         speech=speech,
-        progress_repository=SQLiteProgressRepository(settings.progress_database),
+        progress_repository=progress_repository
+        or SQLiteProgressRepository(settings.progress_database),
         memory_turns=settings.conversation_memory_turns,
         lesson_catalog=lesson_catalog or load_lesson_catalog(settings.lesson_directory),
     )

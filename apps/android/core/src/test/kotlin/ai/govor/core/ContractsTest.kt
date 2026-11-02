@@ -87,6 +87,8 @@ class ContractsTest {
             catalog.lessons.map { it.scenario_id },
         )
         assertEquals("Ordering at a café", catalog.lessons.first().title)
+        assertEquals("completed", catalog.lessons.first().progress.status)
+        assertEquals(2, catalog.lessons.first().progress.completed_count)
     }
 
     @Test

@@ -469,3 +469,11 @@ accept that choice instead of the example value. The airport destination exercis
 so `I am flying to New York` is valid while an incomplete `I am flying to` or the wrong direction
 `flying from` is not. Generated lessons are instructed to use the same representation for cities,
 names, foods, times, and similar open values.
+
+## Post-milestone lesson-catalog progress
+
+Each host-advertised lesson now includes a privacy-bounded projection of its authoritative SQLite
+state: not started, in progress, or completed; successful and total exercise counts; and historical
+completion count. The phone refreshes this catalog after a lesson ends and displays the summary on
+the selected card and in the lesson browser. This makes completed lessons and interrupted progress
+visible without retaining a separate Android-side history or exposing transcript/audio data.

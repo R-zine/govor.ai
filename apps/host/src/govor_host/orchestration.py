@@ -21,6 +21,7 @@ from govor_contracts import (
     LearnerTranscriptPayload,
     LessonCatalogItemPayload,
     LessonCatalogPayload,
+    LessonCatalogProgressPayload,
     LessonCatalogRequestPayload,
     LessonProgressPayload,
     MessageEnvelope,
@@ -137,6 +138,9 @@ class ControlSession:
         renderer: RendererControl,
         lesson_factory: Callable[[LessonCatalog], LessonService],
         lesson_catalog_provider: Callable[[], LessonCatalog],
+        lesson_progress_provider: Callable[
+            [LessonCatalog], dict[str, LessonCatalogProgressPayload]
+        ],
         microphone: MicrophoneAudioSource,
         settings: Settings,
         registry: SessionRegistry,
@@ -146,6 +150,7 @@ class ControlSession:
         self._renderer = renderer
         self._lesson_factory = lesson_factory
         self._lesson_catalog_provider = lesson_catalog_provider
+        self._lesson_progress_provider = lesson_progress_provider
         self._lesson: LessonService | None = None
         self._lesson_catalog: LessonCatalog | None = None
         self._microphone = microphone
@@ -312,6 +317,7 @@ class ControlSession:
 
     async def _send_lesson_catalog(self, correlation_id: UUID) -> None:
         catalog = self._lesson_catalog_provider()
+        progress = self._lesson_progress_provider(catalog)
         await self._send(
             "lesson.catalog",
             correlation_id,
@@ -323,6 +329,7 @@ class ControlSession:
                         title=lesson.title,
                         description=lesson.description,
                         display_order=lesson.display_order,
+                        progress=progress[lesson.scenario_id],
                     )
                     for lesson in catalog.lessons
                 ],

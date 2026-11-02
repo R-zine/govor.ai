@@ -141,3 +141,37 @@ def test_delete_all_learner_data_restores_default_settings(tmp_path) -> None:  #
     assert progress.history()["vocabulary"] == []
     assert progress.get_settings() == LearnerSettings()
     assert b"airport-travel" not in progress.path.read_bytes()
+
+
+def test_lesson_summaries_distinguish_unstarted_partial_and_completed(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    progress = repository(tmp_path)
+    exercise_counts = {lesson.scenario_id: len(lesson.exercises) for lesson in CATALOG.lessons}
+
+    initial = progress.lesson_summaries(exercise_counts)
+    assert initial["cafe-ordering"].status == "not_started"
+    assert initial["cafe-ordering"].successful_exercises == 0
+
+    state, _ = load_progress(progress, "cafe-ordering")
+    engine = TeachingEngine(CATALOG.get("cafe-ordering"), state)
+    first = engine.evaluate(
+        "I would like coffee, please.",
+        DetectedLanguage.ENGLISH,
+        LearnerIntent.ENGLISH_ANSWER,
+    )
+    progress.record_outcome(first, engine.state)
+    partial = progress.lesson_summaries(exercise_counts)["cafe-ordering"]
+    assert partial.status == "in_progress"
+    assert partial.successful_exercises == 1
+    assert partial.completed_count == 0
+
+    for answer in ("That is all, thank you.", "For here, please."):
+        outcome = engine.evaluate(
+            answer,
+            DetectedLanguage.ENGLISH,
+            LearnerIntent.ENGLISH_ANSWER,
+        )
+        progress.record_outcome(outcome, engine.state)
+    completed = progress.lesson_summaries(exercise_counts)["cafe-ordering"]
+    assert completed.status == "completed"
+    assert completed.successful_exercises == completed.exercise_count == 3
+    assert completed.completed_count == 1
