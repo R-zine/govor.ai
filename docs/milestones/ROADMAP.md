@@ -460,3 +460,12 @@ found all local models ready; the physical realme installation updated in place 
 That deployment is package/update evidence only. Pairing, media, teacher/voice presentation, and
 mixed Ethernet/Wi-Fi still require an explicit end-to-end run of this candidate before making a
 candidate-specific runtime claim.
+
+## Post-milestone guided-answer flexibility
+
+Guided lesson patterns may now include one bounded learner-value slot after a required literal
+phrase. This keeps success deterministic while allowing prompts that invite a personal choice to
+accept that choice instead of the example value. The airport destination exercise uses the rule,
+so `I am flying to New York` is valid while an incomplete `I am flying to` or the wrong direction
+`flying from` is not. Generated lessons are instructed to use the same representation for cities,
+names, foods, times, and similar open values.

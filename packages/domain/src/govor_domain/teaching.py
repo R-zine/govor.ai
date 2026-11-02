@@ -102,6 +102,10 @@ class LessonExercise:
             not value or len(value) > 128 for pattern in self.accepted_patterns for value in pattern
         ):
             raise ValueError("accepted pattern values must be non-empty and bounded")
+        for pattern in self.accepted_patterns:
+            slot_indexes = [index for index, value in enumerate(pattern) if _SLOT.fullmatch(value)]
+            if len(slot_indexes) > 1 or slot_indexes == [0]:
+                raise ValueError("an accepted pattern slot must be unique and follow a literal")
         if not self.target_vocabulary or any(
             not value or len(value) > 128 for value in self.target_vocabulary
         ):
@@ -112,10 +116,7 @@ class LessonExercise:
 
     def accepts(self, text: str) -> bool:
         normalized = _normalize(text)
-        return any(
-            all(_normalize(required) in normalized for required in pattern)
-            for pattern in self.accepted_patterns
-        )
+        return any(_matches_pattern(normalized, pattern) for pattern in self.accepted_patterns)
 
 
 @dataclass(frozen=True, slots=True)
@@ -388,3 +389,39 @@ def _raise(value: Difficulty) -> Difficulty:
 
 def _normalize(text: str) -> str:
     return " ".join(re.findall(r"[a-z0-9']+", text.casefold().replace("’", "'")))
+
+
+_SLOT = re.compile(r"^\{[a-z][a-z0-9_]{0,31}\}$")
+
+
+def _matches_pattern(normalized_text: str, pattern: tuple[str, ...]) -> bool:
+    """Match literal fragments plus an optional learner-chosen value.
+
+    A lesson author can place one ``{slot_name}`` marker after a literal fragment when the
+    exercise intentionally lets the learner choose the value (for example, a destination). The
+    marker requires at least one word after the preceding fragment. Patterns without a marker
+    retain the original order-independent literal-fragment behavior.
+    """
+
+    slot_indexes = [index for index, value in enumerate(pattern) if _SLOT.fullmatch(value)]
+    if not slot_indexes:
+        return all(_normalize(required) in normalized_text for required in pattern)
+    if len(slot_indexes) != 1:
+        return False
+
+    slot_index = slot_indexes[0]
+    if slot_index == 0:
+        return False
+    prefix = " ".join(_normalize(value) for value in pattern[:slot_index])
+    suffix = " ".join(_normalize(value) for value in pattern[slot_index + 1 :])
+    if not prefix:
+        return False
+    slot_expression = r"[a-z0-9']+(?: [a-z0-9']+)*"
+    if suffix:
+        slot_expression += "?"
+    expression = rf"(?:^| ){re.escape(prefix)} (?P<slot>{slot_expression})"
+    if suffix:
+        expression += rf" {re.escape(suffix)}(?: |$)"
+    else:
+        expression += r"(?: |$)"
+    return re.search(expression, normalized_text) is not None

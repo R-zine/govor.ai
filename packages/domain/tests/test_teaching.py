@@ -98,6 +98,37 @@ def test_consistent_first_try_success_raises_difficulty() -> None:
 
 
 @pytest.mark.parametrize(
+    "answer",
+    (
+        "I am flying to New York.",
+        "My flight to Sofia leaves tonight.",
+        "I am going to Paris.",
+        "My destination is Rio de Janeiro.",
+    ),
+)
+def test_destination_exercise_accepts_a_learner_chosen_city(answer: str) -> None:
+    engine = TeachingEngine(CATALOG.get("airport-travel"))
+
+    outcome = engine.evaluate(answer, DetectedLanguage.ENGLISH, LearnerIntent.ENGLISH_ANSWER)
+
+    assert outcome.successful
+    assert engine.state.exercise_index == 1
+
+
+@pytest.mark.parametrize(
+    "answer",
+    ("I am flying to.", "My destination is.", "I am flying from New York."),
+)
+def test_destination_exercise_requires_a_value_after_the_direction(answer: str) -> None:
+    engine = TeachingEngine(CATALOG.get("airport-travel"))
+
+    outcome = engine.evaluate(answer, DetectedLanguage.ENGLISH, LearnerIntent.ENGLISH_ANSWER)
+
+    assert outcome.successful is False
+    assert engine.state.exercise_index == 0
+
+
+@pytest.mark.parametrize(
     ("scenario_id", "answers"),
     [
         (

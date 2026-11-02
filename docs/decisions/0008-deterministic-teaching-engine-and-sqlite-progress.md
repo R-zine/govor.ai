@@ -28,6 +28,12 @@ Bulgarian explanations, and a completion condition. Matching is deliberately bou
 deterministic; it is suitable for these guided exercises and is not presented as general language
 or pronunciation scoring.
 
+Patterns may contain one bounded named slot after a literal phrase when the prompt deliberately
+allows a learner-chosen value. For example, `flying to` plus `{destination}` accepts London, New
+York, or another supplied destination while still rejecting `flying to` without a value and
+`flying from`. Slots do not delegate scoring to the dialogue model; the domain matcher remains the
+sole deterministic progression authority.
+
 The dialogue provider remains advisory. It receives the active exercise context and may classify
 the learner intent, but `TeachingEngine` alone decides whether the turn is a help request, failed
 attempt, successful English production, exercise advance, or lesson completion. Bulgarian and

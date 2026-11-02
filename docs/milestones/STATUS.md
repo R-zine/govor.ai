@@ -1272,6 +1272,22 @@ Exact evidence, commands, and the required follow-up are in
 VLANs, profile-matched local-network Windows Firewall access, and no router port forwarding remain
 explicit deployment requirements.
 
+## Post-milestone guided-answer flexibility
+
+The airport destination exercise no longer treats the beginner example's `London` as the only
+valid destination. The deterministic domain matcher now supports one bounded named value slot
+after a required literal phrase. `I am flying to New York`, `My flight to Sofia leaves tonight`,
+and `My destination is Rio de Janeiro` advance; incomplete or directionally wrong answers do not.
+The lesson-creator prompt uses the same representation for future learner-chosen values without
+allowing the dialogue model to award progress.
+
+Verification on 2026-11-02: the focused domain and lesson-creator run passed 27 tests. The only
+warning was an existing environment-specific pytest temporary-directory cleanup permission issue.
+The Python scope then passed Ruff, formatting, strict mypy, and 298 tests at 85.15% branch
+coverage; its only warning was the existing Starlette TestClient deprecation. The full suite and
+packaged runtime check remain to be rerun after the related progress, teacher-selection,
+host-management, and Bulgarian-speech fixes are integrated.
+
 ## Renderer evidence and limitations
 
 The current local proof images visibly contain the selectable facial teachers over four distinct

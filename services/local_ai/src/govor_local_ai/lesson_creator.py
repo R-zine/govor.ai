@@ -320,7 +320,10 @@ must describe plausible learner answers, not the teacher question. They are lowe
 English fragments: every fragment within one alternative must be present in a valid spoken answer,
 so use one to four meaningful fragments rather than splitting a sentence into every word. At least
 one alternative must accept the answer modelled by the beginner prompt. Make every exercise
-specific, useful, distinct, and directly relevant to the requested topic.
+specific, useful, distinct, and directly relevant to the requested topic. When a prompt lets the
+learner choose a value such as a city, name, food, or time, put one lower-case marker such as
+{destination} after the required literal phrase instead of hard-coding the modelled example's
+value. A marker means one or more learner-supplied English words and must not be the first fragment.
 /no_think"""
     user = {
         "topic": request.topic.strip(),

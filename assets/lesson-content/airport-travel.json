@@ -52,15 +52,19 @@
       "accepted_patterns": [
         [
           "flying to",
-          "london"
+          "{destination}"
         ],
         [
           "flight to",
-          "london"
+          "{destination}"
         ],
         [
           "going to",
-          "london"
+          "{destination}"
+        ],
+        [
+          "destination is",
+          "{destination}"
         ]
       ],
       "target_vocabulary": [
