@@ -66,6 +66,9 @@ address. After changing the host address, choose **Scan a different host QR** on
 
 ## Add lessons
 
+While the host is waiting for a phone, open **Content & updates** and choose **Import lessons**.
+You may still double-click the package command directly.
+
 1. Double-click `Manage-Lessons.cmd` in the extracted Windows package.
 2. Choose one `.json` lesson or one `.zip` bundle containing one or more JSON lessons.
 3. Wait for the confirmation dialog. If govor.ai is running, connected Android clients update
@@ -78,6 +81,9 @@ stores imported files under `content\lessons`. Keep a copy of custom lesson file
 the extracted version directory during an update, then import them into the new version.
 
 ## Create a lesson
+
+While the host is waiting for a phone, open **Content & updates** and choose **Create lesson**.
+This opens the same local creator described below.
 
 1. Start govor.ai with `Start-Govor.cmd` and leave its console open. The creator uses the local
    language model owned by that running process.
@@ -95,6 +101,9 @@ try a clearer topic or remove the new JSON file while govor.ai is stopped if the
 useful. Keep wanted custom lesson files when updating the portable directory.
 
 ## Add 3D environments
+
+While the host is waiting for a phone, open **Content & updates** and choose
+**Import environments**. You may still use the package command directly.
 
 1. Double-click `Manage-Environments.cmd` in the extracted Windows package.
 2. Choose one environment `.zip` supplied for govor.ai. Do not unpack it first.
@@ -117,9 +126,12 @@ This path is available only when the current package already contains `Apply-Gov
 Older packages, including the completed 0.1.11 acceptance package, require the full-replacement
 steps below once before they can receive incremental patches.
 
-1. Stop govor.ai and wait for its clean-shutdown message.
-2. Save the supplied `.govorpatch` or patch ZIP locally. Do not unpack or run a script from it.
-3. Double-click the package's existing `Apply-Govor-Patch.cmd`, select the patch, and wait for the
+1. Save the supplied `.govorpatch` or patch ZIP locally. Do not unpack or run a script from it.
+2. On the host pre-connect screen choose **Content & updates** → **Apply application patch**, then
+   confirm. govor.ai closes its managed services before the trusted updater opens. Alternatively,
+   stop govor.ai, wait for its clean-shutdown message, and double-click the package's existing
+   `Apply-Govor-Patch.cmd`.
+3. Select the patch and wait for the
    signed source version plus every old/new file hash to be checked before changes begin.
 4. If it reports a wrong base, local conflict, signature/integrity failure, or rollback, do not
    copy files manually; request a patch for the exact installed version or use a complete release.

@@ -25,6 +25,7 @@ from .security import ensure_tls_identity
 _CONTROL_PORT = 8765
 _MEDIA_PORT = 8766
 _LLAMA_PORT = 8767
+_APPLY_APPLICATION_PATCH_EXIT_CODE = 42
 
 
 def main(arguments: Sequence[str] | None = None) -> int:
@@ -330,6 +331,7 @@ def _start(
     environment = _release_environment(paths, identity.certificate)
     children: list[subprocess.Popen[bytes]] = []
     logs: list[object] = []
+    renderer_exit_code: int | None = None
     with WindowsKillOnCloseJob() as job:
         try:
             children.append(
@@ -415,12 +417,11 @@ def _start(
             job.add(renderer)
             children.append(renderer)
             if smoke_seconds is None:
-                input("Services are ready. Press Enter to stop govor.ai.\n")
+                renderer_exit_code = _wait_for_renderer_or_console(renderer)
             else:
                 if smoke_seconds <= 0 or smoke_seconds > 300:
                     raise ValueError("smoke duration must be between 0 and 300 seconds")
                 time.sleep(smoke_seconds)
-            return 0
         except KeyboardInterrupt:
             return 130
         finally:
@@ -430,6 +431,45 @@ def _start(
             paths.pairing_qr.unlink(missing_ok=True)
             paths.pairing_bootstrap.unlink(missing_ok=True)
             print("govor.ai stopped; managed child processes were closed.")
+    if renderer_exit_code == _APPLY_APPLICATION_PATCH_EXIT_CODE:
+        _launch_application_patch(paths)
+    elif renderer_exit_code not in {None, 0}:
+        raise RuntimeError(f"renderer exited unexpectedly with code {renderer_exit_code}")
+    return 0
+
+
+def _wait_for_renderer_or_console(renderer: subprocess.Popen[bytes]) -> int | None:
+    print("Services are ready. Press Enter to stop govor.ai.")
+    if os.name != "nt":
+        input()
+        return renderer.poll()
+
+    import msvcrt
+
+    while renderer.poll() is None:
+        try:
+            if msvcrt.kbhit() and msvcrt.getwch() in {"\r", "\n"}:
+                return None
+        except OSError:
+            # A redirected/non-interactive console can still stop by closing the renderer.
+            pass
+        time.sleep(0.1)
+    return renderer.returncode
+
+
+def _launch_application_patch(paths: ReleasePaths) -> None:
+    command = paths.install_root / "Apply-Govor-Patch.cmd"
+    if not command.is_file():
+        raise RuntimeError("the installed application patch command is missing")
+    command_processor = Path(os.environ.get("SYSTEMROOT", r"C:\Windows")) / "System32" / "cmd.exe"
+    if os.name == "nt" and not command_processor.is_file():
+        raise RuntimeError("the Windows command processor is unavailable")
+    creation_flags = subprocess.CREATE_NEW_CONSOLE if os.name == "nt" else 0
+    subprocess.Popen(  # noqa: S603 - exact OS/package commands after managed shutdown
+        [str(command_processor), "/d", "/c", str(command)],
+        cwd=paths.install_root,
+        creationflags=creation_flags,
+    )
 
 
 def _renderer_command(

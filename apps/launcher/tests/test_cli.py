@@ -1,4 +1,5 @@
 import json
+import os
 import shutil
 import zipfile
 from pathlib import Path
@@ -8,6 +9,7 @@ import pytest
 from govor_launcher.cli import (
     ReleasePaths,
     _doctor,
+    _launch_application_patch,
     _release_environment,
     _renderer_command,
     main,
@@ -199,6 +201,31 @@ def test_release_renderer_receives_only_the_temporary_qr_path(
     assert f"--pairing-qr={paths.pairing_qr}" in command
     assert f"--pairing-bootstrap={paths.pairing_bootstrap}" in command
     assert not any("12345678" in value or "certificate_sha256" in value for value in command)
+
+
+def test_application_patch_ui_launches_only_the_installed_command_after_shutdown(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    paths = ReleasePaths.from_roots(tmp_path, tmp_path / "data")
+    _touch(tmp_path / "Apply-Govor-Patch.cmd")
+    launched: dict[str, object] = {}
+
+    def fake_popen(command: list[str], **kwargs: object) -> object:
+        launched.update(command=command, **kwargs)
+        return object()
+
+    monkeypatch.setattr("govor_launcher.cli.subprocess.Popen", fake_popen)
+
+    _launch_application_patch(paths)
+
+    assert launched["command"] == [
+        str(Path(os.environ.get("SYSTEMROOT", r"C:\Windows")) / "System32" / "cmd.exe"),
+        "/d",
+        "/c",
+        str(tmp_path / "Apply-Govor-Patch.cmd"),
+    ]
+    assert launched["cwd"] == tmp_path
 
 
 def test_vm_fixture_can_schedule_the_bounded_muted_tone(

@@ -144,6 +144,10 @@ catalog, and publishes canonical recipes under an import lock. The host atomical
 planner snapshots; new lessons and the lesson creator see installed display names without restart.
 Invalid changes retain the previous planner and mark local health
 `environment_catalog_status=reload_error`. See ADR-0015.
+Godot's pre-connect **Content & updates** menu is the discoverable UI for those three exact local
+entry points. It does not implement an importer or expose an administration route. Its fourth
+action confirms an application update, exits with a closed launcher signal, waits for managed host
+process cleanup, and only then opens the package-owned signed updater. See ADR-0021.
 The active local dialogue model may classify or phrase a conversational turn,
 but it cannot award progress. Only recognized English production that satisfies the active guided
 exercise can advance. Bulgarian/mixed assistance, vocabulary questions, repetition, slower-speech

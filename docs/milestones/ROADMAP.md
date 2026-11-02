@@ -492,3 +492,11 @@ All teacher profiles now prefer the installed neural Piper Bulgarian provider. T
 female profiles' poorly intelligible eSpeak normal path while retaining profile-aware eSpeak only
 for provider failure. The temporary female-model/male-voice mismatch is explicitly documented;
 adding a reviewed female Bulgarian neural provider remains a future quality improvement.
+
+## Post-milestone host management menu
+
+The Godot pre-connect screen now exposes **Content & updates** for lesson generation, lesson import,
+environment import, and signed application patches. Content tools launch only their exact installed
+local entry points and keep live catalog reload behavior. Patching requires confirmation, closes
+the renderer and every launcher-managed service, then opens the trusted updater. No administration
+API or arbitrary command/path field is added; ADR-0021 records the lifecycle and security boundary.

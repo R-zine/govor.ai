@@ -26,8 +26,10 @@ public partial class HostPairingScreen : Control
     public string QrImagePath { get; set; } = string.Empty;
     public string BootstrapPath { get; set; } = string.Empty;
     public bool ShowManualDetailsOnReady { get; set; }
+    public string InstallRoot { get; set; } = string.Empty;
     public string InitialTeacherProfileId { get; set; } = TeacherProfileCatalog.DefaultProfileId;
     public event Action<string>? TeacherProfileSelected;
+    public event Action? ApplicationPatchRequested;
 
     public override void _Ready()
     {
@@ -108,6 +110,7 @@ public partial class HostPairingScreen : Control
         brand.AddChild(StyledLabel("Private local English tutor", 14, MutedText));
         header.AddChild(brand);
         header.AddChild(new Control { SizeFlagsHorizontal = SizeFlags.ExpandFill });
+        header.AddChild(CreateManagementMenu());
         header.AddChild(CreateTeacherMenu());
 
         var statusPanel = StyledPanel(PanelRaised, 18, 14, 10);
@@ -115,6 +118,99 @@ public partial class HostPairingScreen : Control
         statusPanel.AddChild(_statusLabel);
         header.AddChild(statusPanel);
         return header;
+    }
+
+    private Control CreateManagementMenu()
+    {
+        var menu = new MenuButton
+        {
+            Text = "Content & updates",
+            TooltipText = "Create or import lessons, import environments, or apply an app patch",
+            CustomMinimumSize = new Vector2(190.0f, 46.0f),
+        };
+        PopupMenu popup = menu.GetPopup();
+        popup.AddItem("Create lesson…", 0);
+        popup.AddItem("Import lessons…", 1);
+        popup.AddItem("Import environments…", 2);
+        popup.AddSeparator();
+        popup.AddItem("Apply application patch…", 3);
+        string[] commands =
+        [
+            "Create-Lesson.cmd",
+            "Manage-Lessons.cmd",
+            "Manage-Environments.cmd",
+            "Apply-Govor-Patch.cmd",
+        ];
+        for (int index = 0; index < commands.Length; index++)
+        {
+            bool available = false;
+            try
+            {
+                available = HostManagementActions.IsAvailable(InstallRoot, commands[index]);
+            }
+            catch (InvalidDataException)
+            {
+                // Source/editor runs do not have packaged management entry points.
+            }
+            popup.SetItemDisabled(popup.GetItemIndex(index), !available);
+        }
+        popup.IdPressed += HandleManagementAction;
+        return menu;
+    }
+
+    private void HandleManagementAction(long actionId)
+    {
+        string? commandName = actionId switch
+        {
+            0 => "Create-Lesson.cmd",
+            1 => "Manage-Lessons.cmd",
+            2 => "Manage-Environments.cmd",
+            3 => "Apply-Govor-Patch.cmd",
+            _ => null,
+        };
+        if (commandName is null)
+        {
+            return;
+        }
+        if (actionId == 3)
+        {
+            ConfirmApplicationPatch();
+            return;
+        }
+        try
+        {
+            HostManagementActions.Launch(InstallRoot, commandName);
+            if (_statusLabel is not null)
+            {
+                _statusLabel.Text = actionId == 0 ? "Lesson creator opened" : "Import window opened";
+            }
+        }
+        catch (Exception error) when (
+            error is IOException or UnauthorizedAccessException or InvalidDataException or
+            System.ComponentModel.Win32Exception)
+        {
+            GD.PushWarning($"Unable to open host management: {error.Message}");
+            if (_statusLabel is not null)
+            {
+                _statusLabel.Text = "Management tool unavailable";
+            }
+        }
+    }
+
+    private void ConfirmApplicationPatch()
+    {
+        var confirmation = new ConfirmationDialog
+        {
+            Title = "Apply an application patch",
+            DialogText = "govor.ai must close before its files can be updated. Continue to close " +
+                "the host and choose a signed patch file?",
+            OkButtonText = "Close and choose patch",
+        };
+        confirmation.Confirmed += () => ApplicationPatchRequested?.Invoke();
+        confirmation.Canceled += confirmation.QueueFree;
+        confirmation.Confirmed += confirmation.QueueFree;
+        AddChild(confirmation);
+        confirmation.PopupCentered(new Vector2I(620, 240));
     }
 
     private Control CreateTeacherMenu()

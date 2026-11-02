@@ -63,8 +63,11 @@ The release launcher instead passes
 `--pairing-qr=<protected temporary PNG>` and
 `--pairing-bootstrap=<protected temporary JSON>`. These paths feed an opaque host-only 2D
 pre-connect screen outside the captured `SubViewport`; it shows instructions, status, expiry,
-the QR, the teacher menu, and a user-opened manual fallback without putting secret values in
-process arguments. It is not sent to the phone as video and is dismissed when a session starts.
+the QR, the teacher menu, a **Content & updates** menu, and a user-opened manual fallback without
+putting secret values in process arguments. Content actions launch only exact package-owned local
+entry points. Application patching confirms, exits with the closed launcher signal, and opens the
+signed updater only after managed services stop. It is not sent to the phone as video and is
+dismissed when a session starts.
 The renderer still connects outward to loopback; none of these options exposes a renderer listener
 or makes certificate verification optional.
 

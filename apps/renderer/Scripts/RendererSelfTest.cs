@@ -77,6 +77,22 @@ internal static class RendererSelfTest
         {
             // The cross-process selection is closed to the three installed profiles.
         }
+        string managementCommand = HostManagementActions.ResolveCommand(
+            Path.GetTempPath(),
+            "Create-Lesson.cmd");
+        if (Path.GetFileName(managementCommand) != "Create-Lesson.cmd")
+        {
+            throw new InvalidOperationException("The host management allow-list is invalid.");
+        }
+        try
+        {
+            HostManagementActions.ResolveCommand(Path.GetTempPath(), "arbitrary.cmd");
+            throw new InvalidOperationException("An arbitrary host management command was accepted.");
+        }
+        catch (InvalidDataException)
+        {
+            // Management actions resolve only exact package-owned entry points.
+        }
 
         IReadOnlyList<SceneSpecificationPayload> scenes = DynamicSceneDirector.TourScenes();
         if (scenes.Count != 4 || scenes.Select(scene => scene.EnvironmentId).Distinct().Count() != 4)

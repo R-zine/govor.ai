@@ -102,6 +102,7 @@ public partial class MediaProofScene : Node
                 QrImagePath = pairingQrPath,
                 BootstrapPath = pairingBootstrapPath ?? string.Empty,
                 ShowManualDetailsOnReady = showManualPairing,
+                InstallRoot = System.Environment.GetEnvironmentVariable("GOVOR_INSTALL_ROOT") ?? string.Empty,
                 InitialTeacherProfileId = selectedTeacherProfileId,
             };
             AddChild(pairingScreen);
@@ -140,6 +141,8 @@ public partial class MediaProofScene : Node
                 _teacher?.SelectProfile(profileId);
                 sessionController?.SelectTeacherProfile(profileId);
             };
+            pairingScreen.ApplicationPatchRequested += () =>
+                GetTree().Quit(HostManagementActions.ApplyApplicationPatchExitCode);
         }
 
         if (!string.IsNullOrWhiteSpace(sceneTourOutput) && _sceneDirector is not null &&

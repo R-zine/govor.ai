@@ -68,9 +68,14 @@ a new immutable planner snapshot on the next poll. The lesson importer/creator t
 environment ID, and the next `session_started` command carries its validated primitive recipe to
 the already-running Godot renderer.
 
+All three entry points are available from the host pre-connect **Content & updates** menu as exact
+package-owned local commands. The menu sends no management message over Android control or media.
+
 ## Offline application update
 
-1. The application is stopped and `Apply-Govor-Patch.cmd` selects a local `.govorpatch`/ZIP.
+1. The user chooses **Apply application patch** from the host menu (or runs the installed command
+   directly). The launcher stops every managed process, then `Apply-Govor-Patch.cmd` selects a
+   local `.govorpatch`/ZIP.
 2. The installed, non-patchable bootstrap reads the package-pinned RSA public key and verifies the
    detached signature over the exact manifest bytes before trusting any operation.
 3. It checks the source version, exact member set, bounded paths/sizes, old host file hashes, and

@@ -1284,9 +1284,10 @@ allowing the dialogue model to award progress.
 Verification on 2026-11-02: the focused domain and lesson-creator run passed 27 tests. The only
 warning was an existing environment-specific pytest temporary-directory cleanup permission issue.
 The Python scope then passed Ruff, formatting, strict mypy, and 298 tests at 85.15% branch
-coverage; its only warning was the existing Starlette TestClient deprecation. The full suite and
-packaged runtime check remain to be rerun after the related progress, teacher-selection,
-host-management, and Bulgarian-speech fixes are integrated.
+coverage; its only warning was the existing Starlette TestClient deprecation. The subsequent
+integrated all-scope gate covering this fix and the related progress, teacher-selection,
+host-management, and Bulgarian-speech work is recorded with the host-management verification
+below. A new packaged end-to-end runtime check has not been executed.
 
 ## Post-milestone lesson-catalog progress
 
@@ -1331,6 +1332,26 @@ The speech scope passed mypy and 14 tests. The real installed-model benchmark ge
 non-empty, aligned Piper WAVs at 0.75/1.0/1.25 speed with no fallback; warm synthesis measured
 961.6 ms and 922.2 ms. It played no audio and left no media listener/player running. Exact evidence
 and limits are in `docs/benchmarks/2026-11-02-bulgarian-neural-routing.md`.
+
+## Post-milestone host management menu
+
+The host's opaque pre-connect screen now has a **Content & updates** native menu. It opens the
+existing packaged lesson creator, lesson JSON/ZIP importer, and environment ZIP importer while the
+host stays live. The application-patch action requires confirmation; Godot returns the closed exit
+code 42, the launcher first stops every managed child and removes temporary pairing files, and only
+then opens the exact installed signed updater in a new console. Missing packaged commands are
+disabled, arbitrary command/path values are rejected, and no LAN administration route was added.
+
+Verification on 2026-11-02: 21 focused launcher/entry-point tests passed; the complete Python gate
+passed Ruff, formatting, strict mypy, and 304 tests at 85.07% branch coverage. Godot import, C#
+build, allow-list self-test, headless self-test, and Windows export passed. The integrated
+`./scripts/test.ps1 -Scope all` gate also passed: 304 Python tests at 85.07% coverage, Kotlin/JVM
+tests, 10 C# tests, 21 media tests, Godot import/build/self-test, and Android debug assembly. Its
+warnings were the existing Starlette TestClient deprecation and offline NuGet vulnerability-feed
+warning. A normal Windows renderer run exited automatically after emitting the UI-proof marker,
+but its internal root-viewport PNG was black, so it is recorded as **verified failing/not visual
+evidence**, not proof of menu appearance. The menu still needs observation in the next packaged
+interactive run; no content or patch operation was executed during this verification.
 
 ## Renderer evidence and limitations
 

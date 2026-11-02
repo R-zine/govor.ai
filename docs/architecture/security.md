@@ -165,6 +165,12 @@ bootstrap or trust key. Patch archives are never treated as executable input and
 LAN-facing. An optional APK is signature-bound to the patch and staged only; Android performs the
 actual visible package-signature/update decision. See ADR-0016.
 
+The host pre-connect management menu adds no administration endpoint. It resolves only four exact
+package-owned command names under the trusted install root. Lesson/environment tools retain their
+existing local validation boundaries. The application-patch action is a closed renderer exit
+signal; the launcher completes managed-process cleanup before it starts the installed signed
+updater. No user-selected path is passed from Godot to a shell. See ADR-0021.
+
 The Windows lesson creator talks only to fixed loopback llama.cpp HTTP. Its topic is bounded to 500
 characters and treated as untrusted content in the model prompt. The model response is capped,
 constrained by the versioned `local-ai-lesson-content` schema, parsed with unknown fields forbidden,
