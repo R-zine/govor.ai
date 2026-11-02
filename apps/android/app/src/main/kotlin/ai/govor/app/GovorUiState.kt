@@ -1,6 +1,8 @@
 package ai.govor.app
 
 import ai.govor.core.SessionState
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 
 internal enum class GovorScreen {
     CONNECTION,
@@ -34,3 +36,37 @@ internal fun lessonControlVisibility(
     ),
     retry = lessonState == SessionState.RECOVERABLE_ERROR,
 )
+
+/** Ephemeral learner-facing values that must not survive a lesson boundary or recovery. */
+internal class LessonTransientUiState {
+    private val mutableTranscript = MutableStateFlow<String?>(null)
+    val transcript: StateFlow<String?> = mutableTranscript
+
+    private val mutableError = MutableStateFlow<String?>(null)
+    val error: StateFlow<String?> = mutableError
+
+    fun beginLesson() = clear()
+
+    fun endLesson() = clear()
+
+    fun disconnect() = clear()
+
+    fun showTranscript(text: String) {
+        mutableTranscript.value = text
+    }
+
+    fun showError(message: String) {
+        mutableError.value = message
+    }
+
+    fun applyHostState(state: SessionState) {
+        if (state !in setOf(SessionState.RECOVERABLE_ERROR, SessionState.FATAL_ERROR)) {
+            mutableError.value = null
+        }
+    }
+
+    private fun clear() {
+        mutableTranscript.value = null
+        mutableError.value = null
+    }
+}

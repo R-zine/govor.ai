@@ -3,6 +3,7 @@ package ai.govor.app
 import ai.govor.core.SessionState
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
@@ -70,5 +71,32 @@ class GovorUiStateTest {
                 hasTeacherTurn = true,
             ).retry,
         )
+    }
+
+    @Test
+    fun `learner transcript does not survive a lesson boundary`() {
+        val state = LessonTransientUiState()
+
+        state.showTranscript("That is all, thank you.")
+        assertEquals("That is all, thank you.", state.transcript.value)
+
+        state.endLesson()
+        assertNull(state.transcript.value)
+
+        state.showTranscript("A later answer")
+        state.beginLesson()
+        assertNull(state.transcript.value)
+    }
+
+    @Test
+    fun `successful host state dismisses a recovered error`() {
+        val state = LessonTransientUiState()
+
+        state.showError("The lesson step timed out.")
+        state.applyHostState(SessionState.RECOVERABLE_ERROR)
+        assertEquals("The lesson step timed out.", state.error.value)
+
+        state.applyHostState(SessionState.PROCESSING)
+        assertNull(state.error.value)
     }
 }

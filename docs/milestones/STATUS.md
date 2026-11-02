@@ -1083,6 +1083,29 @@ Limits:
   1280×720 frames. The screenshot supports only the Compose overlay appearance; video evidence
   remains transport/render logs as already documented.
 
+### Android transient lesson-state correction
+
+On 2026-11-02 two user-observed UI defects were traced to values that outlived their valid lesson
+state. `LessonSessionClient` retained a recoverable error after a successful retry and omitted the
+learner transcript from its lesson-end cleanup. The app now owns both values in a small transient
+presentation-state holder. It clears the final learner answer on lesson completion and before a
+new lesson starts. A real recoverable/fatal error remains visible, but a subsequent normal host
+state clears the recovered error card. Disconnect and lesson boundaries also remove obsolete
+transient values. No wire contract, host state machine, progress record, or persisted learner data
+changed.
+
+Verification:
+
+- `./scripts/test.ps1 -Scope kotlin`: verified passing; 31 JVM tests, zero failures/skips. Two new
+  tests reproduce the final-answer lesson-boundary leak and the stale post-retry error, then verify
+  the corrected lifecycle.
+- The managed account again denied the Kotlin daemon marker under `%LOCALAPPDATA%`; Gradle's
+  supported in-process fallback compiled production and test Kotlin and the build completed.
+- `./scripts/build.ps1 -Target android`: verified passing. The debug APK is 66,058,580 bytes with
+  SHA-256 `0b0f1a5a698d9f0b7b6291f8df963423996c3606732c968e7e62062fde9f011a`.
+- No emulator or physical lesson was run for this correction. The signed 0.1.18 APK installed on
+  the physical phone predates it; a later signed package/install is required before user retesting.
+
 ## Post-milestone QR-first release pairing
 
 The 2026-10-25 maintenance feature makes a single locally scanned QR the default first pairing

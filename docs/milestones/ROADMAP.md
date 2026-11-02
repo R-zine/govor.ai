@@ -44,6 +44,10 @@ contextual Material 3 screens. Connection, selection, and active-lesson actions 
 secondary actions use accessible icon menus/sheets, and all prior functionality remains available.
 ADR-0017 defines the boundary. Native-emulator verification is new software evidence only and does
 not revise the completed physical acceptance record.
+The 2026-11-02 Android state-lifecycle correction makes learner transcripts and recovered error
+messages explicitly lesson-scoped. Completing or starting a lesson clears the prior answer, while
+a recoverable error remains visible only until a later non-error host state confirms recovery.
+This is an app-only maintenance fix with no control-contract or host change.
 
 ## Milestone 2 acceptance tracking
 

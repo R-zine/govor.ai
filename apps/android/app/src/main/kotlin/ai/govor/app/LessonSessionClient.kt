@@ -84,11 +84,9 @@ class LessonSessionClient {
     private val mutablePlaybackRate = MutableStateFlow(1.0f)
     val playbackRate: StateFlow<Float> = mutablePlaybackRate
 
-    private val mutableTranscript = MutableStateFlow<String?>(null)
-    val transcript: StateFlow<String?> = mutableTranscript
-
-    private val mutableError = MutableStateFlow<String?>(null)
-    val error: StateFlow<String?> = mutableError
+    private val transientUiState = LessonTransientUiState()
+    val transcript: StateFlow<String?> = transientUiState.transcript
+    val error: StateFlow<String?> = transientUiState.error
 
     private val mutableLessonProgress = MutableStateFlow<LessonProgressPayload?>(null)
     val lessonProgress: StateFlow<LessonProgressPayload?> = mutableLessonProgress
@@ -135,7 +133,6 @@ class LessonSessionClient {
             fail("Enter a valid Windows control host and port.")
             return
         }
-        mutableError.value = null
         mutableState.value = SessionState.CONNECTING
         httpClient = if (secure) {
             GatewaySecurity.pinnedClient(requireNotNull(certificateFingerprint))
@@ -162,6 +159,7 @@ class LessonSessionClient {
         selectedScenarioId = scenarioId
         selectedEnglishLocale = englishLocale
         selectedSpacedReview = spacedReviewEnabled
+        transientUiState.beginLesson()
         mutableLessonActive.value = true
         mutableState.value = SessionState.CONNECTING
         sendSessionStart()
@@ -301,6 +299,7 @@ class LessonSessionClient {
     private fun applyState(payload: SessionStatePayload) {
         requireMatchingSession(payload.session_id, allowInitial = true)
         UUID.fromString(payload.event_id)
+        transientUiState.applyHostState(payload.state)
         mutableState.value = payload.state
     }
 
@@ -410,7 +409,7 @@ class LessonSessionClient {
     private fun applyTranscript(payload: LearnerTranscriptPayload) {
         requireMatchingSession(payload.session_id)
         require(payload.utterance_id == utteranceId)
-        mutableTranscript.value = payload.text
+        transientUiState.showTranscript(payload.text)
     }
 
     private fun applyEnded(payload: SessionEndedPayload) {
@@ -421,13 +420,14 @@ class LessonSessionClient {
         activeTurn = null
         utteranceId = null
         clearSpeechUi()
+        transientUiState.endLesson()
         mutableLessonActive.value = false
         mutableState.value = SessionState.DISCONNECTED
     }
 
     private fun applyError(payload: SessionErrorPayload) {
         payload.session_id?.let { requireMatchingSession(it, allowInitial = true) }
-        mutableError.value = payload.message
+        transientUiState.showError(payload.message)
         if (payload.retryable) mutableState.value = SessionState.RECOVERABLE_ERROR
     }
 
@@ -470,6 +470,7 @@ class LessonSessionClient {
         mutableLessonCatalog.value = emptyList()
         mutableLessonActive.value = false
         clearSpeechUi()
+        transientUiState.disconnect()
         mutableState.value = SessionState.DISCONNECTED
     }
 
@@ -487,7 +488,7 @@ class LessonSessionClient {
     }
 
     private fun fail(message: String) {
-        mutableError.value = message
+        transientUiState.showError(message)
         mutableState.value = SessionState.RECOVERABLE_ERROR
     }
 
@@ -542,7 +543,7 @@ class LessonSessionClient {
                 pendingStart = null
                 mutableLessonCatalog.value = emptyList()
                 mutableLessonActive.value = false
-                mutableError.value = "Control connection failed."
+                transientUiState.showError("Control connection failed.")
                 mutableState.value = SessionState.DISCONNECTED
             }
         }

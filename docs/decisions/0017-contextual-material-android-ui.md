@@ -39,6 +39,15 @@ Keep the `SurfaceViewRenderer` mounted behind all three contexts and change only
 overlay. This preserves the proven WebRTC attachment and reconnect behavior while the interface
 changes.
 
+### State-lifecycle correction
+
+The 2026-11-02 follow-up makes the transcript and error banner explicitly transient presentation
+state. A learner transcript is cleared when a lesson ends and again before another lesson starts.
+A recoverable error remains visible while the session is in `recoverable_error`, then clears only
+after a normal host state confirms recovery. Starting/ending a lesson or disconnecting also clears
+an obsolete error. This avoids hiding a real failure on button press while preventing a recovered
+failure or the previous lesson's final answer from leaking into a healthy UI.
+
 ## Consequences
 
 - Controls appear only in the context where they are meaningful, while every prior learner action
