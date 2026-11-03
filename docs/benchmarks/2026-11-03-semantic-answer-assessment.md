@@ -30,8 +30,12 @@ existing help/language guards into the teaching engine. See ADR-0022.
 | Frozen media/speech dependency audit | No known vulnerabilities |
 | Full software suite | Passed: 341 Python at 85.57% coverage, Kotlin/JVM, 11 C#, 21 real media, Godot import/build/self-test, Android debug build |
 
-The focused commit runs the installed pre-commit quality/contract/affected-test hooks. Its output
-is captured in `.cache/semantic-answer-commit.log`.
+Focused source commit `f481918` completed with the installed pre-commit
+quality/contract/affected-test hooks. The PowerShell wrapper subsequently raised
+`NativeCommandError` on the hook's stderr status output despite Git completing successfully;
+`git log -1 --oneline` and a clean `git status` confirmed the commit. The attempted
+`.cache/semantic-answer-commit.log` capture is empty and is not hook-result evidence. The
+separate full-suite log above remains the retained software-test evidence.
 
 The semantic fixture set adds unseen paraphrases after the initial prompt revisions; it contains
 yes/no and choice answers, a quantity without “kilo,” personal destinations, polite contractions,
