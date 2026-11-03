@@ -4,6 +4,9 @@
 - Date: 2026-10-11
 - Milestone: 3
 
+ADR-0022 later connects the validated dialogue boolean to semantic answer assessment while
+preserving the deterministic help/language and progression guards described here.
+
 ## Context
 
 Milestone 3 replaces scripted recognition and dialogue with local inference while keeping provider

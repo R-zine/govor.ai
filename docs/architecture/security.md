@@ -86,8 +86,11 @@ public-internet exposure are out of scope; the gateway must remain on a trusted 
 
 llama.cpp and the media capture API also bind only to loopback. The host rejects non-loopback
 model/capture URLs. Model output is untrusted: generation uses a closed JSON schema, Pydantic
-forbids extra fields, and domain policy—not the model—decides whether an exercise may advance. No
-model field can become a renderer action, path, URL, tool call, or command. whisper.cpp receives an
+forbids extra fields and boolean coercion. The semantic answer verdict is an input to domain
+policy; English/help guards, one-exercise advancement, completion, and difficulty remain
+application-owned. Learner/history text is untrusted data, and the prompt explicitly rejects
+grading instructions. This bounded model assessment is fallible and is not a pronunciation or
+recognition score. No model field can become a renderer action, path, URL, tool call, or command. whisper.cpp receives an
 ephemeral per-utterance WAV and writes bounded JSON under ignored `.cache`; both files are removed
 in a `finally` path. Normal logs and benchmark artifacts omit raw audio and transcript text.
 

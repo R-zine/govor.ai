@@ -1262,6 +1262,20 @@ Each scenario should define:
 - Completion conditions.
 - Appropriate Bulgarian explanations.
 
+In local-AI mode, assess the meaning of the recognized answer against the current exercise's
+question and communicative goal using the local LLM. Parse a strict JSON boolean verdict rather
+than requiring example wording or a vocabulary checklist. Accept valid paraphrases, contractions,
+short context-appropriate answers, and sensible learner-chosen values. Reject unrelated or
+incomplete answers and instructions to override grading. This evaluates the transcript's meaning,
+not pronunciation or recognition accuracy.
+
+Application code still enforces English production, help/non-answer guards, one-exercise
+advancement, completion, and difficulty adaptation. A model verdict cannot skip exercises or
+complete a lesson directly. If the model is unavailable or its output is invalid, retain the
+bounded phrase-pattern matcher as a limited deterministic fallback; a valid negative verdict
+must not be overridden by keyword matching. Apply the same assessment to imported/generated
+lessons without code changes.
+
 Default lesson definitions must live as versioned, human-editable JSON under
 `assets/lesson-content`, not as Python or Android constants. The host must load and strictly
 validate the complete catalog at startup, then advertise its ordered lesson summary to Android so

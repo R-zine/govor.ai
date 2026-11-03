@@ -38,6 +38,8 @@ completion after final teacher playback. Structured settings, exercise/comprehen
 vocabulary review state, difficulty reasons, completion, and interrupted-session resume persist in
 local SQLite without raw audio or full transcript storage. Android exposes all four scenarios,
 GB/US accent, optional spaced review, and progress. Local view/export/delete tooling is available.
+ADR-0022 later replaces literal-only answer acceptance in local-AI mode with a validated semantic
+model verdict while preserving the engine's progression/help/language and persistence rules.
 
 Milestone 6 is complete. Its post-milestone presentation path now renders one of three selectable
 CC0 skinned teachers over four packaged CC0 photographic backdrops; installed environment recipes
@@ -1571,6 +1573,38 @@ the product owner defines one. Phone settings are restored and no service or aud
 
 The evidence boundaries remain explicit: Milestone 1 used emulator development evidence, while
 Milestone 9 passed only from the documented physical target execution and learner confirmation.
+
+## Post-milestone semantic answer assessment
+
+The 2026-11-03 café report exposed that `LocalLessonService` discarded the dialogue model's
+`advance_exercise` verdict and always used literal patterns. The service now supplies the strict
+JSON boolean to the domain engine. Valid positive/negative verdicts override the matcher;
+provider failures retain the limited scripted fallback. Language/help gates and all counters,
+adaptation, and progression remain application-owned. ADR-0022 amends the original matching-only
+decision. No dependency or Android wire change is required.
+
+Initial verification: 48 focused domain/service/provider tests passed. Strict mypy passed across
+57 source files. The first real Qwen3 run accepted all 13 valid fixture answers but falsely
+accepted two incomplete answers and a grading override; five additional reported failures came
+from a benchmark comparison incorrectly treating non-attempt `None` as a false boolean. After
+fixing that comparison and strengthening the prompt, the real run reached 20/21, with one valid
+dine-in contraction rejected. The shortened assessment prompt plus greedy local sampling now pass all
+28 semantic fixtures (18 valid paraphrases/choices and 10 negative/help/injection cases) and the
+existing 7/7 bilingual fixtures. The final focused domain/service/provider/schema gate passed
+100 tests; Ruff/format and strict mypy passed. The frozen media/speech dependency audit reported
+no known vulnerabilities after rerunning with network permission (the initial sandbox attempt
+failed with WinError 10013). These are text-fixture checks, not microphone or physical-phone
+acceptance. The first all-scope attempt passed 341 Python tests at 85.57% coverage, then the
+sandbox blocked Kotlin's daemon timestamp under the user profile with AccessDeniedException.
+The full gate rerun with normal build-cache access passed: 341 Python tests at 85.57% branch
+coverage, Kotlin/JVM tests, 11 C# tests, 21 real media tests, Godot import/build/self-test, and
+Android debug assembly. Existing Starlette deprecation and nonfatal pytest-cache access warnings
+were retained in the log. The focused commit is gated by the installed pre-commit hooks, including
+affected-application tests. Exact commands, artifacts, failures, and limitations are in
+`docs/benchmarks/2026-11-03-semantic-answer-assessment.md`.
+
+No model/media server or audio player remains running. The installed 0.1.22 host/APK is unchanged;
+the next deployment must rebuild the host to include this correction. No Android code changed.
 
 ## Future regression commands
 

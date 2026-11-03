@@ -37,18 +37,21 @@ def test_four_scenarios_define_complete_guidance() -> None:
         assert all(exercise.explanation_bg for exercise in lesson.exercises)
 
 
-def test_help_and_bulgarian_production_do_not_advance() -> None:
+@pytest.mark.parametrize("answer_accepted", [None, True])
+def test_help_and_bulgarian_production_do_not_advance(answer_accepted: bool | None) -> None:
     engine = TeachingEngine(CATALOG.get("cafe-ordering"))
 
     help_outcome = engine.evaluate(
         "Какво означава order?",
         DetectedLanguage.BULGARIAN,
         LearnerIntent.VOCABULARY_EXPLANATION,
+        answer_accepted=answer_accepted,
     )
     bulgarian_answer = engine.evaluate(
         "Искам кафе, моля.",
         DetectedLanguage.BULGARIAN,
         LearnerIntent.ENGLISH_ANSWER,
+        answer_accepted=answer_accepted,
     )
 
     assert help_outcome.help_requested
@@ -56,6 +59,47 @@ def test_help_and_bulgarian_production_do_not_advance() -> None:
     assert engine.state.exercise_index == 0
     assert engine.state.attempts_on_exercise == 0
     assert "не завършен английски отговор" in bulgarian_answer.reply_text
+
+
+@pytest.mark.parametrize(
+    ("answer", "accepted", "literal_match"),
+    [
+        ("Hello, I'd like a cup of tea, please.", True, False),
+        ("I don't want coffee, please.", False, True),
+    ],
+)
+def test_semantic_assessment_overrides_literal_patterns(
+    answer: str, accepted: bool, literal_match: bool
+) -> None:
+    engine = TeachingEngine(CATALOG.get("cafe-ordering"))
+    assert engine.current_exercise.accepts(answer) is literal_match
+
+    outcome = engine.evaluate(
+        answer,
+        DetectedLanguage.ENGLISH,
+        LearnerIntent.ENGLISH_ANSWER,
+        answer_accepted=accepted,
+    )
+
+    assert outcome.successful is accepted
+    assert engine.state.exercise_index == int(accepted)
+    assert engine.state.successful_exercises == int(accepted)
+    assert engine.state.status is LessonStatus.IN_PROGRESS
+
+
+def test_mixed_language_answer_cannot_advance_even_when_model_accepts() -> None:
+    engine = TeachingEngine(CATALOG.get("cafe-ordering"))
+
+    outcome = engine.evaluate(
+        "Искам tea, please.",
+        DetectedLanguage.MIXED,
+        LearnerIntent.ENGLISH_ANSWER,
+        answer_accepted=True,
+    )
+
+    assert not outcome.successful
+    assert engine.state.exercise_index == 0
+    assert engine.state.attempts_on_exercise == 0
 
 
 def test_repeated_difficulty_lowers_level_with_an_explainable_reason() -> None:

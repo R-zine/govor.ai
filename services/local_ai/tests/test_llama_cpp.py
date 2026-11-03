@@ -96,6 +96,26 @@ async def test_model_cannot_add_application_control_fields() -> None:
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("verdict", ["true", "false", 1, 0, None, {}, []])
+async def test_assessment_must_be_a_json_boolean(verdict: object) -> None:
+    invalid = json.dumps(
+        {
+            "intent": "english_answer",
+            "reply_text": "A bounded reply.",
+            "reply_locale": "en-GB",
+            "advance_exercise": verdict,
+        }
+    )
+    provider = LlamaCppDialogueProvider(
+        "http://127.0.0.1:8767",
+        transport=httpx.MockTransport(lambda _: completion(invalid)),
+    )
+
+    with pytest.raises(ProviderMalformedOutput):
+        await provider.generate(dialogue_request("Tea, please.", DetectedLanguage.ENGLISH))
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize(
     ("status_code", "error_type"),
     [

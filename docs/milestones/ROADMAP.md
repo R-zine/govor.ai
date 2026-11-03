@@ -475,12 +475,24 @@ candidate-specific runtime claim.
 
 ## Post-milestone guided-answer flexibility
 
-Guided lesson patterns may now include one bounded learner-value slot after a required literal
+The initial fix below is superseded in local-AI mode by semantic answer assessment (ADR-0022).
+Literal patterns remain the limited unavailable/invalid-model fallback and deterministic fake path.
+
+Guided lesson patterns may include one bounded learner-value slot after a required literal
 phrase. This keeps success deterministic while allowing prompts that invite a personal choice to
 accept that choice instead of the example value. The airport destination exercise uses the rule,
 so `I am flying to New York` is valid while an incomplete `I am flying to` or the wrong direction
 `flying from` is not. Generated lessons are instructed to use the same representation for cities,
 names, foods, times, and similar open values.
+
+The 2026-11-03 correction connects the existing strict model boolean to actual lesson assessment.
+The local model compares the current question/goal with the transcript and accepts meaningful
+paraphrases and reasonable personal choices. Valid negative verdicts also override keyword
+matches. Application language/help guards, one-exercise progression, adaptation, and SQLite
+persistence remain authoritative. Real Qwen3 passed 28/28 cross-scenario semantic fixtures and
+7/7 existing bilingual fixtures; this is a bounded text assessment, not speech recognition or
+physical-phone evidence. The exact run and limits are recorded in
+`docs/benchmarks/2026-11-03-semantic-answer-assessment.md`.
 
 ## Post-milestone lesson-catalog progress
 

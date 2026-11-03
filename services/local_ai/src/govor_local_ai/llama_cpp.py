@@ -63,7 +63,7 @@ class LlamaCppDialogueProvider:
         payload = {
             "model": "local-model",
             "messages": dialogue_messages(request),
-            "temperature": 0.2,
+            "temperature": 0.0,
             "top_p": 0.8,
             "top_k": 20,
             "max_tokens": 240,

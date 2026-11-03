@@ -6,7 +6,10 @@
 
 ADR-0013 amends only the storage and discovery mechanism: definitions are now strict external
 JSON loaded into the same framework-independent domain model, and Android discovers the catalog
-from the host. The deterministic teaching and persistence decisions below remain in force.
+from the host. ADR-0022 amends answer assessment: a validated model boolean supplies semantic
+acceptance in local-AI mode; literal matching remains the unavailable/invalid-model fallback.
+Application-owned progression, help/language guards, adaptation, and persistence remain in force.
+The matching-only descriptions below record the original Milestone 5 implementation.
 
 ## Context
 

@@ -14,8 +14,12 @@ from govor_domain import (
     CAFE_LESSON,
     DetectedLanguage,
     DialoguePolicy,
+    Difficulty,
     Recognition,
+    TeachingEngine,
+    TeachingState,
     classify_explicit_intent,
+    load_lesson_catalog,
 )
 from govor_local_ai.llama_cpp import LlamaCppDialogueProvider
 from govor_local_ai.whisper_cpp import WhisperCppRecognizer
@@ -74,11 +78,23 @@ async def main() -> int:
 
 async def run_dialogue(arguments: argparse.Namespace) -> dict[str, object]:
     fixtures = json.loads(Path(arguments.fixtures).read_text(encoding="utf-8"))
+    catalog = load_lesson_catalog(Path(__file__).resolve().parents[1] / "assets/lesson-content")
     provider = LlamaCppDialogueProvider(arguments.llama_url, timeout_seconds=60.0)
     cases: list[dict[str, object]] = []
     latencies: list[float] = []
     for fixture in fixtures:
         language = DetectedLanguage(fixture["language"])
+        engine = (
+            TeachingEngine(
+                catalog.get(fixture["scenario_id"]),
+                TeachingState(
+                    exercise_index=fixture.get("exercise_index", 0),
+                    difficulty=Difficulty(fixture.get("difficulty", "intermediate")),
+                ),
+            )
+            if "scenario_id" in fixture
+            else None
+        )
         request = DialogueRequest(
             transcript=Transcript(
                 text=fixture["text"],
@@ -86,7 +102,7 @@ async def run_dialogue(arguments: argparse.Namespace) -> dict[str, object]:
                 language=language,
                 provider_id="benchmark-fixture",
             ),
-            lesson=CAFE_LESSON,
+            lesson=engine.context() if engine is not None else CAFE_LESSON,
             history=(),
             intent_hint=classify_explicit_intent(fixture["text"], language),
         )
@@ -103,20 +119,29 @@ async def run_dialogue(arguments: argparse.Namespace) -> dict[str, object]:
         )
         latency_ms = (time.perf_counter() - started) * 1_000
         latencies.append(latency_ms)
+        successful = (
+            engine.evaluate(
+                fixture["text"], language, output.intent, answer_accepted=output.advance_exercise
+            ).successful
+            is True
+            if engine is not None
+            else output.advance_exercise
+        )
         passed = (
-            output.intent.value == fixture["intent"]
-            and output.reply_locale == fixture["reply_locale"]
-            and (output.advance_exercise is True) == bool(fixture["may_advance"])
+            ("intent" not in fixture or output.intent.value == fixture["intent"])
+            and ("reply_locale" not in fixture or output.reply_locale == fixture["reply_locale"])
+            and successful == bool(fixture["may_advance"])
         )
         cases.append(
             {
                 "id": fixture["id"],
                 "passed": passed,
-                "expected_intent": fixture["intent"],
+                "expected_intent": fixture.get("intent"),
                 "actual_intent": output.intent.value,
-                "expected_reply_locale": fixture["reply_locale"],
+                "expected_reply_locale": fixture.get("reply_locale"),
                 "actual_reply_locale": output.reply_locale,
                 "advance_exercise": output.advance_exercise,
+                "exercise_successful": successful,
                 "structured_output_valid": True,
                 "policy_modified_output": (
                     output.intent != draft.intent

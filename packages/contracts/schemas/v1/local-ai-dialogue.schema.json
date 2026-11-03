@@ -20,6 +20,9 @@
     },
     "reply_text": { "type": "string", "minLength": 1, "maxLength": 2048 },
     "reply_locale": { "enum": ["en-GB", "bg-BG"] },
-    "advance_exercise": { "type": "boolean" }
+    "advance_exercise": {
+      "type": "boolean",
+      "description": "Semantic acceptance of the current English answer against the question and goal; application help/language guards and progression rules still apply."
+    }
   }
 }

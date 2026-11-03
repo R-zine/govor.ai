@@ -1,15 +1,18 @@
 from __future__ import annotations
 
+import json
+from pathlib import Path
 from uuid import uuid4
 
 import pytest
 from govor_contracts import ProviderCapabilities
-from govor_domain import DetectedLanguage, DialogueDraft, LearnerIntent
+from govor_domain import DetectedLanguage, DialogueDraft, LearnerIntent, load_lesson_catalog
 from govor_local_ai.service import DiagnosticToneSpeechProvider, LocalLessonService
 from govor_progress import SQLiteProgressRepository
 from govor_provider_interfaces import (
     DialogueRequest,
     NoSpeechRecognized,
+    ProviderMalformedOutput,
     ProviderUnavailable,
     Transcript,
     UtteranceAudio,
@@ -123,6 +126,99 @@ async def test_dialogue_failure_uses_deterministic_bilingual_fallback() -> None:
     assert result.turn.locale == "bg-BG"
     assert "I would like" in result.turn.text
     assert service.memory.snapshot()[0].intent is LearnerIntent.BULGARIAN_REFORMULATION
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("answer", "accepted"),
+    [
+        ("Hello, I'd like a cup of tea, please.", True),
+        ("I don't want coffee, please.", False),
+    ],
+)
+async def test_model_assessment_controls_success_and_persisted_progress(
+    tmp_path, answer: str, accepted: bool
+) -> None:  # type: ignore[no-untyped-def]
+    dialogue = QueueDialogue(
+        [DialogueDraft(LearnerIntent.ENGLISH_ANSWER, "A bounded reply.", "en-GB", accepted)]
+    )
+    database = tmp_path / "progress.sqlite3"
+    service = LocalLessonService(
+        QueueRecognizer([transcript(answer, DetectedLanguage.ENGLISH)]),
+        dialogue,
+        progress_repository=SQLiteProgressRepository(database),
+    )
+    await service.initial_turn("cafe-ordering")
+
+    await service.respond(audio())
+
+    assert dialogue.requests[0].lesson.teacher_prompt == "What would you like to drink?"
+    assert dialogue.requests[0].lesson.objective == "Order a drink politely."
+    assert service.progress.successful_exercises == int(accepted)
+    assert service.progress.exercise_number == 1 + int(accepted)
+    restarted = LocalLessonService(
+        QueueRecognizer([]),
+        QueueDialogue([]),
+        progress_repository=SQLiteProgressRepository(database),
+    )
+    await restarted.initial_turn("cafe-ordering")
+    assert restarted.progress.successful_exercises == int(accepted)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("failure", [ProviderUnavailable, ProviderMalformedOutput, TimeoutError])
+async def test_unavailable_or_invalid_model_uses_literal_fallback(failure: type[Exception]) -> None:
+    service = LocalLessonService(
+        QueueRecognizer([transcript("I would like coffee, please.", DetectedLanguage.ENGLISH)]),
+        QueueDialogue([failure("unusable assessment")]),
+    )
+
+    await service.respond(audio())
+
+    assert service.progress.successful_exercises == 1
+
+
+@pytest.mark.asyncio
+async def test_model_rejection_does_not_use_literal_fallback() -> None:
+    service = LocalLessonService(
+        QueueRecognizer([transcript("I would like coffee, please.", DetectedLanguage.ENGLISH)]),
+        QueueDialogue([DialogueDraft(LearnerIntent.ENGLISH_ANSWER, "Try again.", "en-GB", False)]),
+    )
+
+    await service.respond(audio())
+
+    assert service.progress.successful_exercises == 0
+    assert service.progress.exercise_number == 1
+
+
+@pytest.mark.asyncio
+async def test_imported_lesson_uses_its_own_question_and_semantic_verdict(tmp_path: Path) -> None:
+    source = Path(__file__).resolve().parents[3] / "assets/lesson-content/cafe-ordering.json"
+    lesson = json.loads(source.read_text(encoding="utf-8"))
+    lesson["scenario_id"] = "generated-library-lesson"
+    lesson["title"] = "Choosing a book"
+    exercise = lesson["exercises"][0]
+    exercise["goal"] = "Recommend a book to a friend."
+    exercise["prompts"] = ["Which book would you recommend?"] * 3
+    exercise["accepted_patterns"] = [["I recommend"]]
+    lesson["exercises"] = [exercise]
+    (tmp_path / "generated.json").write_text(json.dumps(lesson), encoding="utf-8")
+    dialogue = QueueDialogue(
+        [DialogueDraft(LearnerIntent.ENGLISH_ANSWER, "Good recommendation.", "en-GB", True)]
+    )
+    service = LocalLessonService(
+        QueueRecognizer([transcript("Try reading Treasure Island.", DetectedLanguage.ENGLISH)]),
+        dialogue,
+        lesson_catalog=load_lesson_catalog(tmp_path),
+    )
+    await service.initial_turn(lesson["scenario_id"])
+
+    await service.respond(audio())
+
+    assert dialogue.requests[0].lesson.teacher_prompt == "Which book would you recommend?"
+    assert dialogue.requests[0].lesson.objective == "Recommend a book to a friend."
+    assert service.progress.successful_exercises == 1
+    assert service.progress.status.value == "completed"
 
 
 @pytest.mark.asyncio

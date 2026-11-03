@@ -424,3 +424,14 @@ Windows Firewall for this trusted router's selected profile/local network, start
 candidate, scan its new QR, and verify TCP/WSS plus bidirectional WebRTC media. Do not configure
 router port forwarding. Record the phone, router/SSID, exact package, commands, metrics, and
 cleanup in a new dated entry.
+
+## 2026-11-03 semantic-answer text regression
+
+The Windows 10.0.26200.0 x64 development PC/RTX 3060 ran pinned loopback llama.cpp b11540 and
+Qwen3 4B Q4_K_M at 21:24:19–21:24:27 UTC. `scripts/local_ai_benchmark.py --dialogue-only` passed
+28/28 semantic answer cases through the actual teaching engine and 7/7 existing bilingual cases.
+Median adapter times were 1,062.2 ms and 921.4 ms respectively. No phone, microphone, recognition,
+TTS, LAN, or subjective listening check was executed. No server/player remained active afterward.
+Exact commands, model digest, failed attempts, ignored raw report paths, and limits are in
+`docs/benchmarks/2026-11-03-semantic-answer-assessment.md`. This does not replace any physical
+acceptance row or install the source fix into the currently deployed 0.1.22 host.

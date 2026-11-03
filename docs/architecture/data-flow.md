@@ -118,7 +118,11 @@ written at runtime.
 The local dialogue adapter sends the recognized utterance, lesson context, deterministic intent
 hint, and at most the configured number of recent turns to llama.cpp. Closed structured output is
 parsed, then the domain policy can reject unsafe locale/progress choices and use a deterministic
-fallback. The bounded WAV in `teacher.turn` is local synthesized PCM16 speech. The speech router
+fallback. The model's strict JSON boolean assesses the answer's meaning against the active question
+and goal. The local lesson service passes that verdict to `TeachingEngine`, whose language/help
+guards and progression rules still apply. If inference/parsing fails, the engine receives no
+semantic verdict and uses its limited literal matcher. A valid false verdict never falls back to
+keyword matching. The bounded WAV in `teacher.turn` is local synthesized PCM16 speech. The speech router
 uses the current teacher profile to choose a female or male Kokoro voice for explicit
 `en-GB`/`en-US`. All profiles use the substantially clearer neural Piper Dimitar voice as the base
 for `bg-BG`. Elena and Amira receive a bounded duration-preserving pitch presentation of that

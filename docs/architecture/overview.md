@@ -163,10 +163,15 @@ Godot's pre-connect **Content & updates** menu is the discoverable UI for those 
 entry points. It does not implement an importer or expose an administration route. Its fourth
 action confirms an application update, exits with a closed launcher signal, waits for managed host
 process cleanup, and only then opens the package-owned signed updater. See ADR-0021.
-The active local dialogue model may classify or phrase a conversational turn,
-but it cannot award progress. Only recognized English production that satisfies the active guided
-exercise can advance. Bulgarian/mixed assistance, vocabulary questions, repetition, slower-speech
-requests, ambiguity, and recognition failure retain the exercise.
+The active local dialogue model compares the recognized answer with the current exercise question
+and goal. Its strictly parsed JSON `advance_exercise` boolean supplies semantic acceptance,
+including natural paraphrases and learner-chosen values. `TeachingEngine` applies that verdict
+after its English-production and help guards, then owns counters, one-exercise advancement,
+completion, and difficulty changes. Bulgarian/mixed assistance, vocabulary questions, repetition,
+slower-speech requests, ambiguity, and recognition failure retain the exercise. Literal phrase
+patterns apply only when the provider fails/returns invalid output, or in deterministic fake mode;
+they cannot override a valid model verdict. Imported/generated lessons use the same assessment.
+See ADR-0022 for the amendment to ADR-0008.
 
 Two failed English attempts lower difficulty by one level; two consecutive first-attempt successes
 raise it by one. A closed reason enum accompanies each change. The Android client selects a lesson

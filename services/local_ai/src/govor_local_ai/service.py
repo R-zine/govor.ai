@@ -209,6 +209,7 @@ class LocalLessonService:
         )
         fallback_intent = _fallback_intent(transcript.text, transcript.language.value)
         intent_hint = classify_explicit_intent(transcript.text, transcript.language)
+        answer_accepted: bool | None = None
         try:
             draft = await self.dialogue.generate(
                 DialogueRequest(
@@ -219,12 +220,14 @@ class LocalLessonService:
                 )
             )
             decision = self.policy.apply(recognition, draft)
+            answer_accepted = decision.advance_exercise
         except (ProviderError, TimeoutError):
             decision = self.policy.fallback(fallback_intent)
         outcome = self._engine.evaluate(
             transcript.text,
             transcript.language,
             decision.intent,
+            answer_accepted=answer_accepted,
         )
         turn = await self.speech.synthesize(outcome.reply_text, outcome.reply_locale)
         self.progress_repository.record_outcome(outcome, self._engine.state)

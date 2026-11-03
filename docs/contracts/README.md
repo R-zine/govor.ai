@@ -57,8 +57,11 @@ accent-specific IPA, nullable provider-derived word/phoneme spans, and `fallback
 duration, locale, and audio metadata before use.
 
 `local-ai-dialogue.schema.json` is the closed model-output shape used at the local inference
-boundary. It permits only an intent, bounded reply text, `en-GB`/`bg-BG` locale, and a proposed
-exercise-advance boolean. It is not a wire envelope because it never leaves the trusted desktop;
+boundary. It permits only an intent, bounded reply text, `en-GB`/`bg-BG` locale, and a semantic
+answer-acceptance boolean named `advance_exercise`. Strings/numbers cannot substitute for JSON
+booleans. The local service applies that verdict through the domain's language/help guards and
+one-exercise progression rules (ADR-0022); only unusable model output invokes literal fallback.
+It is not a wire envelope because it never leaves the trusted desktop;
 the same closed shape is supplied to llama.cpp constrained generation and independently validated
 before domain policy applies. An explicit negative fixture proves that an injected renderer action
 is rejected.

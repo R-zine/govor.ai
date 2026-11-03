@@ -1,7 +1,7 @@
 """Deterministic guided-lesson definitions and progression rules.
 
-The language model may help classify a turn, but this module alone decides whether a
-learner succeeded, which exercise comes next, and why difficulty changed.
+The language model may assess an answer's meaning. This module enforces help/language
+guards, advances one exercise at a time, and decides completion and difficulty changes.
 """
 
 from __future__ import annotations
@@ -258,6 +258,8 @@ class TeachingEngine:
         text: str,
         language: DetectedLanguage,
         intent: LearnerIntent,
+        *,
+        answer_accepted: bool | None = None,
     ) -> TeachingOutcome:
         if self.state.status is LessonStatus.COMPLETED:
             raise ValueError("the lesson is already complete")
@@ -268,7 +270,9 @@ class TeachingEngine:
             return self._help_outcome(exercise, intent, language)
 
         self.state.attempts_on_exercise += 1
-        if not exercise.accepts(text):
+        # None means no usable model assessment (including deterministic mock mode).
+        accepted = exercise.accepts(text) if answer_accepted is None else answer_accepted
+        if not accepted:
             if (
                 self.state.attempts_on_exercise == 2
                 and self.state.difficulty is not Difficulty.BEGINNER
