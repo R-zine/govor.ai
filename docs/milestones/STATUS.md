@@ -1415,6 +1415,33 @@ lesson use, and subjective female/male Bulgarian listening remain not executed, 
 is made. Exact evidence and limitations are in
 `docs/benchmarks/2026-11-03-phone-lesson-creator-and-bulgarian-voice.md`.
 
+## Release 0.1.21 build and physical-phone update
+
+The committed phone lesson-creator and Bulgarian teacher-voice changes were packaged on
+2026-11-03 from source commit `3a29e49` as matching 0.1.21/code 22 artifacts. The final package
+pipeline passed renderer export, signed Android release assembly and APK Signature Scheme v2
+verification, embedded Python/runtime construction, corresponding-source/license assembly,
+release imports, prerequisites, and packaged wrapper doctor checks. The packaged model status
+reported Qwen3, Whisper, Kokoro model/voices, and Piper model/config ready.
+
+The signed APK was installed on the authorized physical realme RMX3939 with `adb install -r
+--no-streaming`, preserving application data. Android reported 0.1.21/code 22 afterward, and a
+force-stopped Activity cold-start returned `Status: ok` in 669 ms. The portable host is at
+`.cache/dist/govor.ai-0.1.21-windows-x64`; the 59,924,665-byte APK SHA-256 is
+`5edd6bd6a0704926941319077a79cfb10ef75e78528ed3fe1918c4ba42ec5f73`.
+
+The first package attempt reproduced the completed-export Godot console-exit hang. A bounded
+ignored wrapper required the completed `savepack` marker and output files before terminating the
+idle exporter. A subsequent attempt exposed a stale Gradle transformed-JAR access failure; a clean
+no-daemon release build from the Android project passed in 1 minute 35 seconds before the complete
+package retry. One clean-build invocation from the repository root failed immediately because it
+was not the Gradle root and is not counted as evidence. The temporary wrapper was removed.
+
+This deployment does not prove the new lesson-creation flow or subjective Bulgarian speech on the
+phone. No host service/listener or audio was left active; the phone Activity was left open for the
+user. Exact commands, results, artifacts, failures, and limits are in
+`docs/benchmarks/2026-11-03-release-0.1.21-deployment.md`.
+
 ## Renderer evidence and limitations
 
 The current local proof images visibly contain the selectable facial teachers over four distinct
