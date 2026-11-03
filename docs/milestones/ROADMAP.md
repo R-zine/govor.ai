@@ -500,3 +500,9 @@ environment import, and signed application patches. Content tools launch only th
 local entry points and keep live catalog reload behavior. Patching requires confirmation, closes
 the renderer and every launcher-managed service, then opens the trusted updater. No administration
 API or arbitrary command/path field is added; ADR-0021 records the lifecycle and security boundary.
+
+The current source was subsequently packaged on 2026-11-03 as matching portable Windows and
+signed Android release 0.1.20/code 21. Both host entry-point doctors and local model status passed;
+the physical realme accepted the in-place update and cold-launched the Activity. This is package,
+host-readiness, and update evidence only. It does not substitute for an interactive pairing/media/
+lesson run or the still-pending visual check of the new host management menu.

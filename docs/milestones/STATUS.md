@@ -1,6 +1,6 @@
 # Current verified status
 
-Last updated: 2026-11-02
+Last updated: 2026-11-03
 
 ## Outcome
 
@@ -1352,6 +1352,34 @@ warning. A normal Windows renderer run exited automatically after emitting the U
 but its internal root-viewport PNG was black, so it is recorded as **verified failing/not visual
 evidence**, not proof of menu appearance. The menu still needs observation in the next packaged
 interactive run; no content or patch operation was executed during this verification.
+
+### Signed 0.1.20 deployment amendment
+
+On 2026-11-03 the source through the host-management feature was packaged as matching portable
+Windows and signed Android release 0.1.20/code 21. The final package command passed Godot export,
+Android release compilation/lint, APK Signature Scheme v2 verification with the established
+signer, embedded runtime/dependency/source staging, imports, prerequisite checks, and every
+packaged wrapper doctor. The portable host is
+`.cache/dist/govor.ai-0.1.20-windows-x64`; both learner entry-point doctors passed and all six
+required model/model-config artifacts reported `ready`.
+
+The first sandboxed package attempt was interrupted after completed Godot export output because
+the sandboxed console process did not exit. The first unrestricted retry then exposed stale
+incremental Android release state as an unresolved `GovorTheme` reference. A clean signed release
+build passed Kotlin compilation, lint, packaging, and signing, and the final package run passed
+from that clean state. Neither failed attempt is reported as a successful package.
+
+The authorized physical realme updated in place from 0.1.19/code 20 to 0.1.20/code 21 with
+`adb install -r --no-streaming`; Android returned `Success`. The installed package query reported
+the new version, and `ai.govor.app/.MainActivity` completed a cold launch with `Status: ok` in
+648 ms. The signed APK is 59,908,277 bytes with SHA-256
+`9315e920c6b562cbcca18fac93dac0d2811f9d9ffcd2f0c9771545778dda7894`.
+
+This deployment is build, signature, update, host-readiness, model-availability, and Activity-
+startup evidence only. Pairing, media, microphone return, lesson behavior, Bulgarian listening,
+teacher selection, progress display, and visual use of the host management menu were not executed.
+No host listener, renderer, or PC audio was left active. Exact commands, failures, artifacts, and
+limits are in `docs/benchmarks/2026-11-03-release-0.1.20-deployment.md`.
 
 ## Renderer evidence and limitations
 
