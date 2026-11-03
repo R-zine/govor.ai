@@ -1,0 +1,14 @@
+{
+  "protocol_version": "1.0",
+  "message_type": "lesson.create.result",
+  "correlation_id": "5b1c13d2-3f48-4c4f-b188-f4dc2f97a013",
+  "payload": {
+    "status": "failed",
+    "message": "Lesson creation is unavailable in this host mode.",
+    "scenario_id": null,
+    "title": null,
+    "difficulty": null,
+    "environment_id": null,
+    "exercise_count": null
+  }
+}

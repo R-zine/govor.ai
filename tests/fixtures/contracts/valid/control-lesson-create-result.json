@@ -1,0 +1,14 @@
+{
+  "protocol_version": "1.0",
+  "message_type": "lesson.create.result",
+  "correlation_id": "5b1c13d2-3f48-4c4f-b188-f4dc2f97a013",
+  "payload": {
+    "status": "created",
+    "message": "Created Hotel check-in.",
+    "scenario_id": "hotel-check-in",
+    "title": "Hotel check-in",
+    "difficulty": "beginner",
+    "environment_id": "home",
+    "exercise_count": 3
+  }
+}

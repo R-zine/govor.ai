@@ -171,7 +171,11 @@ existing local validation boundaries. The application-patch action is a closed r
 signal; the launcher completes managed-process cleanup before it starts the installed signed
 updater. No user-selected path is passed from Godot to a shell. See ADR-0021.
 
-The Windows lesson creator talks only to fixed loopback llama.cpp HTTP. Its topic is bounded to 500
+The Windows lesson creator talks only to fixed loopback llama.cpp HTTP. A paired phone may request
+creation through the existing certificate-pinned, device-authenticated control WebSocket; no new
+HTTP route or unauthenticated administration endpoint exists. The operation is pre-lesson only,
+allows one in-flight request per connection, advertises only the current validated environments,
+and returns a bounded result before the normal catalog update. Its topic is bounded to 500
 characters and treated as untrusted content in the model prompt. The model response is capped,
 constrained by the versioned `local-ai-lesson-content` schema, parsed with unknown fields forbidden,
 and then validated again as a complete lesson definition. The output shape has no path, persistent
@@ -179,8 +183,8 @@ ID, display-order, schema-version, scene-ID, command, URL, or renderer-asset fie
 is never interpreted as any of those. Application code selects the structural fields and publishes
 only through the locked additive importer.
 Omitted options are deterministic and never cause an extra provider request. The creator adds no
-LAN route, cloud fallback, telemetry, or content logging. These controls establish structural and
-execution safety; they do not certify generated pedagogical or factual quality.
+new LAN route, cloud fallback, telemetry, or content logging. These controls establish structural
+and execution safety; they do not certify generated pedagogical or factual quality.
 
 ## Required controls
 

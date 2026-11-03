@@ -7,6 +7,7 @@ import android.net.Network
 import android.os.Bundle
 import ai.govor.core.LessonCatalogItemPayload
 import ai.govor.core.LessonCatalogProgressPayload
+import ai.govor.core.LessonEnvironmentItemPayload
 import ai.govor.core.LessonProgressPayload
 import ai.govor.core.PairingBootstrapCodec
 import ai.govor.core.PronunciationPayload
@@ -46,6 +47,7 @@ import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.ErrorOutline
@@ -176,6 +178,8 @@ private fun GovorApp(model: MediaSessionViewModel = viewModel()) {
     val transcript by model.lesson.transcript.collectAsStateWithLifecycle()
     val lessonProgress by model.lesson.lessonProgress.collectAsStateWithLifecycle()
     val lessonCatalog by model.lesson.lessonCatalog.collectAsStateWithLifecycle()
+    val lessonEnvironments by model.lesson.lessonEnvironments.collectAsStateWithLifecycle()
+    val lessonCreationState by model.lesson.lessonCreationState.collectAsStateWithLifecycle()
     val teacherProfiles by model.lesson.teacherProfiles.collectAsStateWithLifecycle()
     val selectedTeacherProfileId by model.lesson.selectedTeacherProfileId.collectAsStateWithLifecycle()
     val lessonActive by model.lesson.lessonActive.collectAsStateWithLifecycle()
@@ -203,6 +207,12 @@ private fun GovorApp(model: MediaSessionViewModel = viewModel()) {
     LaunchedEffect(lessonCatalog) {
         if (lessonCatalog.none { it.scenario_id == scenarioId }) {
             scenarioId = lessonCatalog.firstOrNull()?.scenario_id.orEmpty()
+        }
+    }
+    LaunchedEffect(lessonCreationState.createdScenarioId, lessonCatalog) {
+        val createdScenarioId = lessonCreationState.createdScenarioId
+        if (createdScenarioId != null && lessonCatalog.any { it.scenario_id == createdScenarioId }) {
+            scenarioId = createdScenarioId
         }
     }
 
@@ -314,6 +324,10 @@ private fun GovorApp(model: MediaSessionViewModel = viewModel()) {
 
                     GovorScreen.LESSON_SELECTION -> LessonSelectionScreen(
                         lessonCatalog = lessonCatalog,
+                        lessonEnvironments = lessonEnvironments,
+                        lessonCreationState = lessonCreationState,
+                        onCreateLesson = model.lesson::createLesson,
+                        onDismissCreationResult = model.lesson::clearLessonCreationResult,
                         teacherProfiles = teacherProfiles,
                         selectedTeacherProfileId = selectedTeacherProfileId,
                         onTeacherProfileChanged = model.lesson::selectTeacherProfile,
@@ -562,6 +576,10 @@ private fun ConnectionScreen(
 @Composable
 private fun LessonSelectionScreen(
     lessonCatalog: List<LessonCatalogItemPayload>,
+    lessonEnvironments: List<LessonEnvironmentItemPayload>,
+    lessonCreationState: LessonCreationState,
+    onCreateLesson: (String, String?, String?, Int?) -> Unit,
+    onDismissCreationResult: () -> Unit,
     teacherProfiles: List<TeacherProfileItemPayload>,
     selectedTeacherProfileId: String,
     onTeacherProfileChanged: (String) -> Unit,
@@ -578,6 +596,7 @@ private fun LessonSelectionScreen(
     errors: List<String>,
 ) {
     var showLessonPicker by rememberSaveable { mutableStateOf(false) }
+    var showLessonCreator by rememberSaveable { mutableStateOf(false) }
     var showPreferences by rememberSaveable { mutableStateOf(false) }
     var showMore by rememberSaveable { mutableStateOf(false) }
     val selectedLesson = lessonCatalog.firstOrNull { it.scenario_id == selectedScenarioId }
@@ -588,6 +607,12 @@ private fun LessonSelectionScreen(
             CenterAlignedTopAppBar(
                 title = { Text("Choose a lesson") },
                 actions = {
+                    IconButton(
+                        onClick = { showLessonCreator = true },
+                        enabled = !lessonCreationState.inProgress,
+                    ) {
+                        Icon(Icons.Filled.Add, contentDescription = "Create a lesson")
+                    }
                     IconButton(onClick = { showLessonPicker = true }) {
                         Icon(Icons.AutoMirrored.Filled.List, contentDescription = "Choose lesson")
                     }
@@ -625,6 +650,44 @@ private fun LessonSelectionScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             item { ConnectionStatusPill(MediaConnectionStatus.CONNECTED, lessonState) }
+            lessonCreationState.message?.let { message ->
+                item {
+                    Card(
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (lessonCreationState.failed) {
+                                MaterialTheme.colorScheme.errorContainer
+                            } else {
+                                MaterialTheme.colorScheme.secondaryContainer
+                            },
+                        ),
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        ) {
+                            if (lessonCreationState.inProgress) {
+                                CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                            } else {
+                                Icon(
+                                    if (lessonCreationState.failed) {
+                                        Icons.Filled.ErrorOutline
+                                    } else {
+                                        Icons.Filled.CheckCircle
+                                    },
+                                    contentDescription = null,
+                                )
+                            }
+                            Text(message, modifier = Modifier.weight(1f))
+                            if (!lessonCreationState.inProgress) {
+                                TextButton(onClick = onDismissCreationResult) { Text("Dismiss") }
+                            }
+                        }
+                    }
+                }
+            }
             if (lessonProgress?.status == "completed") {
                 item {
                     Card(
@@ -697,7 +760,8 @@ private fun LessonSelectionScreen(
                 item {
                     Button(
                         onClick = onStartLesson,
-                        enabled = selectedLesson != null,
+                        // Creation owns the local model and catalog publication boundary.
+                        enabled = selectedLesson != null && !lessonCreationState.inProgress,
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(56.dp),
@@ -728,6 +792,16 @@ private fun LessonSelectionScreen(
                     style = MaterialTheme.typography.titleLarge,
                     modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp),
                 )
+                ListItem(
+                    headlineContent = { Text("Create a new lesson") },
+                    supportingContent = { Text("Use the local AI model on your PC") },
+                    leadingContent = { Icon(Icons.Filled.Add, contentDescription = null) },
+                    modifier = Modifier.clickable(enabled = !lessonCreationState.inProgress) {
+                        showLessonPicker = false
+                        showLessonCreator = true
+                    },
+                )
+                HorizontalDivider()
                 lessonCatalog.forEach { lesson ->
                     ListItem(
                         headlineContent = { Text(lesson.title) },
@@ -761,6 +835,17 @@ private fun LessonSelectionScreen(
         }
     }
 
+    if (showLessonCreator) {
+        LessonCreatorSheet(
+            environments = lessonEnvironments,
+            onCreate = { topic, difficulty, environmentId, exerciseCount ->
+                showLessonCreator = false
+                onCreateLesson(topic, difficulty, environmentId, exerciseCount)
+            },
+            onDismiss = { showLessonCreator = false },
+        )
+    }
+
     if (showPreferences) {
         LessonPreferencesSheet(
             teacherProfiles = teacherProfiles,
@@ -772,6 +857,136 @@ private fun LessonSelectionScreen(
             onSpacedReviewChanged = onSpacedReviewChanged,
             onDismiss = { showPreferences = false },
         )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun LessonCreatorSheet(
+    environments: List<LessonEnvironmentItemPayload>,
+    onCreate: (String, String?, String?, Int?) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var topic by rememberSaveable { mutableStateOf("") }
+    var difficulty by rememberSaveable { mutableStateOf<String?>(null) }
+    var environmentId by rememberSaveable { mutableStateOf<String?>(null) }
+    var exerciseCount by rememberSaveable { mutableStateOf<Int?>(null) }
+    var difficultyMenu by remember { mutableStateOf(false) }
+    var environmentMenu by remember { mutableStateOf(false) }
+    var lengthMenu by remember { mutableStateOf(false) }
+    val difficultyLabel = difficulty?.replaceFirstChar(Char::uppercase) ?: "Let the app decide"
+    val environmentLabel = environments
+        .firstOrNull { it.environment_id == environmentId }
+        ?.display_name ?: "Let the app decide"
+    val lengthLabel = exerciseCount?.let { "$it exercises" } ?: "Let the app decide"
+
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 24.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            Text("Create a lesson", style = MaterialTheme.typography.titleLarge)
+            Text(
+                "Describe what you want to practise. Your PC's local model creates and installs " +
+                    "the lesson; nothing is sent to a cloud service.",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            OutlinedTextField(
+                value = topic,
+                onValueChange = { if (it.length <= 500) topic = it },
+                label = { Text("Topic or situation") },
+                supportingText = { Text("Required · ${topic.length}/500") },
+                minLines = 2,
+                maxLines = 5,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            CreatorChoice(
+                label = "Difficulty",
+                value = difficultyLabel,
+                expanded = difficultyMenu,
+                onExpandedChange = { difficultyMenu = it },
+                choices = listOf(
+                    null to "Let the app decide",
+                    "beginner" to "Beginner",
+                    "intermediate" to "Intermediate",
+                    "advanced" to "Advanced",
+                ),
+                onSelected = { difficulty = it },
+            )
+            CreatorChoice(
+                label = "Environment",
+                value = environmentLabel,
+                expanded = environmentMenu,
+                onExpandedChange = { environmentMenu = it },
+                choices = listOf(null to "Let the app decide") +
+                    environments.map { it.environment_id to it.display_name },
+                onSelected = { environmentId = it },
+            )
+            CreatorChoice(
+                label = "Length",
+                value = lengthLabel,
+                expanded = lengthMenu,
+                onExpandedChange = { lengthMenu = it },
+                choices = listOf(null to "Let the app decide") +
+                    (1..8).map { it.toString() to "$it exercises" },
+                onSelected = { exerciseCount = it?.toInt() },
+            )
+            Button(
+                onClick = { onCreate(topic, difficulty, environmentId, exerciseCount) },
+                enabled = topic.isNotBlank(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+            ) {
+                Icon(Icons.Filled.Add, contentDescription = null)
+                Spacer(Modifier.width(10.dp))
+                Text("Create lesson")
+            }
+            Spacer(Modifier.height(16.dp))
+        }
+    }
+}
+
+@Composable
+private fun CreatorChoice(
+    label: String,
+    value: String,
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit,
+    choices: List<Pair<String?, String>>,
+    onSelected: (String?) -> Unit,
+) {
+    Box(modifier = Modifier.fillMaxWidth()) {
+        OutlinedButton(
+            onClick = { onExpandedChange(true) },
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Column(
+                modifier = Modifier.weight(1f),
+                horizontalAlignment = Alignment.Start,
+            ) {
+                Text(label, style = MaterialTheme.typography.labelMedium)
+                Text(value)
+            }
+            Icon(Icons.Filled.ExpandMore, contentDescription = null)
+        }
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { onExpandedChange(false) },
+        ) {
+            choices.forEach { (choice, choiceLabel) ->
+                DropdownMenuItem(
+                    text = { Text(choiceLabel) },
+                    onClick = {
+                        onSelected(choice)
+                        onExpandedChange(false)
+                    },
+                )
+            }
+        }
     }
 }
 

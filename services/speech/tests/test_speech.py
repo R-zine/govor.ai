@@ -46,12 +46,15 @@ class FakePiper:
             SimpleNamespace(phoneme=symbol, num_samples=1_000)
             for symbol in ("d", "o", " ", "b", "a", "r")
         ]
+        samples = np.rint(np.sin(2.0 * np.pi * 140.0 * np.arange(6_000) / 22_050) * 12_000).astype(
+            "<i2"
+        )
         return [
             SimpleNamespace(
                 sample_rate=22_050,
                 sample_width=2,
                 sample_channels=1,
-                audio_int16_bytes=b"\0\0" * 6_000,
+                audio_int16_bytes=samples.tobytes(),
                 phoneme_alignments=phonemes,
             )
         ]
@@ -125,6 +128,27 @@ async def test_piper_uses_speed_and_model_sample_alignment() -> None:
 
 
 @pytest.mark.asyncio
+async def test_piper_bulgarian_presentation_follows_teacher_gender() -> None:
+    engine = FakePiper()
+    selected = "elena"
+    provider = PiperBulgarianSpeechProvider(
+        "missing.onnx",
+        "missing.json",
+        engine_factory=lambda: engine,
+        teacher_profile_provider=lambda: selected,
+    )
+
+    female = await provider.synthesize("Ð”Ð¾Ð±ÑŠÑ€ Ð´ÐµÐ½.", "bg-BG")
+    selected = "daniel"
+    male = await provider.synthesize("Ð”Ð¾Ð±ÑŠÑ€ Ð´ÐµÐ½.", "bg-BG")
+
+    assert female.duration_us == male.duration_us
+    assert female.audio_wav != male.audio_wav
+    assert female.provider_id.endswith("-female-presentation")
+    assert male.provider_id == "piper-bg_BG-dimitar-medium"
+
+
+@pytest.mark.asyncio
 async def test_real_espeak_fallback_has_consistent_wav_shape_without_alignment() -> None:
     provider = EspeakFallbackSpeechProvider(timeout_seconds=10.0)
 
@@ -138,6 +162,23 @@ async def test_real_espeak_fallback_has_consistent_wav_shape_without_alignment()
     assert first.phoneme_alignment is None
     assert first.sample_rate_hz == bulgarian.sample_rate_hz == 22_050
     assert bulgarian.duration_us > first.duration_us / 2
+
+
+@pytest.mark.asyncio
+async def test_bulgarian_fallback_never_uses_unintelligible_female_variant() -> None:
+    female = EspeakFallbackSpeechProvider(
+        timeout_seconds=10.0,
+        teacher_profile_provider=lambda: "amira",
+    )
+    male = EspeakFallbackSpeechProvider(
+        timeout_seconds=10.0,
+        teacher_profile_provider=lambda: "daniel",
+    )
+
+    female_turn = await female.synthesize("Ð”Ð¾Ð±ÑŠÑ€ Ð´ÐµÐ½.", "bg-BG")
+    male_turn = await male.synthesize("Ð”Ð¾Ð±ÑŠÑ€ Ð´ÐµÐ½.", "bg-BG")
+
+    assert female_turn.audio_wav == male_turn.audio_wav
 
 
 @pytest.mark.asyncio

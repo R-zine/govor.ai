@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import ipaddress
-from collections.abc import AsyncIterator, Callable
+from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from typing import Any
 from uuid import UUID
@@ -12,6 +12,9 @@ from fastapi import FastAPI, Request, Response, WebSocket, WebSocketDisconnect
 from govor_contracts import (
     DeviceAuthPayload,
     LessonCatalogProgressPayload,
+    LessonCreateRequestPayload,
+    LessonCreateResultPayload,
+    LessonEnvironmentItemPayload,
     MessageEnvelope,
     PairingRequestPayload,
     TeacherProfileItemPayload,
@@ -40,6 +43,8 @@ def create_app(
     microphone: MicrophoneAudioSource | None = None,
     renderer: RendererControl | None = None,
     progress_repository: SQLiteProgressRepository | None = None,
+    lesson_creator: Callable[[LessonCreateRequestPayload], Awaitable[LessonCreateResultPayload]]
+    | None = None,
 ) -> FastAPI:
     runtime = settings or get_settings()
     catalog = lesson_catalog or load_lesson_catalog(runtime.lesson_directory)
@@ -56,6 +61,47 @@ def create_app(
         reload_enabled=lesson_catalog is None,
         scene_planner_provider=lambda: environment_registry.planner,
     )
+    requested_lesson_creator = lesson_creator
+
+    if requested_lesson_creator is None and runtime.mode == "local":
+
+        async def create_requested_lesson(
+            payload: LessonCreateRequestPayload,
+        ) -> LessonCreateResultPayload:
+            from govor_domain import Difficulty
+            from govor_local_ai.lesson_creator import (
+                LessonCreationRequest,
+                LlamaCppLessonContentProvider,
+                create_lesson,
+            )
+
+            planner = environment_registry.planner
+            created = await create_lesson(
+                LessonCreationRequest(
+                    topic=payload.topic,
+                    difficulty=(
+                        Difficulty(payload.difficulty) if payload.difficulty is not None else None
+                    ),
+                    scene_template_id=payload.environment_id,
+                    exercise_count=payload.exercise_count,
+                ),
+                LlamaCppLessonContentProvider(runtime.llama_base_url),
+                runtime.lesson_directory,
+                allowed_scene_templates=set(planner.supported_templates),
+            )
+            if catalog_registry.refresh(force=True) is None:
+                raise ValueError("created lesson did not enter the live catalog")
+            return LessonCreateResultPayload(
+                status="created",
+                message=f"Created {created.imported.title}.",
+                scenario_id=created.imported.scenario_id,
+                title=created.imported.title,
+                difficulty=created.options.difficulty.value,
+                environment_id=created.options.scene_template_id,
+                exercise_count=created.options.exercise_count,
+            )
+
+        requested_lesson_creator = create_requested_lesson
     control_sessions: set[ControlSession] = set()
     teacher_profiles = TeacherProfileSelection()
     progress_store = progress_repository or (
@@ -139,6 +185,15 @@ def create_app(
                 voice_gender=profile.voice_gender,
             )
             for profile in PROFILES.values()
+        ]
+
+    def lesson_environment_catalog() -> list[LessonEnvironmentItemPayload]:
+        return [
+            LessonEnvironmentItemPayload(
+                environment_id=environment_id,
+                display_name=display_name,
+            )
+            for environment_id, display_name in environment_registry.planner.environment_choices
         ]
 
     session_registry = SessionRegistry()
@@ -273,6 +328,9 @@ def create_app(
             teacher_profile_provider=lambda: teacher_profiles.profile_id,
             teacher_profiles_provider=teacher_profile_catalog,
             teacher_profile_selector=select_teacher_profile,
+            lesson_creator=requested_lesson_creator,
+            lesson_environment_provider=lesson_environment_catalog,
+            lesson_catalog_broadcaster=broadcast_lesson_catalog,
             scene_planner_provider=lambda: environment_registry.planner,
             microphone=microphone_source,
             settings=runtime,

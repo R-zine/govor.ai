@@ -5,6 +5,9 @@ import ai.govor.core.LearnerTranscriptPayload
 import ai.govor.core.LessonCatalogItemPayload
 import ai.govor.core.LessonCatalogPayload
 import ai.govor.core.LessonCatalogRequestPayload
+import ai.govor.core.LessonCreateRequestPayload
+import ai.govor.core.LessonCreateResultPayload
+import ai.govor.core.LessonEnvironmentItemPayload
 import ai.govor.core.LessonProgressPayload
 import ai.govor.core.MessageEnvelope
 import ai.govor.core.RecordingStartedPayload
@@ -51,6 +54,13 @@ import java.util.concurrent.TimeUnit
 import kotlin.math.abs
 import kotlin.math.max
 
+data class LessonCreationState(
+    val inProgress: Boolean = false,
+    val message: String? = null,
+    val createdScenarioId: String? = null,
+    val failed: Boolean = false,
+)
+
 /** Validated Milestone 2 control client. It performs no inference and persists no audio. */
 class LessonSessionClient {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -96,6 +106,14 @@ class LessonSessionClient {
     private val mutableLessonCatalog = MutableStateFlow<List<LessonCatalogItemPayload>>(emptyList())
     val lessonCatalog: StateFlow<List<LessonCatalogItemPayload>> = mutableLessonCatalog
 
+    private val mutableLessonEnvironments =
+        MutableStateFlow<List<LessonEnvironmentItemPayload>>(emptyList())
+    val lessonEnvironments: StateFlow<List<LessonEnvironmentItemPayload>> =
+        mutableLessonEnvironments
+
+    private val mutableLessonCreationState = MutableStateFlow(LessonCreationState())
+    val lessonCreationState: StateFlow<LessonCreationState> = mutableLessonCreationState
+
     private val mutableTeacherProfiles = MutableStateFlow<List<TeacherProfileItemPayload>>(emptyList())
     val teacherProfiles: StateFlow<List<TeacherProfileItemPayload>> = mutableTeacherProfiles
 
@@ -124,6 +142,8 @@ class LessonSessionClient {
             LessonSelection(it, englishLocale, spacedReviewEnabled)
         }
         mutableLessonCatalog.value = emptyList()
+        mutableLessonEnvironments.value = emptyList()
+        mutableLessonCreationState.value = LessonCreationState()
         mutableTeacherProfiles.value = emptyList()
         mutableSelectedTeacherProfileId.value = ""
         if (secure && (deviceId == null || credential == null || certificateFingerprint == null)) {
@@ -181,6 +201,36 @@ class LessonSessionClient {
             "Teacher profile is not present in the host catalog"
         }
         send("teacher.profile.select", TeacherProfileSelectPayload(profileId))
+    }
+
+    fun createLesson(
+        topic: String,
+        difficulty: String?,
+        environmentId: String?,
+        exerciseCount: Int?,
+    ) {
+        require(socket != null) { "Control connection is not open" }
+        require(sessionId == null) { "A lesson is already active" }
+        val request = LessonCreateRequestPayload(
+            topic = topic.trim(),
+            difficulty = difficulty,
+            environment_id = environmentId,
+            exercise_count = exerciseCount,
+        ).validate()
+        require(!mutableLessonCreationState.value.inProgress) {
+            "A lesson is already being created"
+        }
+        mutableLessonCreationState.value = LessonCreationState(
+            inProgress = true,
+            message = "Creating the lesson on your PC…",
+        )
+        send("lesson.create.request", request)
+    }
+
+    fun clearLessonCreationResult() {
+        if (!mutableLessonCreationState.value.inProgress) {
+            mutableLessonCreationState.value = LessonCreationState()
+        }
     }
 
     fun beginRecording() {
@@ -268,6 +318,9 @@ class LessonSessionClient {
                 "lesson.catalog" -> applyLessonCatalog(
                     ControlContractCodec.decodePayload<LessonCatalogPayload>(envelope),
                 )
+                "lesson.create.result" -> applyLessonCreationResult(
+                    ControlContractCodec.decodePayload<LessonCreateResultPayload>(envelope),
+                )
                 "session.state" -> applyState(
                     ControlContractCodec.decodePayload<SessionStatePayload>(envelope),
                 )
@@ -297,6 +350,7 @@ class LessonSessionClient {
     private fun applyLessonCatalog(payload: LessonCatalogPayload) {
         payload.validate()
         mutableLessonCatalog.value = payload.lessons
+        mutableLessonEnvironments.value = payload.environments
         mutableTeacherProfiles.value = payload.teacher_profiles
         mutableSelectedTeacherProfileId.value = payload.selected_teacher_profile_id
         val selection = pendingStart
@@ -314,6 +368,15 @@ class LessonSessionClient {
         } else if (!mutableLessonActive.value) {
             mutableState.value = SessionState.READY
         }
+    }
+
+    private fun applyLessonCreationResult(payload: LessonCreateResultPayload) {
+        payload.validate()
+        mutableLessonCreationState.value = LessonCreationState(
+            message = payload.message,
+            createdScenarioId = payload.scenario_id,
+            failed = payload.status == "failed",
+        )
     }
 
     private fun applyState(payload: SessionStatePayload) {
@@ -489,6 +552,8 @@ class LessonSessionClient {
         utteranceId = null
         pendingStart = null
         mutableLessonCatalog.value = emptyList()
+        mutableLessonEnvironments.value = emptyList()
+        mutableLessonCreationState.value = LessonCreationState()
         mutableTeacherProfiles.value = emptyList()
         mutableSelectedTeacherProfileId.value = ""
         mutableLessonActive.value = false
@@ -565,6 +630,8 @@ class LessonSessionClient {
                 socket = null
                 pendingStart = null
                 mutableLessonCatalog.value = emptyList()
+                mutableLessonEnvironments.value = emptyList()
+                mutableLessonCreationState.value = LessonCreationState()
                 mutableTeacherProfiles.value = emptyList()
                 mutableSelectedTeacherProfileId.value = ""
                 mutableLessonActive.value = false
@@ -578,6 +645,8 @@ class LessonSessionClient {
                 socket = null
                 pendingStart = null
                 mutableLessonCatalog.value = emptyList()
+                mutableLessonEnvironments.value = emptyList()
+                mutableLessonCreationState.value = LessonCreationState()
                 mutableTeacherProfiles.value = emptyList()
                 mutableSelectedTeacherProfileId.value = ""
                 mutableLessonActive.value = false

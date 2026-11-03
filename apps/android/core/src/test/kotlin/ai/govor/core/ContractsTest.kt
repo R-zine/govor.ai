@@ -90,10 +90,44 @@ class ContractsTest {
         assertEquals("completed", catalog.lessons.first().progress.status)
         assertEquals(2, catalog.lessons.first().progress.completed_count)
         assertEquals("amira", catalog.selected_teacher_profile_id)
+        assertEquals(listOf("cafe", "airport"), catalog.environments.map { it.environment_id })
         assertEquals(
             listOf("elena", "amira", "daniel"),
             catalog.teacher_profiles.map { it.profile_id },
         )
+    }
+
+    @Test
+    fun `lesson creation request and result fixtures deserialize strictly`() {
+        val requestEnvelope = ControlContractCodec.decodeEnvelope(
+            requireNotNull(
+                javaClass.classLoader.getResource("valid/control-lesson-create-request.json"),
+            ).readText(),
+        )
+        val resultEnvelope = ControlContractCodec.decodeEnvelope(
+            requireNotNull(
+                javaClass.classLoader.getResource("valid/control-lesson-create-result.json"),
+            ).readText(),
+        )
+        val failedEnvelope = ControlContractCodec.decodeEnvelope(
+            requireNotNull(
+                javaClass.classLoader.getResource("valid/control-lesson-create-failed.json"),
+            ).readText(),
+        )
+
+        val request = ControlContractCodec.decodePayload<LessonCreateRequestPayload>(requestEnvelope)
+            .validate()
+        val result = ControlContractCodec.decodePayload<LessonCreateResultPayload>(resultEnvelope)
+            .validate()
+        val failed = ControlContractCodec.decodePayload<LessonCreateResultPayload>(failedEnvelope)
+            .validate()
+
+        assertEquals("beginner", request.difficulty)
+        assertEquals(3, request.exercise_count)
+        assertEquals("hotel-check-in", result.scenario_id)
+        assertEquals("created", result.status)
+        assertEquals("failed", failed.status)
+        assertEquals(null, failed.scenario_id)
     }
 
     @Test

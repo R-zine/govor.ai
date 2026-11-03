@@ -5,6 +5,10 @@
   "payload": {
     "default_scenario_id": "cafe-ordering",
     "selected_teacher_profile_id": "amira",
+    "environments": [
+      { "environment_id": "cafe", "display_name": "CafÃ©" },
+      { "environment_id": "airport", "display_name": "Airport" }
+    ],
     "teacher_profiles": [
       {
         "profile_id": "elena",

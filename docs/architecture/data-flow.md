@@ -31,10 +31,14 @@
 1. Android authenticates to the release LAN gateway and establishes signaling/control. The
    Milestone 2 emulator development path instead uses debug-only `adb reverse` to loopback.
 2. Android requests `lesson.catalog`; the host returns the current ordered immutable lesson
-   summary, the closed teacher-profile catalog, and the current teacher ID. Android selects only
+   summary, validated environment choices, the closed teacher-profile catalog, and the current
+   teacher ID. Android selects only
    advertised IDs. A pre-lesson `teacher.profile.select` updates the host voice selection and the
    Godot model over loopback, then returns the updated catalog as confirmation. A validated
    host-side import also pushes the replacement summary on the same authenticated connection.
+   Beside the selector, Android may send one bounded pre-lesson `lesson.create.request`; the host
+   uses loopback llama.cpp and the existing atomic importer, returns `lesson.create.result`, then
+   broadcasts the refreshed catalog. No file/path or model-controlled identifier crosses the LAN.
    Before lesson start, the Material 3 list and preferences sheets own lesson, teacher, accent,
    and review selection; playback actions are not present in this context.
 3. The gateway starts a WebRTC media session with the renderer/media service.
@@ -56,11 +60,12 @@ metadata, retry, and cancellation.
 launcher, which validates and additively publishes it into `content/lessons`. The control host
 notices that local directory change and sends a new `lesson.catalog`; no unauthenticated LAN
 administration endpoint is exposed. A running lesson keeps its prior immutable snapshot.
-`Create-Lesson.cmd` is a second same-PC path. It resolves omitted settings deterministically,
+`Create-Lesson.cmd` and the authenticated phone lesson-creator sheet are two UIs over the same
+bounded operation. They resolve omitted settings deterministically,
 sends the bounded topic and resolved content settings to loopback llama.cpp, validates the closed
 structured response, adds application-owned IDs/order/scene fields, and hands the complete JSON to
-the same importer. The creator does not call a network-facing host route, and the existing watcher
-provides the same live Android update.
+the same importer. The phone uses the existing paired WSS control channel rather than a separate
+administration endpoint, and the host provides the same live Android update.
 `Manage-Environments.cmd` is a third same-PC path. Its native picker accepts one ZIP, and the
 launcher reads (without extracting) only bounded environment JSON entries. After whole-batch and
 combined-catalog validation, it publishes recipes into `content/environments`. The host swaps to
@@ -68,8 +73,9 @@ a new immutable planner snapshot on the next poll. The lesson importer/creator t
 environment ID, and the next `session_started` command carries its validated primitive recipe to
 the already-running Godot renderer.
 
-All three entry points are available from the host pre-connect **Content & updates** menu as exact
-package-owned local commands. The menu sends no management message over Android control or media.
+All three Windows entry points are available from the host pre-connect **Content & updates** menu
+as exact package-owned local commands. Only lesson creation is also available from the phone; it
+uses the bounded authenticated control messages above. Import and patch paths remain local-only.
 
 ## Offline application update
 
@@ -114,10 +120,10 @@ hint, and at most the configured number of recent turns to llama.cpp. Closed str
 parsed, then the domain policy can reject unsafe locale/progress choices and use a deterministic
 fallback. The bounded WAV in `teacher.turn` is local synthesized PCM16 speech. The speech router
 uses the current teacher profile to choose a female or male Kokoro voice for explicit
-`en-GB`/`en-US`. All profiles use the substantially clearer neural Piper Dimitar voice for
-`bg-BG`; this temporary gender mismatch is explicit because no reviewed female Bulgarian neural
-voice is bundled and the prior eSpeak route failed the product-owner intelligibility check.
-Provider failure routes to the profile-appropriate eSpeak presentation. The turn also carries exact
+`en-GB`/`en-US`. All profiles use the substantially clearer neural Piper Dimitar voice as the base
+for `bg-BG`. Elena and Amira receive a bounded duration-preserving pitch presentation of that
+neural waveform; Daniel receives the original waveform. Provider failure always uses normal
+Bulgarian eSpeak `bg`, never the previously unintelligible `bg+f3` variant. The turn also carries exact
 word/IPA character ranges and nullable model timing. Android plays the WAV with `AudioTrack`;
 playback-head frames define media time for subtitle highlighting. Missing alignment disables
 highlighting without blocking playback.

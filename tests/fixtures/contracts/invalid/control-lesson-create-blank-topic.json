@@ -1,0 +1,6 @@
+{
+  "protocol_version": "1.0",
+  "message_type": "lesson.create.request",
+  "correlation_id": "5b1c13d2-3f48-4c4f-b188-f4dc2f97a013",
+  "payload": { "topic": "" }
+}

@@ -129,6 +129,51 @@ data class SessionStartPayload(
 class LessonCatalogRequestPayload
 
 @Serializable
+data class LessonCreateRequestPayload(
+    val topic: String,
+    val difficulty: String? = null,
+    val environment_id: String? = null,
+    val exercise_count: Int? = null,
+) {
+    fun validate(): LessonCreateRequestPayload {
+        require(topic.isNotBlank() && topic.length <= 500)
+        require(difficulty == null || difficulty in setOf("beginner", "intermediate", "advanced"))
+        require(
+            environment_id == null ||
+                environment_id.matches(Regex("^[a-z][a-z0-9-]{2,63}$")),
+        )
+        require(exercise_count == null || exercise_count in 1..8)
+        return this
+    }
+}
+
+@Serializable
+data class LessonCreateResultPayload(
+    val status: String,
+    val message: String,
+    val scenario_id: String? = null,
+    val title: String? = null,
+    val difficulty: String? = null,
+    val environment_id: String? = null,
+    val exercise_count: Int? = null,
+) {
+    fun validate(): LessonCreateResultPayload {
+        require(status in setOf("created", "failed"))
+        require(message.isNotBlank() && message.length <= 512)
+        val details = listOf(scenario_id, title, difficulty, environment_id, exercise_count)
+        require((status == "created" && details.none { it == null }) || details.all { it == null })
+        if (status == "created") {
+            require(scenario_id!!.matches(Regex("^[a-z][a-z0-9-]{2,63}$")))
+            require(title!!.isNotBlank() && title.length <= 128)
+            require(difficulty in setOf("beginner", "intermediate", "advanced"))
+            require(environment_id!!.matches(Regex("^[a-z][a-z0-9-]{2,63}$")))
+            require(exercise_count in 1..8)
+        }
+        return this
+    }
+}
+
+@Serializable
 data class LessonCatalogProgressPayload(
     val status: String,
     val successful_exercises: Int,
@@ -168,6 +213,18 @@ data class LessonCatalogItemPayload(
 }
 
 @Serializable
+data class LessonEnvironmentItemPayload(
+    val environment_id: String,
+    val display_name: String,
+) {
+    fun validate(): LessonEnvironmentItemPayload {
+        require(environment_id.matches(Regex("^[a-z][a-z0-9-]{2,63}$")))
+        require(display_name.isNotBlank() && display_name.length <= 128)
+        return this
+    }
+}
+
+@Serializable
 data class TeacherProfileItemPayload(
     val profile_id: String,
     val display_name: String,
@@ -188,6 +245,7 @@ data class TeacherProfileSelectPayload(val profile_id: String)
 data class LessonCatalogPayload(
     val default_scenario_id: String,
     val lessons: List<LessonCatalogItemPayload>,
+    val environments: List<LessonEnvironmentItemPayload>,
     val teacher_profiles: List<TeacherProfileItemPayload>,
     val selected_teacher_profile_id: String,
 ) {
@@ -196,6 +254,9 @@ data class LessonCatalogPayload(
         lessons.forEach { it.validate() }
         require(lessons.map { it.scenario_id }.distinct().size == lessons.size)
         require(default_scenario_id in lessons.map { it.scenario_id })
+        require(environments.size in 1..64)
+        environments.forEach { it.validate() }
+        require(environments.map { it.environment_id }.distinct().size == environments.size)
         require(teacher_profiles.size in 1..8)
         teacher_profiles.forEach { it.validate() }
         require(teacher_profiles.map { it.profile_id }.distinct().size == teacher_profiles.size)

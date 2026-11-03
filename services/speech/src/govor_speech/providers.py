@@ -11,7 +11,7 @@ from typing import Any, Literal, Protocol
 from govor_contracts import ProviderCapabilities
 from govor_provider_interfaces import ProviderUnavailable, SpeechProvider, TeacherTurn
 
-from .audio import inspect_wav, pcm16_wav
+from .audio import inspect_wav, pcm16_wav, pitch_shift_pcm16_wav
 from .phonemes import RawPhonemeTiming, align_to_words, pronunciations_for
 
 
@@ -153,10 +153,12 @@ class PiperBulgarianSpeechProvider:
         config_path: str,
         *,
         engine_factory: Callable[[], Any] | None = None,
+        teacher_profile_provider: Callable[[], str] | None = None,
     ) -> None:
         self._model_path = str(Path(model_path).resolve())
         self._config_path = str(Path(config_path).resolve())
         self._engine_factory = engine_factory
+        self._teacher_profile_provider = teacher_profile_provider or (lambda: "elena")
         self._engine: Any | None = None
 
     async def synthesize(self, text: str, locale: str, *, speed: float = 1.0) -> TeacherTurn:
@@ -187,13 +189,21 @@ class PiperBulgarianSpeechProvider:
             pcm = b"".join(bytes(chunk.audio_int16_bytes) for chunk in chunks)
             audio_wav = pcm16_wav(pcm, sample_rate)
             raw_timings = _piper_timings(chunks, sample_rate)
+            profile_id = _teacher_profile(self._teacher_profile_provider)
+            semitones = {"elena": 3.5, "amira": 2.5, "daniel": 0.0}[profile_id]
+            if semitones:
+                audio_wav = pitch_shift_pcm16_wav(audio_wav, semitones)
         except Exception as error:
             raise ProviderUnavailable("Piper Bulgarian synthesis failed") from error
         return _turn_from_audio(
             text=text,
             locale=locale,
             audio_wav=audio_wav,
-            provider_id=self.capabilities.provider_id,
+            provider_id=(
+                f"{self.capabilities.provider_id}-female-presentation"
+                if profile_id in {"elena", "amira"}
+                else self.capabilities.provider_id
+            ),
             raw_timings=raw_timings,
         )
 
@@ -251,7 +261,7 @@ class EspeakFallbackSpeechProvider:
         )
         profile_id = _teacher_profile(self._teacher_profile_provider)
         base_voice = {"en-GB": "en", "en-US": "en-us", "bg-BG": "bg"}[locale]
-        voice = f"{base_voice}+f3" if profile_id in {"elena", "amira"} else base_voice
+        voice = base_voice if locale == "bg-BG" or profile_id == "daniel" else f"{base_voice}+f3"
         rate = round(175 * speed)
         process = await asyncio.create_subprocess_exec(
             sys.executable,
@@ -357,6 +367,7 @@ def build_local_speech_provider(
         bulgarian=PiperBulgarianSpeechProvider(
             settings.piper_bg_model,
             settings.piper_bg_config,
+            teacher_profile_provider=profile_provider,
         ),
         fallback=EspeakFallbackSpeechProvider(
             timeout_seconds=settings.provider_timeout_seconds,

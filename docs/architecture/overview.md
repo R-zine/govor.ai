@@ -117,8 +117,10 @@ empty recognition is distinct from malformed provider output and produces a repe
 an invented transcript. The server URL, provider identity, model path, context size, GPU layers,
 and memory window are configurable without changing domain code. See ADR-0006.
 
-The separate Windows lesson creator also uses that loopback llama.cpp process, but through the
-closed `local-ai-lesson-content` shape. The model supplies bounded teaching prose only.
+The Windows and paired-phone lesson creator use that loopback llama.cpp process through the closed
+`local-ai-lesson-content` shape. The phone reaches it only through a bounded request on the
+existing authenticated control connection; llama.cpp itself remains loopback-only. The model
+supplies bounded teaching prose only.
 Deterministic code resolves omitted creator options and owns all identifiers, ordering, the
 allow-listed scene, validation, and publication. It never routes generated text into a command or
 renderer asset. See ADR-0014.
@@ -135,10 +137,12 @@ atomically swaps only a complete valid snapshot, and pushes its bounded summary 
 authenticated control connections. Android updates its selector without reconnecting. Active
 lessons retain their original catalog/service snapshot; subsequent lessons use the replacement.
 Invalid out-of-band edits leave the last valid catalog active and mark health as `reload_error`.
-`Create-Lesson.cmd` collects a required topic plus optional difficulty, scene, and one-to-eight
-exercise length. It validates structured local-model output, assembles the deterministic fields,
-and enters the catalog through the same locked importer. There is no runtime network download or
-LAN administration endpoint. The deterministic `TeachingEngine` consumes the selected definition.
+`Create-Lesson.cmd` and the Android lesson-selector action collect a required topic plus optional
+difficulty, scene, and one-to-eight exercise length. They validate structured local-model output,
+assemble deterministic fields, and enter the catalog through the same locked importer. Android's
+request is allowed only on the paired control WebSocket before a lesson; there is no runtime
+download or separate administration endpoint. The deterministic `TeachingEngine` consumes the
+selected definition.
 `Manage-Environments.cmd` accepts only a bounded data-only ZIP, validates the complete combined
 catalog, and publishes canonical recipes under an import lock. The host atomically swaps immutable
 planner snapshots; new lessons and the lesson creator see installed display names without restart.

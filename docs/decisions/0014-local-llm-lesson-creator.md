@@ -18,7 +18,8 @@ partial or invalid catalog.
 
 ## Decision
 
-Package `Create-Lesson.cmd` with a native Windows form. The topic is required. Difficulty,
+Package `Create-Lesson.cmd` with a native Windows form and expose the same operation beside the
+Android lesson selector after the phone has authenticated. The topic is required. Difficulty,
 environment, and exercise count are optional; deterministic application code resolves omissions
 to intermediate difficulty, five exercises, and an allow-listed scene selected from topic
 keywords or a stable topic hash. ADR-0015 makes the allow-list include validated installed
@@ -36,27 +37,35 @@ validated scene-template field. It then validates the complete `lesson-definitio
 through the same locked additive importer introduced by ADR-0013. The host's existing catalog
 watcher sends the replacement summary to connected Android clients. An active lesson is unchanged.
 
-The creator has no LAN endpoint and no cloud fallback. `Start-Govor.cmd` must be running because it
-owns the packaged llama.cpp process. The topic and generated content are not logged by the creator.
+No new HTTP endpoint is added. Android uses the existing certificate-pinned, device-authenticated
+control WebSocket with strict `lesson.create.request` and `lesson.create.result` envelopes. The
+operation is pre-lesson only, permits one in-flight generation per connection, and carries no
+path, model name, command, or file. The host resolves the current validated environment catalog,
+runs the same creator against loopback llama.cpp, atomically publishes through the importer, and
+broadcasts a replacement catalog. The local Windows form remains available.
+
+The creator has no cloud fallback. `Start-Govor.cmd` must be running because it owns the packaged
+llama.cpp process. The topic and generated content are not logged by the creator.
 
 ## Consequences
 
 - A generated lesson is a normal human-readable JSON file under `content/lessons` and survives
   host restarts.
-- Connected Android clients receive it without restarting or reconnecting.
+- Connected Android clients receive it without restarting or reconnecting, and the requesting
+  phone selects the new lesson when the refreshed catalog arrives.
 - Malformed model output, unsupported scenes, catalog collisions at publication time, and invalid
   lesson definitions fail before installation.
 - Model quality still affects pedagogical quality. Structural validation does not imply that every
   generated lesson is factually or pedagogically ideal.
-- The current creator is local-release UI; it does not expose lesson administration to the phone
-  or network.
+- Release phone creation is available only after normal pairing/device authentication. Debug mode
+  retains its explicitly insecure development boundary and is not release evidence.
 
 ## Rejected
 
 - Letting the model emit a complete installable lesson, because that would allow it to select
   paths, IDs, ordering, and scene identifiers.
-- Adding a LAN lesson-generation endpoint, which would expand authentication, authorization, and
-  abuse-prevention scope for a same-PC operation.
+- Adding a separate LAN lesson-generation HTTP endpoint. Reusing the authenticated bounded control
+  channel avoids another listener/authentication surface while making the function discoverable.
 - Generating omitted settings in a second model call. Deterministic defaults are faster,
   repeatable, and sufficient.
 - Mutating an existing lesson. Generated content remains additive so persisted progress keys are

@@ -12,12 +12,24 @@ from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
-from govor_contracts import RendererCommandPayload
-from govor_domain import DetectedLanguage, LearnerIntent, TeachingEngine, import_lesson_bundle
+from govor_contracts import (
+    LessonCreateRequestPayload,
+    LessonCreateResultPayload,
+    RendererCommandPayload,
+)
+from govor_domain import (
+    DetectedLanguage,
+    Difficulty,
+    ImportedLesson,
+    LearnerIntent,
+    TeachingEngine,
+    import_lesson_bundle,
+)
 from govor_gateway_security import PairingAuthority
 from govor_host.app import create_app
 from govor_host.config import Settings
 from govor_host.fake_lesson import FakeLessonService
+from govor_local_ai.lesson_creator import CreatedLesson, ResolvedLessonOptions
 from govor_progress import SQLiteProgressRepository
 from govor_provider_interfaces import LessonResult, Pronunciation, TeacherTurn, UtteranceAudio
 from govor_provider_router import (
@@ -220,6 +232,194 @@ def test_control_selects_teacher_for_voice_renderer_and_catalog() -> None:
     assert updated["payload"]["selected_teacher_profile_id"] == "daniel"
     assert app.state.teacher_profiles.profile_id == "daniel"
     assert renderer.selected_teacher_profiles == ["daniel"]
+
+
+def test_control_creates_lesson_through_bounded_authenticated_channel() -> None:
+    requests: list[LessonCreateRequestPayload] = []
+
+    async def creator(payload: LessonCreateRequestPayload) -> LessonCreateResultPayload:
+        requests.append(payload)
+        return LessonCreateResultPayload(
+            status="created",
+            message="Created Hotel check-in.",
+            scenario_id="hotel-check-in",
+            title="Hotel check-in",
+            difficulty="beginner",
+            environment_id="home",
+            exercise_count=3,
+        )
+
+    app = create_app(
+        Settings(mode="fake"),
+        renderer=FakeRendererControl(),
+        lesson_creator=creator,
+    )
+
+    with TestClient(app).websocket_connect("/v1/control") as socket:
+        socket.send_json(
+            envelope(
+                "lesson.create.request",
+                {
+                    "topic": "Practise checking into a hotel",
+                    "difficulty": "beginner",
+                    "environment_id": "home",
+                    "exercise_count": 3,
+                },
+            )
+        )
+        result = socket.receive_json()
+
+    assert result["message_type"] == "lesson.create.result"
+    assert result["payload"] == {
+        "status": "created",
+        "message": "Created Hotel check-in.",
+        "scenario_id": "hotel-check-in",
+        "title": "Hotel check-in",
+        "difficulty": "beginner",
+        "environment_id": "home",
+        "exercise_count": 3,
+    }
+    assert requests == [
+        LessonCreateRequestPayload(
+            topic="Practise checking into a hotel",
+            difficulty="beginner",
+            environment_id="home",
+            exercise_count=3,
+        )
+    ]
+
+
+def test_local_control_wires_generated_lesson_into_live_catalog(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    lesson_directory = tmp_path / "lessons"
+    shutil.copytree(Path("assets/lesson-content"), lesson_directory)
+
+    async def create_local_lesson(
+        request: object,
+        provider: object,
+        destination_directory: str | Path,
+        *,
+        allowed_scene_templates: set[str],
+    ) -> CreatedLesson:
+        assert request is not None
+        assert provider is not None
+        assert allowed_scene_templates == {"airport", "cafe", "home", "supermarket"}
+        lesson = json.loads((lesson_directory / "cafe-ordering.json").read_text(encoding="utf-8"))
+        lesson.update(
+            scenario_id="hotel-check-in",
+            title="Hotel check-in",
+            display_order=5,
+            scene_template_id="home",
+        )
+        destination = Path(destination_directory) / "hotel-check-in.json"
+        destination.write_text(json.dumps(lesson), encoding="utf-8")
+        return CreatedLesson(
+            imported=ImportedLesson("hotel-check-in", "Hotel check-in", destination),
+            options=ResolvedLessonOptions(Difficulty.BEGINNER, "home", 3),
+        )
+
+    monkeypatch.setattr("govor_local_ai.lesson_creator.create_lesson", create_local_lesson)
+    app = create_app(
+        Settings(
+            mode="local",
+            lesson_directory=str(lesson_directory),
+            progress_database=str(tmp_path / "progress.sqlite3"),
+        ),
+        lesson=FakeLessonService(),
+        renderer=FakeRendererControl(),
+    )
+
+    with TestClient(app).websocket_connect("/v1/control") as socket:
+        socket.send_json(
+            envelope(
+                "lesson.create.request",
+                {
+                    "topic": "Practise checking into a hotel",
+                    "difficulty": "beginner",
+                    "environment_id": "home",
+                    "exercise_count": 3,
+                },
+            )
+        )
+        result = socket.receive_json()
+
+    assert result["payload"]["status"] == "created"
+    assert result["payload"]["scenario_id"] == "hotel-check-in"
+    assert app.state.lesson_catalog_registry.catalog.get("hotel-check-in").title == "Hotel check-in"
+
+
+def test_control_reports_lesson_creation_unavailable_without_changing_session_state() -> None:
+    app = create_app(Settings(mode="fake"), renderer=FakeRendererControl())
+
+    with TestClient(app).websocket_connect("/v1/control") as socket:
+        socket.send_json(envelope("lesson.create.request", {"topic": "Hotel check-in"}))
+        result = socket.receive_json()
+
+    assert result["message_type"] == "lesson.create.result"
+    assert result["payload"]["status"] == "failed"
+    assert "unavailable" in result["payload"]["message"]
+    assert app.state.session_registry.active_count == 0
+
+
+def test_control_reports_bounded_failure_when_lesson_creator_fails() -> None:
+    async def failing_creator(_: LessonCreateRequestPayload) -> LessonCreateResultPayload:
+        raise RuntimeError("sensitive provider detail")
+
+    app = create_app(
+        Settings(mode="fake"),
+        renderer=FakeRendererControl(),
+        lesson_creator=failing_creator,
+    )
+
+    with TestClient(app).websocket_connect("/v1/control") as socket:
+        socket.send_json(envelope("lesson.create.request", {"topic": "Hotel check-in"}))
+        result = socket.receive_json()
+
+    assert result["message_type"] == "lesson.create.result"
+    assert result["payload"] == {
+        "status": "failed",
+        "message": "The local lesson model could not create a valid lesson. Please try again.",
+        "scenario_id": None,
+        "title": None,
+        "difficulty": None,
+        "environment_id": None,
+        "exercise_count": None,
+    }
+    assert "sensitive provider detail" not in json.dumps(result)
+
+
+def test_local_control_fails_closed_when_generated_lesson_is_not_published(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    catalog = FakeLessonService().catalog
+
+    async def create_unpublished_lesson(*_: object, **__: object) -> CreatedLesson:
+        return CreatedLesson(
+            imported=ImportedLesson(
+                "hotel-check-in",
+                "Hotel check-in",
+                tmp_path / "hotel-check-in.json",
+            ),
+            options=ResolvedLessonOptions(Difficulty.BEGINNER, "home", 3),
+        )
+
+    monkeypatch.setattr("govor_local_ai.lesson_creator.create_lesson", create_unpublished_lesson)
+    app = create_app(
+        Settings(mode="local", progress_database=str(tmp_path / "progress.sqlite3")),
+        lesson=FakeLessonService(),
+        lesson_catalog=catalog,
+        renderer=FakeRendererControl(),
+    )
+
+    with TestClient(app).websocket_connect("/v1/control") as socket:
+        socket.send_json(envelope("lesson.create.request", {"topic": "Hotel check-in"}))
+        result = socket.receive_json()
+
+    assert result["payload"]["status"] == "failed"
+    assert result["payload"]["scenario_id"] is None
 
 
 def test_control_catalog_includes_persisted_lesson_progress(tmp_path: Path) -> None:

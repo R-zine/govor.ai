@@ -12,6 +12,8 @@
         "session.start",
         "lesson.catalog.request",
         "lesson.catalog",
+        "lesson.create.request",
+        "lesson.create.result",
         "teacher.profile.select",
         "session.state",
         "session.cancel",
@@ -42,6 +44,14 @@
     {
       "if": { "properties": { "message_type": { "const": "lesson.catalog" } } },
       "then": { "properties": { "payload": { "$ref": "#/$defs/lessonCatalog" } } }
+    },
+    {
+      "if": { "properties": { "message_type": { "const": "lesson.create.request" } } },
+      "then": { "properties": { "payload": { "$ref": "#/$defs/lessonCreateRequest" } } }
+    },
+    {
+      "if": { "properties": { "message_type": { "const": "lesson.create.result" } } },
+      "then": { "properties": { "payload": { "$ref": "#/$defs/lessonCreateResult" } } }
     },
     {
       "if": { "properties": { "message_type": { "const": "teacher.profile.select" } } },
@@ -144,6 +154,115 @@
       "additionalProperties": false,
       "maxProperties": 0
     },
+    "lessonCreateRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["topic"],
+      "properties": {
+        "topic": { "type": "string", "minLength": 1, "maxLength": 500 },
+        "difficulty": { "enum": ["beginner", "intermediate", "advanced"] },
+        "environment_id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]{2,63}$",
+          "maxLength": 64
+        },
+        "exercise_count": { "type": "integer", "minimum": 1, "maximum": 8 }
+      }
+    },
+    "lessonCreateResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "message"],
+      "properties": {
+        "status": { "enum": ["created", "failed"] },
+        "message": { "type": "string", "minLength": 1, "maxLength": 512 },
+        "scenario_id": {
+          "oneOf": [
+            {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]{2,63}$",
+              "maxLength": 64
+            },
+            { "type": "null" }
+          ]
+        },
+        "title": {
+          "oneOf": [
+            { "type": "string", "minLength": 1, "maxLength": 128 },
+            { "type": "null" }
+          ]
+        },
+        "difficulty": {
+          "enum": ["beginner", "intermediate", "advanced", null]
+        },
+        "environment_id": {
+          "oneOf": [
+            {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]{2,63}$",
+              "maxLength": 64
+            },
+            { "type": "null" }
+          ]
+        },
+        "exercise_count": {
+          "oneOf": [
+            { "type": "integer", "minimum": 1, "maximum": 8 },
+            { "type": "null" }
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "status": { "const": "created" } } },
+          "then": {
+            "required": [
+              "scenario_id", "title", "difficulty", "environment_id", "exercise_count"
+            ],
+            "properties": {
+              "scenario_id": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9-]{2,63}$",
+                "maxLength": 64
+              },
+              "title": { "type": "string", "minLength": 1, "maxLength": 128 },
+              "difficulty": { "enum": ["beginner", "intermediate", "advanced"] },
+              "environment_id": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9-]{2,63}$",
+                "maxLength": 64
+              },
+              "exercise_count": { "type": "integer", "minimum": 1, "maximum": 8 }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "status": { "const": "failed" } } },
+          "then": {
+            "properties": {
+              "scenario_id": { "type": "null" },
+              "title": { "type": "null" },
+              "difficulty": { "type": "null" },
+              "environment_id": { "type": "null" },
+              "exercise_count": { "type": "null" }
+            }
+          }
+        }
+      ]
+    },
+    "lessonEnvironmentItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["environment_id", "display_name"],
+      "properties": {
+        "environment_id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]{2,63}$",
+          "maxLength": 64
+        },
+        "display_name": { "type": "string", "minLength": 1, "maxLength": 128 }
+      }
+    },
     "lessonCatalogItem": {
       "type": "object",
       "additionalProperties": false,
@@ -175,7 +294,8 @@
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "default_scenario_id", "lessons", "teacher_profiles", "selected_teacher_profile_id"
+        "default_scenario_id", "lessons", "environments", "teacher_profiles",
+        "selected_teacher_profile_id"
       ],
       "properties": {
         "default_scenario_id": {
@@ -188,6 +308,12 @@
           "minItems": 1,
           "maxItems": 64,
           "items": { "$ref": "#/$defs/lessonCatalogItem" }
+        },
+        "environments": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "items": { "$ref": "#/$defs/lessonEnvironmentItem" }
         },
         "teacher_profiles": {
           "type": "array",

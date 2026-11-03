@@ -1381,6 +1381,40 @@ teacher selection, progress display, and visual use of the host management menu 
 No host listener, renderer, or PC audio was left active. Exact commands, failures, artifacts, and
 limits are in `docs/benchmarks/2026-11-03-release-0.1.20-deployment.md`.
 
+## Post-milestone phone lesson creation and Bulgarian voice presentation
+
+Implementation on 2026-11-03 addresses the product-owner report that lesson creation was not
+discoverable on Android, female teachers spoke Bulgarian with a male presentation, and the
+intermittent female Bulgarian fallback was unintelligible.
+
+- Android now places **Create a lesson** beside and inside the lesson selector. Its Material 3
+  sheet accepts a required bounded topic and optional difficulty, current host-advertised
+  environment, and one-to-eight exercise count. It shows creation progress/result separately from
+  session errors and automatically selects the newly broadcast lesson.
+- The existing paired WSS control channel adds strict `lesson.create.request` and
+  `lesson.create.result` payloads. Creation is pre-lesson, one-at-a-time, local-model-only, and
+  enters the existing atomic validated importer; no new endpoint, path, import, or patch authority
+  was exposed to Android.
+- Elena and Amira now receive duration-preserving 3.5/2.5-semitone presentations of the intelligible
+  Piper Bulgarian neural waveform; Daniel remains unmodified. Any Piper failure uses normal eSpeak
+  `bg` for all profiles, so the known-bad `bg+f3` route is unreachable.
+
+Focused Ruff plus 80 Python/contract/host tests passed. The Python gate passed Ruff, formatting,
+strict mypy, and 315 tests at 85.07% branch coverage.
+The Kotlin/JVM gate passed all 29 tasks outside the managed sandbox after a sandbox-only Gradle
+cache denial. The real installed-model speech benchmark passed at all three speeds; the warm 1.0
+female presentation retained five word/30 phoneme alignments, used no fallback, and synthesized in
+1,034.7 ms. No audio was played. The full all-scope gate passed the same 315 Python tests plus
+Kotlin/JVM, 10 C# contract tests, 21 media tests, Godot import/build/headless self-test, and Android
+debug assembly.
+
+The live audit initially found `GHSA-45c3-73f7-pv4m` in transitive dnspython 2.8.0. The lockfile was
+updated to 2.9.1; the media gate passed again and the repeated audit reported no known
+vulnerabilities. The all-files pre-commit gate passed. Package, installed-phone UI, generated-
+lesson use, and subjective female/male Bulgarian listening remain not executed, so no such claim
+is made. Exact evidence and limitations are in
+`docs/benchmarks/2026-11-03-phone-lesson-creator-and-bulgarian-voice.md`.
+
 ## Renderer evidence and limitations
 
 The current local proof images visibly contain the selectable facial teachers over four distinct

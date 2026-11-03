@@ -39,17 +39,19 @@ Resolve speech voices at synthesis time from the same selection:
 
 | Profile | English `en-GB` | English `en-US` | Bulgarian |
 | --- | --- | --- | --- |
-| Elena | Kokoro `bf_emma` | Kokoro `af_heart` | Piper `bg_BG-dimitar-medium` |
-| Amira | Kokoro `bf_isabella` | Kokoro `af_bella` | Piper `bg_BG-dimitar-medium` |
+| Elena | Kokoro `bf_emma` | Kokoro `af_heart` | Piper `bg_BG-dimitar-medium` + 3.5-semitone presentation |
+| Amira | Kokoro `bf_isabella` | Kokoro `af_bella` | Piper `bg_BG-dimitar-medium` + 2.5-semitone presentation |
 | Daniel | Kokoro `bm_george` | Kokoro `am_michael` | Piper `bg_BG-dimitar-medium` |
 
-Use the installed neural Bulgarian Piper voice for every profile. The earlier gender-matched
-eSpeak route for Elena and Amira was barely understandable in the product-owner listening run;
-intelligibility now takes precedence over speaker/model gender until a reviewed female neural
-Bulgarian provider is integrated. This mismatch is explicit, not presented as a matched voice.
-Provider failure still uses the gender-matched eSpeak variant. Optional cloud-compatible speech
-uses independently configurable presentation voice names; those names are not treated as a
-provider guarantee about speaker identity.
+Use the installed neural Bulgarian Piper voice as the intelligible base for every profile. For the
+female profiles, apply a bounded in-process phase-vocoder pitch presentation that preserves the
+exact WAV frame count and therefore the model's timing offsets; Daniel receives the unmodified
+voice. This is a transformed neural presentation, not a claim that Dimitar is a native female
+speaker. The earlier eSpeak `bg+f3` route was barely understandable in the product-owner listening
+run and is now prohibited even on provider failure: all Bulgarian failure fallback uses normal
+`bg`, prioritizing comprehensibility over gender if the neural provider is unavailable. Optional
+cloud-compatible speech uses independently configurable presentation voice names; those names are
+not treated as a provider guarantee about speaker identity.
 
 Replace the four built-in procedural rooms with four locally bundled CC0 photographic 2D
 backdrops. Godot renders the selected 3D teacher in front of the image and keeps the 1280x720 media
@@ -62,8 +64,8 @@ resources.
 - The face and mouth occupy more of the frame, and users can change teacher appearance from the
   host pairing screen or phone lesson screen without rebuilding or restarting the host.
 - Appearance, English accent, and voice presentation are separate concerns: accent remains the
-  learner's setting, and English uses profile-matched voices. The single bundled Bulgarian neural
-  voice is shared until a suitable female neural voice passes review.
+  learner's setting, English uses profile-matched voices, and Bulgarian uses a profile-specific
+  presentation of one bundled neural voice. A native female Bulgarian model remains preferable.
 - Profile assets and built-in backdrops increase the packaged renderer size. Their exact source,
   license, generation inputs, and hashes are committed beside the assets.
 - The selection is intentionally closed to three profiles. Adding a teacher requires reviewed
@@ -84,6 +86,10 @@ resources.
   temporary presentation mismatch.
 - Treat cloud voice names as guaranteed gender metadata: compatible providers control the meaning
   of those names.
+- Immediately bundle BgTTS-38M-V2: its native Bulgarian female samples are promising, but its
+  current PyTorch/MioCodec/WavLM runtime is substantially larger than the existing ONNX/Piper
+  stack, its checkpoint is pickle-based, and this project has not yet pinned, audited, packaged,
+  or subjectively accepted that dependency chain.
 
 ## Evidence and limits
 

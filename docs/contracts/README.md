@@ -23,6 +23,11 @@ the same selection for visual-state reporting and speech presentation. `lesson.c
 advertises those closed profile IDs and the current selection to authenticated Android clients.
 Before a lesson, Android may send `teacher.profile.select`; the host rejects unadvertised IDs and
 mid-lesson changes, forwards the closed ID to Godot, and confirms it with a replacement catalog.
+The same catalog advertises bounded environment IDs/display names. Before a lesson, a paired phone
+may send `lesson.create.request` with a required bounded topic and optional closed difficulty,
+advertised environment ID, and one-to-eight exercise count. `lesson.create.result` contains either
+the application-owned installed lesson identity/options or a bounded failure message; it never
+contains a path, command, model name, or generated lesson body.
 
 `gateway-auth-message.schema.json` is the closed Milestone 8 release-pairing contract. A
 `pairing.request` contains the one-time eight-digit code, UUID device ID, and bounded device name;

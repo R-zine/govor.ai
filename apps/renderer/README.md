@@ -68,6 +68,8 @@ putting secret values in process arguments. Content actions launch only exact pa
 entry points. Application patching confirms, exits with the closed launcher signal, and opens the
 signed updater only after managed services stop. It is not sent to the phone as video and is
 dismissed when a session starts.
+The paired Android client separately exposes bounded lesson creation beside its lesson selector;
+lesson/environment file import and application patching remain host-local operations.
 The renderer still connects outward to loopback; none of these options exposes a renderer listener
 or makes certificate verification optional.
 

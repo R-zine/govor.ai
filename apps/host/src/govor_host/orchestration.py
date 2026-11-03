@@ -23,6 +23,9 @@ from govor_contracts import (
     LessonCatalogPayload,
     LessonCatalogProgressPayload,
     LessonCatalogRequestPayload,
+    LessonCreateRequestPayload,
+    LessonCreateResultPayload,
+    LessonEnvironmentItemPayload,
     LessonProgressPayload,
     MessageEnvelope,
     PhonemeAlignmentPayload,
@@ -122,6 +125,7 @@ class SessionRegistry:
 
 INBOUND_PAYLOADS: dict[str, type[BaseModel]] = {
     "lesson.catalog.request": LessonCatalogRequestPayload,
+    "lesson.create.request": LessonCreateRequestPayload,
     "teacher.profile.select": TeacherProfileSelectPayload,
     "session.start": SessionStartPayload,
     "teacher.playback_completed": TeacherPlaybackCompletedPayload,
@@ -147,6 +151,10 @@ class ControlSession:
         teacher_profile_provider: Callable[[], str],
         teacher_profiles_provider: Callable[[], list[TeacherProfileItemPayload]],
         teacher_profile_selector: Callable[[str, UUID], Awaitable[None]],
+        lesson_creator: Callable[[LessonCreateRequestPayload], Awaitable[LessonCreateResultPayload]]
+        | None,
+        lesson_environment_provider: Callable[[], list[LessonEnvironmentItemPayload]],
+        lesson_catalog_broadcaster: Callable[[], Awaitable[None]],
         microphone: MicrophoneAudioSource,
         settings: Settings,
         registry: SessionRegistry,
@@ -160,6 +168,9 @@ class ControlSession:
         self._teacher_profile_provider = teacher_profile_provider
         self._teacher_profiles_provider = teacher_profiles_provider
         self._teacher_profile_selector = teacher_profile_selector
+        self._lesson_creator = lesson_creator
+        self._lesson_environment_provider = lesson_environment_provider
+        self._lesson_catalog_broadcaster = lesson_catalog_broadcaster
         self._lesson: LessonService | None = None
         self._lesson_catalog: LessonCatalog | None = None
         self._microphone = microphone
@@ -178,6 +189,7 @@ class ControlSession:
         self._spaced_review_enabled = False
         self._utterance_id: UUID | None = None
         self._work_task: asyncio.Task[None] | None = None
+        self._lesson_creation_task: asyncio.Task[None] | None = None
         self._deadline_task: asyncio.Task[None] | None = None
         self._closed = False
 
@@ -226,6 +238,11 @@ class ControlSession:
 
     async def close(self) -> None:
         self._closed = True
+        if self._lesson_creation_task is not None:
+            self._lesson_creation_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await self._lesson_creation_task
+            self._lesson_creation_task = None
         await self._cleanup_active_session(reason="disconnected", notify=False)
 
     async def send_lesson_catalog_update(self) -> None:
@@ -237,6 +254,12 @@ class ControlSession:
         if envelope.message_type == "lesson.catalog.request":
             _require(payload, LessonCatalogRequestPayload)
             await self._send_lesson_catalog(envelope.correlation_id)
+            return
+        if envelope.message_type == "lesson.create.request":
+            await self._begin_lesson_creation(
+                envelope.correlation_id,
+                _require(payload, LessonCreateRequestPayload),
+            )
             return
         if envelope.message_type == "teacher.profile.select":
             if self._session_id is not None:
@@ -339,6 +362,7 @@ class ControlSession:
             correlation_id,
             LessonCatalogPayload(
                 default_scenario_id=catalog.default_scenario_id,
+                environments=self._lesson_environment_provider(),
                 teacher_profiles=self._teacher_profiles_provider(),
                 selected_teacher_profile_id=self._teacher_profile_provider(),
                 lessons=[
@@ -352,6 +376,63 @@ class ControlSession:
                     for lesson in catalog.lessons
                 ],
             ),
+        )
+
+    async def _begin_lesson_creation(
+        self,
+        correlation_id: UUID,
+        payload: LessonCreateRequestPayload,
+    ) -> None:
+        if self._session_id is not None:
+            await self._send_lesson_creation_failure(
+                correlation_id,
+                "Finish the active lesson before creating another one.",
+            )
+            return
+        if self._lesson_creator is None:
+            await self._send_lesson_creation_failure(
+                correlation_id,
+                "Lesson creation is unavailable in this host mode.",
+            )
+            return
+        if self._lesson_creation_task is not None and not self._lesson_creation_task.done():
+            await self._send_lesson_creation_failure(
+                correlation_id,
+                "A lesson is already being created.",
+            )
+            return
+        self._lesson_creation_task = asyncio.create_task(
+            self._create_requested_lesson(correlation_id, payload)
+        )
+
+    async def _create_requested_lesson(
+        self,
+        correlation_id: UUID,
+        payload: LessonCreateRequestPayload,
+    ) -> None:
+        creator = self._lesson_creator
+        if creator is None:
+            return
+        try:
+            result = await creator(payload)
+            await self._send("lesson.create.result", correlation_id, result)
+            await self._lesson_catalog_broadcaster()
+        except asyncio.CancelledError:
+            raise
+        except Exception as error:
+            LOGGER.warning("lesson creation failed error_type=%s", type(error).__name__)
+            await self._send_lesson_creation_failure(
+                correlation_id,
+                "The local lesson model could not create a valid lesson. Please try again.",
+            )
+        finally:
+            self._lesson_creation_task = None
+
+    async def _send_lesson_creation_failure(self, correlation_id: UUID, message: str) -> None:
+        await self._send(
+            "lesson.create.result",
+            correlation_id,
+            LessonCreateResultPayload(status="failed", message=message),
         )
 
     async def _playback_completed(

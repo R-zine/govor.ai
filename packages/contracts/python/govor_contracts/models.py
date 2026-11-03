@@ -91,6 +91,57 @@ class LessonCatalogRequestPayload(StrictModel):
     pass
 
 
+class LessonCreateRequestPayload(StrictModel):
+    topic: str = Field(min_length=1, max_length=500)
+    difficulty: Literal["beginner", "intermediate", "advanced"] | None = None
+    environment_id: str | None = Field(
+        default=None,
+        pattern=r"^[a-z][a-z0-9-]{2,63}$",
+        max_length=64,
+    )
+    exercise_count: int | None = Field(default=None, ge=1, le=8)
+
+    @field_validator("topic")
+    @classmethod
+    def reject_blank_topic(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("lesson topic must not be blank")
+        return value
+
+
+class LessonCreateResultPayload(StrictModel):
+    status: Literal["created", "failed"]
+    message: str = Field(min_length=1, max_length=512)
+    scenario_id: str | None = Field(
+        default=None,
+        pattern=r"^[a-z][a-z0-9-]{2,63}$",
+        max_length=64,
+    )
+    title: str | None = Field(default=None, min_length=1, max_length=128)
+    difficulty: Literal["beginner", "intermediate", "advanced"] | None = None
+    environment_id: str | None = Field(
+        default=None,
+        pattern=r"^[a-z][a-z0-9-]{2,63}$",
+        max_length=64,
+    )
+    exercise_count: int | None = Field(default=None, ge=1, le=8)
+
+    @model_validator(mode="after")
+    def validate_result(self) -> LessonCreateResultPayload:
+        details = (
+            self.scenario_id,
+            self.title,
+            self.difficulty,
+            self.environment_id,
+            self.exercise_count,
+        )
+        if self.status == "created" and any(item is None for item in details):
+            raise ValueError("created lesson result is missing details")
+        if self.status == "failed" and any(item is not None for item in details):
+            raise ValueError("failed lesson result must not contain lesson details")
+        return self
+
+
 class LessonCatalogProgressPayload(StrictModel):
     status: Literal["not_started", "in_progress", "completed"]
     successful_exercises: int = Field(ge=0, le=64)
@@ -120,6 +171,11 @@ class LessonCatalogItemPayload(StrictModel):
     progress: LessonCatalogProgressPayload
 
 
+class LessonEnvironmentItemPayload(StrictModel):
+    environment_id: str = Field(pattern=r"^[a-z][a-z0-9-]{2,63}$", max_length=64)
+    display_name: str = Field(min_length=1, max_length=128)
+
+
 class TeacherProfileItemPayload(StrictModel):
     profile_id: Literal["elena", "amira", "daniel"]
     display_name: str = Field(min_length=1, max_length=64)
@@ -133,6 +189,7 @@ class TeacherProfileSelectPayload(StrictModel):
 class LessonCatalogPayload(StrictModel):
     default_scenario_id: str = Field(pattern=r"^[a-z][a-z0-9-]{2,63}$", max_length=64)
     lessons: list[LessonCatalogItemPayload] = Field(min_length=1, max_length=64)
+    environments: list[LessonEnvironmentItemPayload] = Field(min_length=1, max_length=64)
     teacher_profiles: list[TeacherProfileItemPayload] = Field(min_length=1, max_length=8)
     selected_teacher_profile_id: Literal["elena", "amira", "daniel"]
 
@@ -143,6 +200,9 @@ class LessonCatalogPayload(StrictModel):
             raise ValueError("lesson catalog scenario IDs must be unique")
         if self.default_scenario_id not in scenario_ids:
             raise ValueError("default lesson must be present in the catalog")
+        environment_ids = [item.environment_id for item in self.environments]
+        if len(environment_ids) != len(set(environment_ids)):
+            raise ValueError("lesson environment IDs must be unique")
         expected = sorted(
             self.lessons,
             key=lambda item: (item.display_order, item.title, item.scenario_id),

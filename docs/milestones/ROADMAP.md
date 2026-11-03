@@ -354,6 +354,12 @@ content; application code owns IDs, ordering, scene selection, final lesson vali
 additive publication. The existing catalog watcher makes the new lesson available to connected
 Android clients without a restart. ADR-0014 defines this boundary.
 
+The 2026-11-03 follow-up places the creator directly beside the Android lesson selector. It uses
+the existing paired WSS connection, one bounded pre-lesson request, current validated environment
+choices, and the same local model/importer. The refreshed catalog is pushed without a restart and
+the new lesson is selected automatically. No lesson/environment file import or application patch
+operation was exposed to the phone.
+
 Acceptance for this maintenance item requires structured-output/provider tests, deterministic
 default tests, real importer publication, contract fixtures, launcher/distribution checks,
 PowerShell parsing, one bounded real local-model smoke when the installed model is available, and
@@ -488,10 +494,12 @@ rejected. The host pre-connect selector remains available and uses the same proc
 
 ## Post-milestone Bulgarian neural voice correction
 
-All teacher profiles now prefer the installed neural Piper Bulgarian provider. This replaces the
-female profiles' poorly intelligible eSpeak normal path while retaining profile-aware eSpeak only
-for provider failure. The temporary female-model/male-voice mismatch is explicitly documented;
-adding a reviewed female Bulgarian neural provider remains a future quality improvement.
+All teacher profiles now prefer the installed neural Piper Bulgarian provider. Elena and Amira
+receive a bounded duration-preserving pitch presentation of that neural waveform, while Daniel
+receives the original. If Piper fails, every profile uses normal Bulgarian eSpeak `bg`; the
+unintelligible `bg+f3` fallback is no longer reachable. A native female Bulgarian neural provider
+remains a future quality improvement after its runtime, model format, licensing, packaging, and
+subjective intelligibility pass review.
 
 ## Post-milestone host management menu
 
