@@ -31,6 +31,12 @@ mutually exclusive contexts derived from media/session state:
    icon actions; speed uses a dropdown and pronunciation uses a bottom sheet. Disconnect remains
    in the overflow menu.
 
+The 2026-11-03 follow-up adds a distinct **Leave lesson** toolbar action and overflow item, also
+handled by Android Back. A Material confirmation offers **Keep learning** or **Leave lesson**.
+The accepted action uses `session.cancel`, stops local playback/microphone transmission, clears
+the reconnect lesson selection, and waits for host teardown before returning to the selector.
+The media/control connection remains open, and completed exercises remain in the host database.
+
 All controls retain explicit accessibility descriptions or visible labels. State determines which
 controls can exist; hidden controls are not merely disabled or visually obscured. A small pure
 Kotlin state/visibility policy is unit tested without Android runtime dependencies.

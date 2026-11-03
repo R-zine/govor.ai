@@ -48,6 +48,9 @@ class FakeRendererControl:
     failure: bool = False
     selected_teacher_profiles: list[str] = field(default_factory=list)
 
+    async def show_lesson_creation(self, payload: Any) -> None:
+        self.creation_status = payload
+
     async def dispatch(self, payload: RendererCommandPayload, correlation_id: Any) -> None:
         _ = correlation_id
         if self.failure:
@@ -150,6 +153,68 @@ def envelope(message_type: str, payload: dict[str, object]) -> dict[str, object]
         "correlation_id": str(uuid4()),
         "payload": payload,
     }
+
+
+def receive_creation_result(socket: Any) -> dict[str, Any]:
+    for _ in range(10):
+        status = socket.receive_json()
+        assert status["message_type"] == "lesson.create.status"
+        if status["payload"]["result"] is not None:
+            return {"message_type": "lesson.create.result", "payload": status["payload"]["result"]}
+    raise AssertionError("creation never reached a terminal state")
+
+
+def test_creation_survives_socket_close_and_status_is_restored_after_reconnect() -> None:
+    calls = 0
+
+    async def creator(_: LessonCreateRequestPayload) -> LessonCreateResultPayload:
+        nonlocal calls
+        calls += 1
+        await asyncio.sleep(0.1)
+        return LessonCreateResultPayload(status="failed", message="Controlled test outcome.")
+
+    renderer = FakeRendererControl()
+    app = create_app(Settings(), renderer=renderer, lesson_creator=creator)
+    with TestClient(app) as client:
+        with client.websocket_connect("/v1/control") as first:
+            first.send_json(envelope("lesson.create.request", {"topic": "Travel"}))
+            status = first.receive_json()
+            assert status["payload"]["state"] == "generating"
+            job_id = status["payload"]["job_id"]
+        time.sleep(0.2)
+        with client.websocket_connect("/v1/control") as second:
+            second.send_json(envelope("lesson.create.status.request", {}))
+            restored = second.receive_json()["payload"]
+        assert restored["job_id"] == job_id
+        assert restored["state"] == "failed"
+        assert restored["result"]["message"] == "Controlled test outcome."
+        assert renderer.creation_status.state == "failed"
+    assert calls == 1
+
+
+def test_renderer_receives_creation_progress_and_latest_status_after_reconnect() -> None:
+    async def creator(_: LessonCreateRequestPayload) -> LessonCreateResultPayload:
+        await asyncio.sleep(0.02)
+        return LessonCreateResultPayload(status="failed", message="Controlled result.")
+
+    app = create_app(Settings(), lesson_creator=creator)
+    with TestClient(app) as client:
+        with client.websocket_connect("/v1/renderer/control") as renderer:
+            renderer.send_json(envelope("renderer.ready", {"renderer_id": str(uuid4())}))
+            assert renderer.receive_json()["message_type"] == "renderer.ack"
+            with client.websocket_connect("/v1/control") as phone:
+                phone.send_json(envelope("lesson.create.request", {"topic": "Travel"}))
+                result = receive_creation_result(phone)
+            first = renderer.receive_json()
+            last = renderer.receive_json()
+            assert first["message_type"] == "renderer.lesson_creation"
+            assert first["payload"]["state"] == "generating"
+            assert last["payload"]["state"] == "failed"
+            assert result["payload"]["status"] == "failed"
+        with client.websocket_connect("/v1/renderer/control") as renderer:
+            renderer.send_json(envelope("renderer.ready", {"renderer_id": str(uuid4())}))
+            assert renderer.receive_json()["message_type"] == "renderer.ack"
+            assert renderer.receive_json()["payload"] == last["payload"]
 
 
 def test_health_identifies_fake_mode() -> None:
@@ -267,7 +332,7 @@ def test_control_creates_lesson_through_bounded_authenticated_channel() -> None:
                 },
             )
         )
-        result = socket.receive_json()
+        result = receive_creation_result(socket)
 
     assert result["message_type"] == "lesson.create.result"
     assert result["payload"] == {
@@ -343,7 +408,7 @@ def test_local_control_wires_generated_lesson_into_live_catalog(
                 },
             )
         )
-        result = socket.receive_json()
+        result = receive_creation_result(socket)
 
     assert result["payload"]["status"] == "created"
     assert result["payload"]["scenario_id"] == "hotel-check-in"
@@ -355,7 +420,7 @@ def test_control_reports_lesson_creation_unavailable_without_changing_session_st
 
     with TestClient(app).websocket_connect("/v1/control") as socket:
         socket.send_json(envelope("lesson.create.request", {"topic": "Hotel check-in"}))
-        result = socket.receive_json()
+        result = receive_creation_result(socket)
 
     assert result["message_type"] == "lesson.create.result"
     assert result["payload"]["status"] == "failed"
@@ -375,7 +440,7 @@ def test_control_reports_bounded_failure_when_lesson_creator_fails() -> None:
 
     with TestClient(app).websocket_connect("/v1/control") as socket:
         socket.send_json(envelope("lesson.create.request", {"topic": "Hotel check-in"}))
-        result = socket.receive_json()
+        result = receive_creation_result(socket)
 
     assert result["message_type"] == "lesson.create.result"
     assert result["payload"] == {
@@ -416,7 +481,7 @@ def test_local_control_fails_closed_when_generated_lesson_is_not_published(
 
     with TestClient(app).websocket_connect("/v1/control") as socket:
         socket.send_json(envelope("lesson.create.request", {"topic": "Hotel check-in"}))
-        result = socket.receive_json()
+        result = receive_creation_result(socket)
 
     assert result["payload"]["status"] == "failed"
     assert result["payload"]["scenario_id"] is None

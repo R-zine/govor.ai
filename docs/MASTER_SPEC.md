@@ -299,6 +299,10 @@ Avoid clutter.
 
 The phone should feel like the learning experience itself, not a remote-control dashboard.
 
+An active lesson must expose **Leave lesson** from the toolbar, overflow menu, and Android Back.
+Confirm the action, save completed exercise progress, cancel in-flight lesson work/playback, and
+return to lesson selection while keeping the host/media connection available.
+
 Teacher and streamed application audio must default to the phone's built-in loudspeaker rather
 than the quiet call earpiece. The Android client must restore the device's prior communication
 audio route when the lesson disconnects or moves to the background.
@@ -682,6 +686,12 @@ Keep the natural TTS provider independent of the deterministic fallback.
 When the preferred synthesizer fails, the application should continue using an available offline voice.
 
 Changing providers must not require modifying dialogue or rendering code.
+
+For replies containing both English and Bulgarian, synthesize each script span with its matching
+language provider, preserving the selected English accent and teacher. Combine the actual audio
+into one bounded PCM timeline with exact text offsets and provider-derived timing or nulls.
+Never send an entire bilingual explanation to a single-language model merely because the reply
+has one overall locale.
 
 ### Speech alignment and phonemes
 
@@ -1275,7 +1285,15 @@ content through a closed structured-output schema. Application code, not the mod
 version, persistent IDs, file names, display order, scene selection, and publication. Generated
 content must pass the normal lesson-definition and combined-catalog validation, then use the same
 locked additive import path so a running host publishes it to connected Android clients without a
-restart. No lesson-generation or upload endpoint is exposed on the LAN.
+restart. No lesson-generation or upload HTTP endpoint is exposed on the LAN.
+
+The authenticated phone lesson selector also exposes the creator through the existing control
+WebSocket. Creation is a host-owned bounded job: phone lock/background/disconnect must not cancel
+it, and reconnect must restore its running or terminal status for that authenticated device.
+The host window and phone show generation activity and a final success/failure. Limit the host to
+one simultaneous phone generation with a bounded overall timeout; keep only bounded latest-job
+metadata in host memory. A host restart ends uncompleted jobs, while published lesson JSON remains
+installed. Do not persist learner topics or partial model output as job history.
 
 ### Acceptance criteria
 

@@ -6,6 +6,16 @@ namespace Govor.Contracts.Tests;
 public sealed class MessageEnvelopeTests
 {
     [Fact]
+    public void HostCreationDisplayHasClosedStateAndBoundedText()
+    {
+        new LessonCreationDisplayPayload("generating", "Creating a lesson on this PC.").Validate();
+        Assert.Throws<InvalidDataException>(() =>
+            new LessonCreationDisplayPayload("execute", "Create").Validate());
+        Assert.Throws<InvalidDataException>(() =>
+            new LessonCreationDisplayPayload("created", new string('x', 513)).Validate());
+    }
+
+    [Fact]
     public void ValidEnvelopePassesValidation()
     {
         using var payloadDocument = JsonDocument.Parse("{}");

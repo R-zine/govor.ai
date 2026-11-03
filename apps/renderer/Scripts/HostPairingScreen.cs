@@ -1,4 +1,5 @@
 using Godot;
+using Govor.Contracts;
 
 namespace Govor.Renderer;
 
@@ -18,6 +19,8 @@ public partial class HostPairingScreen : Control
 
     private Label? _expiryLabel;
     private Label? _statusLabel;
+    private Label? _creationLabel;
+    private ProgressBar? _creationProgress;
     private Control? _manualDialog;
     private MenuButton? _teacherMenu;
     private PairingBootstrapDetails? _details;
@@ -62,6 +65,12 @@ public partial class HostPairingScreen : Control
         page.AddThemeConstantOverride("separation", 24);
         pageMargin.AddChild(page);
         page.AddChild(CreateHeader());
+        _creationLabel = StyledLabel(string.Empty, 18, Primary);
+        _creationLabel.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        _creationLabel.Visible = false;
+        page.AddChild(_creationLabel);
+        _creationProgress = new ProgressBar { Indeterminate = true, ShowPercentage = false, Visible = false };
+        page.AddChild(_creationProgress);
         page.AddChild(CreateMainContent());
 
         _manualDialog = CreateManualDialog();
@@ -81,6 +90,27 @@ public partial class HostPairingScreen : Control
         Visible = false;
         MouseFilter = MouseFilterEnum.Ignore;
         SetProcess(false);
+    }
+
+    public void ShowConnection()
+    {
+        Visible = true;
+        MouseFilter = MouseFilterEnum.Stop;
+        SetProcess(true);
+    }
+
+    public void ShowLessonCreation(LessonCreationDisplayPayload status)
+    {
+        status.Validate();
+        if (_creationLabel is not null)
+        {
+            _creationLabel.Text = status.Message;
+            _creationLabel.Visible = status.State != "idle";
+        }
+        if (_creationProgress is not null)
+        {
+            _creationProgress.Visible = status.State == "generating";
+        }
     }
 
     private Control CreateHeader()

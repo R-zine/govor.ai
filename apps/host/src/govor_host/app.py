@@ -14,6 +14,7 @@ from govor_contracts import (
     LessonCatalogProgressPayload,
     LessonCreateRequestPayload,
     LessonCreateResultPayload,
+    LessonCreationDisplayPayload,
     LessonEnvironmentItemPayload,
     MessageEnvelope,
     PairingRequestPayload,
@@ -29,6 +30,7 @@ from .config import Settings, get_settings
 from .environment_catalog_registry import EnvironmentCatalogRegistry
 from .fake_lesson import FakeLessonService
 from .lesson_catalog_registry import LessonCatalogRegistry
+from .lesson_creation_jobs import LessonCreationJobs
 from .microphone import MediaMicrophoneSource, MicrophoneAudioSource, ReferenceOnlyMicrophoneSource
 from .orchestration import ControlSession, LessonService, SessionRegistry
 from .renderer_gateway import RendererControl, RendererGateway
@@ -117,6 +119,25 @@ def create_app(
             if isinstance(result, Exception):
                 # A failed socket send is cleaned up by its connection handler.
                 continue
+
+    async def broadcast_creation_status() -> None:
+        await asyncio.gather(
+            *(session.send_creation_status() for session in tuple(control_sessions)),
+            return_exceptions=True,
+        )
+        await asyncio.gather(
+            renderer_gateway.show_lesson_creation(
+                LessonCreationDisplayPayload(
+                    state=creation_jobs.display.state,
+                    message=creation_jobs.display.message,
+                )
+            ),
+            return_exceptions=True,
+        )
+        if creation_jobs.display.state == "created":
+            await broadcast_lesson_catalog()
+
+    creation_jobs = LessonCreationJobs(requested_lesson_creator, broadcast_creation_status)
 
     def lesson_progress(catalog_snapshot: LessonCatalog) -> dict[str, LessonCatalogProgressPayload]:
         exercise_counts = {
@@ -222,6 +243,7 @@ def create_app(
         try:
             yield
         finally:
+            await creation_jobs.close()
             watcher.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await watcher
@@ -232,6 +254,7 @@ def create_app(
     app.state.lesson_catalog_registry = catalog_registry
     app.state.environment_catalog_registry = environment_registry
     app.state.teacher_profiles = teacher_profiles
+    app.state.lesson_creation_jobs = creation_jobs
 
     @app.get("/health")
     async def health() -> dict[str, Any]:
@@ -313,12 +336,16 @@ def create_app(
         if runtime.secure_gateway and websocket.url.scheme != "wss":
             await websocket.close(code=1008, reason="secure transport required")
             return
-        if pairing_authority is not None and not await _authenticate_websocket(
-            websocket,
-            pairing_authority,
-            runtime.max_control_message_bytes,
-        ):
-            return
+        owner = "loopback-development"
+        if pairing_authority is not None:
+            authenticated = await _authenticate_websocket(
+                websocket,
+                pairing_authority,
+                runtime.max_control_message_bytes,
+            )
+            if authenticated is None:
+                return
+            owner = authenticated
         session = ControlSession(
             send_json=websocket.send_json,
             renderer=renderer_gateway,
@@ -328,9 +355,9 @@ def create_app(
             teacher_profile_provider=lambda: teacher_profiles.profile_id,
             teacher_profiles_provider=teacher_profile_catalog,
             teacher_profile_selector=select_teacher_profile,
-            lesson_creator=requested_lesson_creator,
+            creation_jobs=creation_jobs,
+            creation_owner=owner,
             lesson_environment_provider=lesson_environment_catalog,
-            lesson_catalog_broadcaster=broadcast_lesson_catalog,
             scene_planner_provider=lambda: environment_registry.planner,
             microphone=microphone_source,
             settings=runtime,
@@ -376,12 +403,12 @@ async def _authenticate_websocket(
     websocket: WebSocket,
     authority: PairingAuthority,
     max_message_bytes: int,
-) -> bool:
+) -> str | None:
     try:
         raw = await websocket.receive_text()
         if len(raw.encode("utf-8")) > max_message_bytes:
             await websocket.close(code=1009, reason="authentication message too large")
-            return False
+            return None
         message = MessageEnvelope.model_validate_json(raw)
         if message.message_type != "auth.request":
             raise ValueError("authentication required")
@@ -399,10 +426,10 @@ async def _authenticate_websocket(
                 "payload": {},
             }
         )
-        return True
+        return str(payload.device_id)
     except (ValidationError, ValueError, WebSocketDisconnect):
         await websocket.close(code=1008, reason="authentication failed")
-        return False
+        return None
 
 
 def _gateway_envelope(message_type: str, correlation_id: str, payload: dict[str, Any]) -> str:

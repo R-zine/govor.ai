@@ -161,13 +161,35 @@ data class LessonCreateResultPayload(
         require(status in setOf("created", "failed"))
         require(message.isNotBlank() && message.length <= 512)
         val details = listOf(scenario_id, title, difficulty, environment_id, exercise_count)
-        require((status == "created" && details.none { it == null }) || details.all { it == null })
+        require(if (status == "created") details.none { it == null } else details.all { it == null })
         if (status == "created") {
             require(scenario_id!!.matches(Regex("^[a-z][a-z0-9-]{2,63}$")))
             require(title!!.isNotBlank() && title.length <= 128)
             require(difficulty in setOf("beginner", "intermediate", "advanced"))
             require(environment_id!!.matches(Regex("^[a-z][a-z0-9-]{2,63}$")))
             require(exercise_count in 1..8)
+        }
+        return this
+    }
+}
+
+@Serializable
+data class LessonCreationStatusPayload(
+    val job_id: String? = null,
+    val state: String,
+    val message: String,
+    val result: LessonCreateResultPayload? = null,
+) {
+    fun validate(): LessonCreationStatusPayload {
+        require(state in setOf("idle", "generating", "created", "failed"))
+        require(message.isNotBlank() && message.length <= 512)
+        require((state == "idle") == (job_id == null))
+        job_id?.let { java.util.UUID.fromString(it) }
+        if (state in setOf("created", "failed")) {
+            require(result != null && result.status == state)
+            result.validate()
+        } else {
+            require(result == null)
         }
         return this
     }

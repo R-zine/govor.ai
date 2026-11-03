@@ -7,6 +7,7 @@ import ai.govor.core.LessonCatalogPayload
 import ai.govor.core.LessonCatalogRequestPayload
 import ai.govor.core.LessonCreateRequestPayload
 import ai.govor.core.LessonCreateResultPayload
+import ai.govor.core.LessonCreationStatusPayload
 import ai.govor.core.LessonEnvironmentItemPayload
 import ai.govor.core.LessonProgressPayload
 import ai.govor.core.MessageEnvelope
@@ -306,6 +307,13 @@ class LessonSessionClient {
         closeSocket(notifyHost = true)
     }
 
+    fun leaveLesson() {
+        val activeSession = sessionId ?: return
+        stopPlayback()
+        utteranceId = null
+        send("session.cancel", SessionCancelPayload(activeSession))
+    }
+
     fun release() {
         closeSocket(notifyHost = true)
         scope.cancel()
@@ -315,6 +323,15 @@ class LessonSessionClient {
         runCatching {
             val envelope = ControlContractCodec.decodeEnvelope(text)
             when (envelope.message_type) {
+                "lesson.create.status" -> {
+                    val status = ControlContractCodec.decodePayload<LessonCreationStatusPayload>(envelope).validate()
+                    mutableLessonCreationState.value = LessonCreationState(
+                        inProgress = status.state == "generating",
+                        message = if (status.state == "idle") null else status.message,
+                        createdScenarioId = status.result?.scenario_id,
+                        failed = status.state == "failed",
+                    )
+                }
                 "lesson.catalog" -> applyLessonCatalog(
                     ControlContractCodec.decodePayload<LessonCatalogPayload>(envelope),
                 )
@@ -505,7 +522,7 @@ class LessonSessionClient {
         clearSpeechUi()
         transientUiState.endLesson()
         mutableLessonActive.value = false
-        mutableState.value = SessionState.DISCONNECTED
+        mutableState.value = SessionState.READY
         requestLessonCatalog()
     }
 
@@ -594,6 +611,7 @@ class LessonSessionClient {
 
     private fun requestLessonCatalog() {
         send("lesson.catalog.request", LessonCatalogRequestPayload())
+        send("lesson.create.status.request", LessonCatalogRequestPayload())
     }
 
     private inner class ControlListener(

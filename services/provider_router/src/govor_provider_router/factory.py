@@ -109,10 +109,12 @@ def build_configured_lesson_service(
             transport=None,
         )
     )
+    progress_store = progress_repository or SQLiteProgressRepository(settings.progress_database)
     speech = (
         build_local_speech_provider(
             settings,
             teacher_profile_provider=teacher_profile_provider,
+            english_locale_provider=lambda: progress_store.get_settings().english_locale,
         )
         if settings.speech_provider == "local"
         else OpenAiCompatibleSpeechProvider(
@@ -131,8 +133,7 @@ def build_configured_lesson_service(
         recognizer=recognizer,
         dialogue=dialogue,
         speech=speech,
-        progress_repository=progress_repository
-        or SQLiteProgressRepository(settings.progress_database),
+        progress_repository=progress_store,
         memory_turns=settings.conversation_memory_turns,
         lesson_catalog=lesson_catalog or load_lesson_catalog(settings.lesson_directory),
     )

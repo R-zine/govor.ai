@@ -14,6 +14,9 @@
         "lesson.catalog",
         "lesson.create.request",
         "lesson.create.result",
+        "lesson.create.status.request",
+        "lesson.create.status",
+        "renderer.lesson_creation",
         "teacher.profile.select",
         "session.state",
         "session.cancel",
@@ -37,6 +40,18 @@
     "payload": { "type": "object" }
   },
   "allOf": [
+    {
+      "if": { "properties": { "message_type": { "const": "lesson.create.status.request" } } },
+      "then": { "properties": { "payload": { "$ref": "#/$defs/lessonCatalogRequest" } } }
+    },
+    {
+      "if": { "properties": { "message_type": { "const": "lesson.create.status" } } },
+      "then": { "properties": { "payload": { "$ref": "#/$defs/lessonCreationStatus" } } }
+    },
+    {
+      "if": { "properties": { "message_type": { "const": "renderer.lesson_creation" } } },
+      "then": { "properties": { "payload": { "$ref": "#/$defs/lessonCreationDisplay" } } }
+    },
     {
       "if": { "properties": { "message_type": { "const": "lesson.catalog.request" } } },
       "then": { "properties": { "payload": { "$ref": "#/$defs/lessonCatalogRequest" } } }
@@ -141,6 +156,46 @@
     }
   ],
   "$defs": {
+    "lessonCreationDisplay": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "message"],
+      "properties": {
+        "state": { "enum": ["idle", "generating", "created", "failed"] },
+        "message": { "type": "string", "minLength": 1, "maxLength": 512 }
+      }
+    },
+    "lessonCreationStatus": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["job_id", "state", "message", "result"],
+      "properties": {
+        "job_id": { "type": ["string", "null"], "format": "uuid" },
+        "state": { "enum": ["idle", "generating", "created", "failed"] },
+        "message": { "type": "string", "minLength": 1, "maxLength": 512 },
+        "result": { "anyOf": [{ "$ref": "#/$defs/lessonCreateResult" }, { "type": "null" }] }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "state": { "const": "idle" } } },
+          "then": { "properties": { "job_id": { "type": "null" } } },
+          "else": { "properties": { "job_id": { "type": "string", "format": "uuid" } } }
+        },
+        {
+          "if": { "properties": { "state": { "enum": ["idle", "generating"] } } },
+          "then": { "properties": { "result": { "type": "null" } } },
+          "else": { "properties": { "result": { "type": "object" } } }
+        },
+        {
+          "if": { "properties": { "state": { "const": "created" } } },
+          "then": { "properties": { "result": { "properties": { "status": { "const": "created" } } } } }
+        },
+        {
+          "if": { "properties": { "state": { "const": "failed" } } },
+          "then": { "properties": { "result": { "properties": { "status": { "const": "failed" } } } } }
+        }
+      ]
+    },
     "uuid": { "type": "string", "format": "uuid" },
     "sessionIdProperty": { "session_id": { "$ref": "#/$defs/uuid" } },
     "sessionScoped": {

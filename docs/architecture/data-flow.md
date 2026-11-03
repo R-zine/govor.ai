@@ -173,6 +173,20 @@ and are idempotent. Disconnect transitions to `reconnecting`; lesson state remai
 
 ## Sensitive data
 
+Phone creation requests enter a host-owned job, not the current socket's cancellation scope.
+Authenticated-device identity selects the recoverable latest status. `lesson.create.status` goes
+to that device, `renderer.lesson_creation` supplies bounded host display text/state, and successful
+publication broadcasts the new catalog. Android re-queries on reconnect. Phone lock does not
+cancel generation; host shutdown cancels it and clears in-memory status.
+
+Mixed teacher replies are segmented by Latin/Cyrillic script before local synthesis. Each span
+uses its language voice, selected teacher, and English accent. Resampled PCM and actual timing
+are combined into one teacher turn, preserving exact character offsets and explicit null timing.
+
+**Leave lesson** sends `session.cancel` over the existing connection. Host cleanup resets Godot;
+the renderer returns to its pre-lesson screen. Android clears the active lesson and reloads the
+catalog while the WebRTC peer remains connected.
+
 Raw microphone audio is held only long enough to process an utterance and is not persisted by
 default. Normal logs contain event names, timing, correlation IDs, and error classes—not audio,
 credentials, or full transcripts. The transcript is sent to the active Android session but is not

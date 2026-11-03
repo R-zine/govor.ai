@@ -73,6 +73,17 @@ model-derived word/phoneme alignment. Android owns `AudioTrack` playout, media-t
 0.75×/1×/1.25× speed, full replay, word selection, IPA/explanation display, and isolated-word
 playback. Godot and the domain do not depend on a speech SDK. See ADR-0007.
 
+Local bilingual replies are split at Latin/Cyrillic script changes before synthesis. Kokoro uses
+the learner's English accent; Piper handles Bulgarian spans. Actual PCM is resampled to 24 kHz
+and concatenated. Pronunciation character offsets, word indices, and real timestamps are shifted
+to the combined timeline; if any span lacks an alignment type, that combined type is null.
+Fallback is applied per span so a provider failure cannot force both languages into one voice.
+
+Phone lesson creation is owned by `LessonCreationJobs`, separately from cancellable lesson work.
+It survives phone socket teardown and keeps one bounded latest status per authenticated device.
+The phone explicitly re-queries status on reconnect, while a closed loopback display message
+updates the host pre-lesson progress UI. ADR-0014 defines timeout, ownership, and restart limits.
+
 While the WebRTC lesson session is connected, Android selects the built-in loudspeaker as the
 communication device and reasserts that selection when the remote audio track starts. Android 12+
 uses the communication-device API; Android 8-11 uses the speakerphone compatibility API. The

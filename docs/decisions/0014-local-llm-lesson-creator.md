@@ -39,13 +39,29 @@ watcher sends the replacement summary to connected Android clients. An active le
 
 No new HTTP endpoint is added. Android uses the existing certificate-pinned, device-authenticated
 control WebSocket with strict `lesson.create.request` and `lesson.create.result` envelopes. The
-operation is pre-lesson only, permits one in-flight generation per connection, and carries no
+operation is pre-lesson only, permits one in-flight phone generation per host, and carries no
 path, model name, command, or file. The host resolves the current validated environment catalog,
 runs the same creator against loopback llama.cpp, atomically publishes through the importer, and
 broadcasts a replacement catalog. The local Windows form remains available.
 
 The creator has no cloud fallback. `Start-Govor.cmd` must be running because it owns the packaged
 llama.cpp process. The topic and generated content are not logged by the creator.
+
+### Phone lifecycle correction
+
+The host, rather than a control socket, owns the phone creation task. Its latest bounded snapshot
+is keyed by the authenticated device identity, with the request correlation UUID as job identity.
+Closing the phone socket does not cancel the job. `lesson.create.status.request` restores
+`idle`, `generating`, `created`, or `failed` plus an actual terminal result after reconnect.
+One global task and at most 16 latest-device snapshots are retained in memory; the overall job
+deadline is 270 seconds. Duplicate requests for the active job return its existing status.
+Shutdown cancels unfinished work; installed lesson JSON survives, but unfinished jobs do not
+resume after host restart. Topics and partial model output are not persisted as job history.
+
+The host pushes `renderer.lesson_creation` over loopback so the pre-lesson screen shows an
+indeterminate progress bar and final result. Renderer/socket loss does not fail generation.
+Android requests its own status after every catalog load/reconnect, and automatically selects
+the published lesson. Pre-lesson failures remain separate from session-recovery errors.
 
 ## Consequences
 

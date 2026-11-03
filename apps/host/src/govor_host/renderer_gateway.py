@@ -10,6 +10,7 @@ from uuid import UUID
 
 from fastapi import WebSocket, WebSocketDisconnect
 from govor_contracts import (
+    LessonCreationDisplayPayload,
     MessageEnvelope,
     RendererAckPayload,
     RendererCommandPayload,
@@ -37,6 +38,8 @@ class RendererControl(Protocol):
 
     async def select_teacher_profile(self, profile_id: str, correlation_id: UUID) -> None: ...
 
+    async def show_lesson_creation(self, payload: LessonCreationDisplayPayload) -> None: ...
+
 
 class RendererGateway:
     def __init__(
@@ -53,6 +56,7 @@ class RendererGateway:
         self._send_lock = asyncio.Lock()
         self._teacher_profiles = teacher_profiles or TeacherProfileSelection()
         self._on_teacher_profile_selected = on_teacher_profile_selected
+        self._creation_status: LessonCreationDisplayPayload | None = None
 
     @property
     def connected(self) -> bool:
@@ -88,6 +92,8 @@ class RendererGateway:
                     },
                 )
             )
+            if self._creation_status is not None:
+                await self.show_lesson_creation(self._creation_status)
 
             while True:
                 raw = await websocket.receive_text()
@@ -170,6 +176,18 @@ class RendererGateway:
         pending = self._pending.get(acknowledgement.command_id)
         if pending is not None and not pending.done():
             pending.set_result(acknowledgement.applied)
+
+    async def show_lesson_creation(self, payload: LessonCreationDisplayPayload) -> None:
+        self._creation_status = payload
+        if self._send_json is not None:
+            async with self._send_lock:
+                await self._send_json(
+                    _envelope(
+                        "renderer.lesson_creation",
+                        UUID(int=0),
+                        payload.model_dump(mode="json"),
+                    )
+                )
 
     def _fail_pending(self, detail: str) -> None:
         for pending in self._pending.values():

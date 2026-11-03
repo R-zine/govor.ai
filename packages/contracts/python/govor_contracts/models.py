@@ -142,6 +142,29 @@ class LessonCreateResultPayload(StrictModel):
         return self
 
 
+class LessonCreationStatusPayload(StrictModel):
+    job_id: UUID | None = None
+    state: Literal["idle", "generating", "created", "failed"]
+    message: str = Field(min_length=1, max_length=512)
+    result: LessonCreateResultPayload | None = None
+
+    @model_validator(mode="after")
+    def validate_status(self) -> LessonCreationStatusPayload:
+        if (self.state == "idle") != (self.job_id is None):
+            raise ValueError("only idle creation status has no job ID")
+        if self.state in {"created", "failed"}:
+            if self.result is None or self.result.status != self.state:
+                raise ValueError("terminal creation status requires matching result")
+        elif self.result is not None:
+            raise ValueError("unfinished creation has no result")
+        return self
+
+
+class LessonCreationDisplayPayload(StrictModel):
+    state: Literal["idle", "generating", "created", "failed"]
+    message: str = Field(min_length=1, max_length=512)
+
+
 class LessonCatalogProgressPayload(StrictModel):
     status: Literal["not_started", "in_progress", "completed"]
     successful_exercises: int = Field(ge=0, le=64)

@@ -1442,6 +1442,51 @@ phone. No host service/listener or audio was left active; the phone Activity was
 user. Exact commands, results, artifacts, failures, and limits are in
 `docs/benchmarks/2026-11-03-release-0.1.21-deployment.md`.
 
+## Post-milestone bilingual playback, recoverable creation, and leave-lesson controls
+
+The 2026-11-03 correction traces mixed-reply unintelligibility to routing the complete reply by
+one overall locale. The local speech router now splits Latin/Cyrillic spans, uses the selected
+teacher and learner English accent for each matching language provider, resamples actual PCM to
+24 kHz, and composes one bounded turn. Text ranges, word indices, and real timestamps are shifted
+exactly; a missing timing type on any span makes that combined type null. Only a failed span
+uses fallback. Two corrupted Bulgarian test literals were also corrected to actual UTF-8 text.
+
+Phone generation now belongs to `LessonCreationJobs` on the host, with one active job, at most
+16 latest-device snapshots, authenticated ownership, and a 270-second overall timeout. A phone
+socket closing no longer cancels it. Android re-queries `lesson.create.status` after reconnect;
+the host's pre-lesson screen also displays activity and the final result through the closed
+loopback `renderer.lesson_creation` message. Host shutdown cancels unfinished work and clears
+in-memory job status; published lesson JSON stays installed. Topics and partial output are not
+persisted as job history.
+
+An active lesson now has a **Leave lesson** toolbar arrow and overflow item. Android Back opens
+the same confirmation. Accepted leave stops local playback/microphone transmission, clears the
+reconnect lesson choice, sends `session.cancel`, and returns to the live selector after host
+teardown. Godot handles reset by restoring its pre-lesson screen; saved exercises are retained.
+
+Verification: 104 focused Python/host/speech/schema tests passed. The final all-scope gate passed
+323 Python tests at 85.38% branch coverage, Kotlin/JVM tests, 11 C# tests, 21 media tests, Godot
+import/build/self-test, and Android debug assembly. Real Kokoro/Piper
+synthesized mixed replies for Elena/Amira/Daniel with word timing and zero fallback. Actual Qwen3
+generated and installed a five-exercise lesson across a closed/reconnected control socket in
+22.62 seconds. The first all-scope retry failed three updater checks because the concurrent UI
+fixture occupied port 8765; the complete rerun with that fixture stopped passed those checks.
+The muted API 34 emulator passed creation request, phone sleep/wake, automatic reconnect,
+restored completion, automatic new-lesson selection, Back confirmation, keep-learning, toolbar
+leave, and return to selection with zero active host lessons. A separate task-owned Android
+userdata image preserved the emulator's existing signed installation. No subjective listening or
+new physical-phone acceptance is claimed. Full evidence and failed harness attempts are recorded
+in `docs/benchmarks/2026-11-03-bilingual-creation-and-lesson-exit.md`.
+
+The frozen media/speech dependency audit reported no known vulnerabilities. No media/model server
+or audio player remains active, and the temporary emulator was stopped after its UI checks.
+
+The installed physical-phone/portable release remains 0.1.21. To distribute these source fixes,
+build matching host/client artifacts with `./scripts/package.ps1 -Version 0.1.22 -VersionCode 23
+-NoArchive`, then update the authorized phone with `adb install -r --no-streaming
+.cache/dist/govor.ai-0.1.22-android-release.apk`. Physical listening and release lock/reconnect
+must be checked on that new candidate; the emulator result is development evidence only.
+
 ## Renderer evidence and limitations
 
 The current local proof images visibly contain the selectable facial teachers over four distinct

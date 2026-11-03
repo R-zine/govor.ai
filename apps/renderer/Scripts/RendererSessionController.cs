@@ -195,6 +195,14 @@ public partial class RendererSessionController : Node
                 return;
             }
 
+            if (envelope.MessageType == "renderer.lesson_creation")
+            {
+                var status = ControlContractCodec.DecodePayload<LessonCreationDisplayPayload>(envelope);
+                status.Validate();
+                PairingScreen?.ShowLessonCreation(status);
+                return;
+            }
+
             if (envelope.MessageType != "renderer.command")
             {
                 throw new InvalidDataException("Unsupported renderer message type.");
@@ -212,6 +220,10 @@ public partial class RendererSessionController : Node
             if (command.Action == "session_started")
             {
                 PairingScreen?.CompleteConnection();
+            }
+            else if (command.Action == "reset")
+            {
+                PairingScreen?.ShowConnection();
             }
             applied = true;
             GD.Print(

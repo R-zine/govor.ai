@@ -174,7 +174,7 @@ updater. No user-selected path is passed from Godot to a shell. See ADR-0021.
 The Windows lesson creator talks only to fixed loopback llama.cpp HTTP. A paired phone may request
 creation through the existing certificate-pinned, device-authenticated control WebSocket; no new
 HTTP route or unauthenticated administration endpoint exists. The operation is pre-lesson only,
-allows one in-flight request per connection, advertises only the current validated environments,
+allows one in-flight phone request per host, advertises only the current validated environments,
 and returns a bounded result before the normal catalog update. Its topic is bounded to 500
 characters and treated as untrusted content in the model prompt. The model response is capped,
 constrained by the versioned `local-ai-lesson-content` schema, parsed with unknown fields forbidden,
@@ -185,6 +185,13 @@ only through the locked additive importer.
 Omitted options are deterministic and never cause an extra provider request. The creator adds no
 new LAN route, cloud fallback, telemetry, or content logging. These controls establish structural
 and execution safety; they do not certify generated pedagogical or factual quality.
+
+Phone jobs are keyed by authenticated device ID, never a caller-selected status owner. The
+latest status is available only through that authenticated control connection; at most 16 device
+snapshots and one task are retained in host memory, bounded by a 270-second job timeout. Socket
+loss does not cancel the task. Host shutdown does. No topic, raw model output, credential, or
+generated lesson body is added to the status contract/logs. The host renderer receives only
+validated bounded display state/text over its existing loopback connection.
 
 ## Required controls
 

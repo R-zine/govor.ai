@@ -10,6 +10,21 @@ import java.util.UUID
 
 class ContractsTest {
     @Test
+    fun `creation status survives reconnect and rejects terminal state without result`() {
+        val message = ControlContractCodec.decodeEnvelope(requireNotNull(
+            javaClass.classLoader.getResource("valid/control-lesson-create-status.json"),
+        ).readText())
+        val status = ControlContractCodec.decodePayload<LessonCreationStatusPayload>(message).validate()
+        assertEquals("generating", status.state)
+        assertThrows(IllegalArgumentException::class.java) {
+            status.copy(state = "created").validate()
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            LessonCreateResultPayload(status = "created", message = "Missing details").validate()
+        }
+    }
+
+    @Test
     fun `pairing QR fixture decodes strictly`() {
         val fixture = requireNotNull(
             javaClass.classLoader.getResource("valid/pairing-bootstrap.json"),

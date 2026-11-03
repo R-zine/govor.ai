@@ -5,7 +5,12 @@ from typing import Any
 
 import numpy as np
 import pytest
-from govor_provider_interfaces import ProviderUnavailable
+from govor_provider_interfaces import (
+    PhonemeAlignment,
+    ProviderUnavailable,
+    TeacherTurn,
+    WordAlignment,
+)
 from govor_speech import (
     EspeakFallbackSpeechProvider,
     KokoroEnglishSpeechProvider,
@@ -14,6 +19,7 @@ from govor_speech import (
     build_local_speech_provider,
 )
 from govor_speech.audio import inspect_wav, pcm16_wav
+from govor_speech.mixed import speech_spans
 from govor_speech.phonemes import RawPhonemeTiming, align_to_words, pronunciations_for
 
 
@@ -138,9 +144,9 @@ async def test_piper_bulgarian_presentation_follows_teacher_gender() -> None:
         teacher_profile_provider=lambda: selected,
     )
 
-    female = await provider.synthesize("Ð”Ð¾Ð±ÑŠÑ€ Ð´ÐµÐ½.", "bg-BG")
+    female = await provider.synthesize("Добър ден.", "bg-BG")
     selected = "daniel"
-    male = await provider.synthesize("Ð”Ð¾Ð±ÑŠÑ€ Ð´ÐµÐ½.", "bg-BG")
+    male = await provider.synthesize("Добър ден.", "bg-BG")
 
     assert female.duration_us == male.duration_us
     assert female.audio_wav != male.audio_wav
@@ -175,8 +181,8 @@ async def test_bulgarian_fallback_never_uses_unintelligible_female_variant() -> 
         teacher_profile_provider=lambda: "daniel",
     )
 
-    female_turn = await female.synthesize("Ð”Ð¾Ð±ÑŠÑ€ Ð´ÐµÐ½.", "bg-BG")
-    male_turn = await male.synthesize("Ð”Ð¾Ð±ÑŠÑ€ Ð´ÐµÐ½.", "bg-BG")
+    female_turn = await female.synthesize("Добър ден.", "bg-BG")
+    male_turn = await male.synthesize("Добър ден.", "bg-BG")
 
     assert female_turn.audio_wav == male_turn.audio_wav
 
@@ -258,6 +264,84 @@ def test_curated_ipa_is_accent_aware_and_bulgarian_is_not_empty() -> None:
     assert [item.ipa for item in bulgarian] == ["dˈobər", "dˈen"]
     assert british[1].explanation is not None
     assert all(item.explanation is None for item in bulgarian)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("missing_alignment", [False, True])
+async def test_mixed_reply_routes_each_script_and_preserves_pcm_and_metadata(
+    missing_alignment: bool,
+) -> None:
+    calls: list[tuple[str, str, float]] = []
+
+    class SegmentProvider:
+        def __init__(self, rate: int, unavailable: bool = False) -> None:
+            self.rate = rate
+            self.unavailable = unavailable
+
+        async def synthesize(self, text: str, locale: str, *, speed: float = 1.0) -> TeacherTurn:
+            if self.unavailable:
+                raise ProviderUnavailable("injected")
+            calls.append((text, locale, speed))
+            pronunciations = pronunciations_for(text, locale)
+            return TeacherTurn(
+                text=text,
+                locale=locale,
+                audio_wav=pcm16_wav(b"\x01\x00" * self.rate, self.rate),
+                sample_rate_hz=self.rate,
+                duration_us=1_000_000,
+                provider_id="segment-test",
+                pronunciations=pronunciations,
+                word_alignment=None
+                if missing_alignment
+                else tuple(
+                    WordAlignment(i, i * 100_000, (i + 1) * 100_000)
+                    for i in range(len(pronunciations))
+                ),
+                phoneme_alignment=None
+                if missing_alignment
+                else tuple(
+                    PhonemeAlignment(i, "a", i * 100_000, (i + 1) * 100_000)
+                    for i in range(len(pronunciations))
+                ),
+            )
+
+    router = LocalSpeechRouter(
+        SegmentProvider(24_000),
+        SegmentProvider(22_050),
+        SegmentProvider(16_000),
+        english_locale_provider=lambda: "en-US",
+    )
+    text = 'Order означава поръчка. Say "coffee please".'
+    turn = await router.synthesize(text, "bg-BG", speed=0.75)
+    assert calls == [
+        ("Order ", "en-US", 0.75),
+        ("означава поръчка. ", "bg-BG", 0.75),
+        ('Say "coffee please".', "en-US", 0.75),
+    ]
+    assert turn.text == text
+    assert inspect_wav(turn.audio_wav).duration_us == 3_000_000
+    assert [p.locale for p in turn.pronunciations] == [
+        "en-US",
+        "bg-BG",
+        "bg-BG",
+        "en-US",
+        "en-US",
+        "en-US",
+    ]
+    assert all(text[p.start_char : p.end_char] == p.word for p in turn.pronunciations)
+    if missing_alignment:
+        assert turn.word_alignment is None and turn.phoneme_alignment is None
+    else:
+        assert turn.word_alignment is not None
+        assert turn.word_alignment[1].start_us == 1_000_000
+        assert turn.word_alignment[3].start_us == 2_000_000
+
+
+def test_script_routing_overrides_an_incorrect_overall_reply_locale() -> None:
+    text = "Say hello. Кажи „здравей“. Now repeat!"
+    spans = speech_spans(text, "en-GB")
+    assert "".join(span.text for span in spans) == text
+    assert [span.locale for span in spans] == ["en-GB", "bg-BG", "en-GB"]
 
 
 def test_alignment_is_explicitly_absent_when_provider_groups_do_not_match() -> None:

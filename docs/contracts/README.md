@@ -29,6 +29,13 @@ advertised environment ID, and one-to-eight exercise count. `lesson.create.resul
 the application-owned installed lesson identity/options or a bounded failure message; it never
 contains a path, command, model name, or generated lesson body.
 
+`lesson.create.status.request` has an empty payload and queries the authenticated device's latest
+host-owned job. `lesson.create.status` carries a nullable UUID job ID (null only for `idle`), a
+closed `idle`/`generating`/`created`/`failed` state, bounded display text, and a matching terminal
+result object or null. The host retains this snapshot across phone socket loss. The existing
+standalone `lesson.create.result` remains for immediate rejected requests. The loopback-only
+`renderer.lesson_creation` carries only the closed state and bounded display text for host UI.
+
 `gateway-auth-message.schema.json` is the closed Milestone 8 release-pairing contract. A
 `pairing.request` contains the one-time eight-digit code, UUID device ID, and bounded device name;
 `pairing.ok` returns that device ID plus a random bounded credential. Subsequent control and media

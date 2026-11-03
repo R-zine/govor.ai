@@ -27,6 +27,12 @@ physical target-hardware bundle.
 
 ## Post-milestone maintenance
 
+The 2026-11-03 usability corrections route bilingual replies through separate local language
+voices, recover host-owned lesson-creation status after phone lock/reconnect, show creation
+activity on the host, and expose confirmed **Leave lesson** navigation while staying connected.
+ADRs 0014, 0017, and 0020 define the lifecycle, UI, and speech changes. The current handoff records
+the new software/model/emulator evidence without changing historical milestone acceptance.
+
 On 2026-10-22 guided lesson definitions moved from Python/Android constants to strict versioned
 JSON in `assets/lesson-content`. The host loads immutable catalog snapshots, Android discovers the
 ordered list over the authenticated control contract, and lessons choose a validated reusable

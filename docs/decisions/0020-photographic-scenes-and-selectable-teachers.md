@@ -53,6 +53,13 @@ run and is now prohibited even on provider failure: all Bulgarian failure fallba
 cloud-compatible speech uses independently configurable presentation voice names; those names are
 not treated as a provider guarantee about speaker identity.
 
+The 2026-11-03 mixed-reply correction routes each Latin/Cyrillic span separately. Passing an
+entire explanation with English examples to Piper (or Bulgarian text to Kokoro) was the remaining
+intelligibility defect. Each span keeps the selected teacher's language voice; English uses the
+learner's accent even when the overall reply locale is Bulgarian. The router resamples actual PCM
+to 24 kHz and concatenates it, translating exact text/word/timestamp offsets. Missing timing stays
+null for the combined turn. Failure fallback applies only to the failed language span.
+
 Replace the four built-in procedural rooms with four locally bundled CC0 photographic 2D
 backdrops. Godot renders the selected 3D teacher in front of the image and keeps the 1280x720 media
 surface, control contract, and scene IDs unchanged. Imported environment bundles retain ADR-0015's

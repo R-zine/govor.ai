@@ -53,6 +53,12 @@ changed.
 
 ## Lesson controls and microphone
 
+From **Choose a lesson**, tap **+ Create a lesson**, or open the lesson list and choose
+**Create a new lesson**. Enter a topic; difficulty, environment, and length are optional. The PC
+shows creation progress too. You may lock the phone while generation runs; the app retrieves its
+status after reconnecting and selects the new lesson once it is installed. Keep the Windows host
+running. A failed or timed-out request shows a result you can dismiss before trying again.
+
 - Teacher and environment audio plays through the phone's main loudspeaker by default, not the
   quiet call earpiece. Use the phone's volume buttons to adjust it. govor.ai restores the
   previous communication-audio route after disconnecting or moving to the background.
@@ -65,6 +71,10 @@ changed.
   request isolated-word audio; annotated subtitle words can also be selected directly.
 - Open the three-dot menu and choose **Disconnect** to end the current connection. Interrupted
   lessons retain structured progress on Windows and resume at the current exercise.
+- To choose another lesson while keeping the connection, tap the toolbar Back arrow or choose
+  **Leave lesson** from the three-dot menu. Android Back opens the same confirmation. Choose
+  **Leave lesson** to return to selection, or **Keep learning** to continue. Completed exercises
+  are saved automatically.
 
 The app does not save raw microphone recordings. Normal logs omit full learner transcripts.
 

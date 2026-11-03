@@ -11,6 +11,11 @@ continue to use bounded procedural primitives.
 Scene specifications, animation timelines, and the closed teacher selection arrive through the
 validated loopback renderer-control contract; no command can name a path, URL, download, or script.
 
+The host-owned phone lesson-creation job sends bounded `renderer.lesson_creation` display updates
+over loopback. The pre-lesson screen shows generation activity and the final result; phone lock
+does not cancel the job. A `reset` session command restores the pre-lesson screen after a learner
+leaves a lesson. No teaching or generation logic runs in Godot.
+
 Built-in scene IDs resolve only to the four packaged backdrop resources. The scene catalog caches
 those textures plus reusable primitive meshes/materials; custom recipes contain only bounded
 colored box/cylinder/sphere primitives. Replaced scene trees are queued for cleanup. Unknown wire

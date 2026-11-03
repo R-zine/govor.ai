@@ -12,6 +12,7 @@ from govor_contracts import ProviderCapabilities
 from govor_provider_interfaces import ProviderUnavailable, SpeechProvider, TeacherTurn
 
 from .audio import inspect_wav, pcm16_wav, pitch_shift_pcm16_wav
+from .mixed import combine_turns, speech_spans
 from .phonemes import RawPhonemeTiming, align_to_words, pronunciations_for
 
 
@@ -327,29 +328,39 @@ class LocalSpeechRouter:
         fallback: SpeechProvider,
         *,
         teacher_profile_provider: Callable[[], str] | None = None,
+        english_locale_provider: Callable[[], str] | None = None,
     ) -> None:
         self.english = english
         self.bulgarian = bulgarian
         self.fallback = fallback
         self._teacher_profile_provider = teacher_profile_provider or (lambda: "elena")
         self._lock = asyncio.Lock()
+        self._english_locale_provider = english_locale_provider or (lambda: "en-GB")
 
     async def synthesize(self, text: str, locale: str, *, speed: float = 1.0) -> TeacherTurn:
         _teacher_profile(self._teacher_profile_provider)
-        preferred = self.bulgarian if locale == "bg-BG" else self.english
+        _validate_request(text, locale, speed, allowed_locales={"en-GB", "en-US", "bg-BG"})
+        english_locale = locale if locale.startswith("en-") else self._english_locale_provider()
+        if english_locale not in {"en-GB", "en-US"}:
+            raise ValueError("unsupported English accent")
+        spans = speech_spans(text, english_locale)
         async with self._lock:
-            if preferred is self.fallback:
-                return await self.fallback.synthesize(text, locale, speed=speed)
-            try:
-                return await preferred.synthesize(text, locale, speed=speed)
-            except (ProviderUnavailable, TimeoutError, OSError, ValueError):
-                return await self.fallback.synthesize(text, locale, speed=speed)
+            parts = []
+            for span in spans:
+                preferred = self.bulgarian if span.locale == "bg-BG" else self.english
+                try:
+                    turn = await preferred.synthesize(span.text, span.locale, speed=speed)
+                except (ProviderUnavailable, TimeoutError, OSError, ValueError):
+                    turn = await self.fallback.synthesize(span.text, span.locale, speed=speed)
+                parts.append((span, turn))
+            return parts[0][1] if len(parts) == 1 else combine_turns(text, locale, parts)
 
 
 def build_local_speech_provider(
     settings: SpeechSettings,
     *,
     teacher_profile_provider: Callable[[], str] | None = None,
+    english_locale_provider: Callable[[], str] | None = None,
 ) -> LocalSpeechRouter:
     profile_provider = teacher_profile_provider or (lambda: "elena")
     return LocalSpeechRouter(
@@ -374,6 +385,7 @@ def build_local_speech_provider(
             teacher_profile_provider=profile_provider,
         ),
         teacher_profile_provider=profile_provider,
+        english_locale_provider=english_locale_provider,
     )
 
 

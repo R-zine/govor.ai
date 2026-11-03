@@ -4,6 +4,20 @@ using System.Text.RegularExpressions;
 
 namespace Govor.Contracts;
 
+public sealed record LessonCreationDisplayPayload(
+    [property: JsonPropertyName("state")] string State,
+    [property: JsonPropertyName("message")] string Message)
+{
+    public void Validate()
+    {
+        if (State is not ("idle" or "generating" or "created" or "failed") ||
+            string.IsNullOrWhiteSpace(Message) || Message.Length > 512)
+        {
+            throw new InvalidDataException("Invalid lesson creation status.");
+        }
+    }
+}
+
 public sealed record RendererReadyPayload(
     [property: JsonPropertyName("renderer_id")] Guid RendererId,
     [property: JsonPropertyName("renderer_kind")] string RendererKind,

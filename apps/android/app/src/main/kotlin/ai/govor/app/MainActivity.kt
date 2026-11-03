@@ -15,6 +15,7 @@ import ai.govor.core.SessionState
 import ai.govor.core.SpeechTimeline
 import ai.govor.core.TeacherProfileItemPayload
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -44,6 +45,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
@@ -62,6 +64,7 @@ import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.Button
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -365,6 +368,7 @@ private fun GovorApp(model: MediaSessionViewModel = viewModel()) {
                         onWordSelected = model.lesson::selectWord,
                         onPushToTalkChanged = model::setPushToTalk,
                         onRetry = model.lesson::retry,
+                        onLeaveLesson = model::leaveLesson,
                         onDisconnect = model::disconnect,
                         errors = listOfNotNull(mediaError, lessonError, pairingError),
                     )
@@ -1125,10 +1129,26 @@ private fun ActiveLessonScreen(
     onWordSelected: (Int) -> Unit,
     onPushToTalkChanged: (Boolean) -> Unit,
     onRetry: () -> Unit,
+    onLeaveLesson: () -> Unit,
     onDisconnect: () -> Unit,
     errors: List<String>,
 ) {
     var showMore by rememberSaveable { mutableStateOf(false) }
+    var confirmLeave by rememberSaveable { mutableStateOf(false) }
+    BackHandler { confirmLeave = true }
+    if (confirmLeave) {
+        AlertDialog(
+            onDismissRequest = { confirmLeave = false },
+            title = { Text("Leave this lesson?") },
+            text = { Text("Your completed exercises are saved. Return to the lesson selector?") },
+            confirmButton = {
+                TextButton(onClick = { confirmLeave = false; onLeaveLesson() }) {
+                    Text("Leave lesson")
+                }
+            },
+            dismissButton = { TextButton(onClick = { confirmLeave = false }) { Text("Keep learning") } },
+        )
+    }
     var showSpeedMenu by rememberSaveable { mutableStateOf(false) }
     var showPronunciations by rememberSaveable { mutableStateOf(false) }
     val controls = lessonControlVisibility(lessonState, teacherText != null)
@@ -1144,7 +1164,9 @@ private fun ActiveLessonScreen(
                     )
                 },
                 navigationIcon = {
-                    ConnectionStatusDot(mediaStatus, lessonState)
+                    IconButton(onClick = { confirmLeave = true }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Leave lesson")
+                    }
                 },
                 actions = {
                     Box {
@@ -1155,6 +1177,10 @@ private fun ActiveLessonScreen(
                             expanded = showMore,
                             onDismissRequest = { showMore = false },
                         ) {
+                            DropdownMenuItem(
+                                text = { Text("Leave lesson") },
+                                onClick = { showMore = false; confirmLeave = true },
+                            )
                             DropdownMenuItem(
                                 text = { Text("Disconnect") },
                                 leadingIcon = { Icon(Icons.Filled.Close, contentDescription = null) },

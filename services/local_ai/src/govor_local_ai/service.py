@@ -244,6 +244,7 @@ def build_local_lesson_service(settings: LocalAiSettings) -> LocalLessonService:
     from govor_progress import SQLiteProgressRepository
     from govor_speech import build_local_speech_provider
 
+    progress_store = SQLiteProgressRepository(settings.progress_database)
     return LocalLessonService(
         recognizer=WhisperCppRecognizer(
             settings.whisper_executable,
@@ -255,8 +256,11 @@ def build_local_lesson_service(settings: LocalAiSettings) -> LocalLessonService:
             timeout_seconds=max(1.0, settings.provider_timeout_seconds / 2),
             provider_id=settings.dialogue_provider_id,
         ),
-        speech=build_local_speech_provider(settings),
-        progress_repository=SQLiteProgressRepository(settings.progress_database),
+        speech=build_local_speech_provider(
+            settings,
+            english_locale_provider=lambda: progress_store.get_settings().english_locale,
+        ),
+        progress_repository=progress_store,
         memory_turns=settings.conversation_memory_turns,
         lesson_catalog=load_lesson_catalog(settings.lesson_directory),
     )
