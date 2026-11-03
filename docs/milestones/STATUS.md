@@ -1481,11 +1481,32 @@ in `docs/benchmarks/2026-11-03-bilingual-creation-and-lesson-exit.md`.
 The frozen media/speech dependency audit reported no known vulnerabilities. No media/model server
 or audio player remains active, and the temporary emulator was stopped after its UI checks.
 
-The installed physical-phone/portable release remains 0.1.21. To distribute these source fixes,
-build matching host/client artifacts with `./scripts/package.ps1 -Version 0.1.22 -VersionCode 23
--NoArchive`, then update the authorized phone with `adb install -r --no-streaming
-.cache/dist/govor.ai-0.1.22-android-release.apk`. Physical listening and release lock/reconnect
-must be checked on that new candidate; the emulator result is development evidence only.
+The matching 0.1.22/code 23 release has now been packaged and installed as recorded below.
+Physical listening and release lock/reconnect still need checking on that candidate; the emulator
+result is development evidence only.
+
+## Release 0.1.22 rebuild and phone update
+
+Source commit `c12cc3f` was packaged on 2026-11-03 as matching Windows host and Android
+0.1.22/code 23 artifacts. A clean no-daemon signed Android build passed in 2 minutes 7 seconds.
+The renderer's console launcher repeated its completed-export exit hang; using the main Godot
+executable with an explicit process wait completed normally with exit code 0. The complete
+package pipeline then passed renderer export, release lint/assembly, v2 signature verification,
+embedded runtimes/dependencies, notices/source, imports, prerequisites, and packaged wrapper
+doctors. The temporary ignored exporter wrapper was removed afterward.
+
+The authorized physical realme RMX3939 accepted `adb install -r --no-streaming`, preserving its
+installation data while moving from 0.1.21/code 22 to 0.1.22/code 23. The Activity cold-started
+with `Status: ok` in 756 ms. All six local model/voice artifacts are ready. Packaged speech/job
+source hashes match the committed files, the exported renderer DLL changed, and the existing
+Windows progress database stayed byte-identical. Older host directories were retained.
+
+Host directory: `.cache/dist/govor.ai-0.1.22-windows-x64`. Signed APK size: 59,924,661 bytes;
+SHA-256 `c075bca19be818d1c954554c3662b14fb024bd82af22ee6aea4be3d91160d27b`.
+This is package/update/startup evidence; no physical bilingual listening or new creation/leave
+interaction is inferred. The phone Activity is open, no host listeners remain on 8765-8768, and
+no audio is active. See `docs/benchmarks/2026-11-03-release-0.1.22-deployment.md` for commands,
+artifacts, failures, and limitations.
 
 ## Renderer evidence and limitations
 
