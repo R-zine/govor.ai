@@ -172,6 +172,12 @@ class MediaSessionViewModel(application: Application) : AndroidViewModel(applica
         lesson.leaveLesson()
     }
 
+    fun deleteLesson() {
+        lastLesson = null
+        session.setPushToTalk(false)
+        lesson.deleteLesson()
+    }
+
     override fun onCleared() {
         networkReconnectJob?.cancel()
         connectionJob?.cancel()

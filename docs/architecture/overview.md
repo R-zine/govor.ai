@@ -64,6 +64,12 @@ The Compose overlay changes by context, but its native `SurfaceViewRenderer` sta
 Activity lifetime. This lets an existing or newly arriving WebRTC track retain its sink through UI
 transitions and reconnects.
 
+Leave uses a consistent Material navigation icon in its menu and confirmation. Delete is a
+separate confirmed active-lesson action. The phone sends only its session UUID; host teardown
+precedes locked removal of that session's validated JSON definition and a live catalog broadcast.
+History remains in SQLite, the last remaining lesson is protected, and deletion failures return
+to the selector with an error. See the 2026-11-04 amendments to ADR-0013 and ADR-0017.
+
 ## Speech boundary
 
 `services/speech` owns local synthesis and phonemization adapters. English `en-GB` and `en-US`

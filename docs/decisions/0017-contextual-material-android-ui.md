@@ -37,6 +37,13 @@ The accepted action uses `session.cancel`, stops local playback/microphone trans
 the reconnect lesson selection, and waits for host teardown before returning to the selector.
 The media/control connection remains open, and completed exercises remain in the host database.
 
+The 2026-11-04 follow-up adds the same navigation icon to both the leave menu entry and dialog.
+The active overflow also contains a red Material **Delete lesson** action. Its separate dialog
+names the lesson, explains host-wide removal and retained history, and defaults to keeping the
+lesson when dismissed. The confirmation is unavailable for the last remaining lesson, with an
+explicit explanation. Only confirmed deletion sends the session-bound control request; selecting
+or dismissing either dialog cannot delete content. No delete control appears in the lesson picker.
+
 All controls retain explicit accessibility descriptions or visible labels. State determines which
 controls can exist; hidden controls are not merely disabled or visually obscured. A small pure
 Kotlin state/visibility policy is unit tested without Android runtime dependencies.

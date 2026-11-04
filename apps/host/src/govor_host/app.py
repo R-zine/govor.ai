@@ -120,6 +120,10 @@ def create_app(
                 # A failed socket send is cleaned up by its connection handler.
                 continue
 
+    async def delete_active_lesson(scenario_id: str) -> None:
+        catalog_registry.delete(scenario_id)
+        await broadcast_lesson_catalog()
+
     async def broadcast_creation_status() -> None:
         await asyncio.gather(
             *(session.send_creation_status() for session in tuple(control_sessions)),
@@ -357,6 +361,7 @@ def create_app(
             teacher_profile_selector=select_teacher_profile,
             creation_jobs=creation_jobs,
             creation_owner=owner,
+            lesson_deleter=delete_active_lesson,
             lesson_environment_provider=lesson_environment_catalog,
             scene_planner_provider=lambda: environment_registry.planner,
             microphone=microphone_source,

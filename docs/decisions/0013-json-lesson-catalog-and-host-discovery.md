@@ -2,7 +2,7 @@
 
 - Status: accepted
 - Date: 2026-10-22
-- Amended: 2026-10-22 (validated host-side imports and live catalog replacement)
+- Amended: 2026-10-22 (live imports); 2026-11-04 (confirmed active-lesson deletion)
 - Scope: post-milestone product maintenance
 
 ## Context
@@ -44,6 +44,24 @@ provided by the active definition to progress restoration; incompatible edits mu
 data migrations rather than silently guessed.
 
 ## Consequences
+
+### Confirmed active-lesson deletion (2026-11-04 amendment)
+
+An authenticated phone may send `lesson.delete.request` with only its active session UUID after a
+separate, named Android confirmation. The host resolves that session to its lesson, cancels its
+work/capture/playback, resets the renderer, and removes exactly the validated definition file.
+Deletion shares the import lock, validates the complete remaining catalog before unlinking,
+refuses linked files, and retains at least one lesson. It immediately swaps the registry snapshot
+and broadcasts the catalog, so restart/reconnect is unnecessary. SQLite history is retained.
+Rejected IDs, invalid remaining content, busy locks, and filesystem errors do not remove files.
+If removal fails after session teardown, the client receives a bounded error on the selector and
+can start a lesson again. Another socket cannot delete the first socket's active lesson.
+
+The physical definition is removed from the selected install's lesson directory, including when
+the filename differs from its scenario ID. Neither the phone nor the model selects a filename.
+Deleting a packaged default is an intentional local content change: a later fresh full package
+contains its own defaults; an incremental patch that needs that missing base file fails the
+existing conflict check rather than weakening signature/hash validation.
 
 - A valid imported JSON lesson appears in connected Android clients without restarting or
   reconnecting, and requires no Python, Kotlin, or Godot changes when it reuses an existing scene

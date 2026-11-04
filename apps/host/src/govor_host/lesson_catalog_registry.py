@@ -6,7 +6,7 @@ import logging
 from collections.abc import Callable
 from pathlib import Path
 
-from govor_domain import IMPORT_LOCK_NAME, LessonCatalog, load_lesson_catalog
+from govor_domain import IMPORT_LOCK_NAME, LessonCatalog, delete_lesson, load_lesson_catalog
 from govor_scene_planner import ScenePlanner
 
 LOGGER = logging.getLogger("uvicorn.error")
@@ -72,3 +72,16 @@ class LessonCatalogRegistry:
             )
         except OSError:
             return ()
+
+    def delete(self, scenario_id: str) -> None:
+        if not self._reload_enabled:
+            raise ValueError("The lesson catalog is not backed by mutable local files.")
+        replacement = delete_lesson(
+            scenario_id,
+            self._directory,
+            allowed_scene_templates=set(self._scene_planner_provider().supported_templates),
+        )
+        self._catalog = replacement
+        self._observed = self._fingerprint()
+        self._last_reload_failed = False
+        LOGGER.info("lesson deleted lesson_count=%d", len(replacement.lessons))

@@ -27,6 +27,12 @@ physical target-hardware bundle.
 
 ## Post-milestone maintenance
 
+The 2026-11-04 Android follow-up makes leave icons consistent and adds separately confirmed
+active-lesson deletion. The host enforces socket/session ownership and locked, validated,
+single-file removal with last-lesson protection, retains learning history, and immediately pushes
+the replacement catalog. ADR-0013 and ADR-0017 record the content and UI behavior. Source and
+emulator checks do not update the installed release or change historical physical acceptance.
+
 The 2026-11-03 usability corrections route bilingual replies through separate local language
 voices, recover host-owned lesson-creation status after phone lock/reconnect, show creation
 activity on the host, and expose confirmed **Leave lesson** navigation while staying connected.

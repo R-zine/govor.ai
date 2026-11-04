@@ -1,4 +1,4 @@
-"""Validated, additive imports for local lesson JSON and ZIP bundles."""
+"""Validated imports and session-confirmed deletion of local lesson content."""
 
 from __future__ import annotations
 
@@ -103,6 +103,51 @@ def import_lesson_bundle(
         )
         for _, final_path, candidate in staged
     )
+
+
+def delete_lesson(
+    scenario_id: str,
+    destination_directory: str | Path,
+    *,
+    allowed_scene_templates: set[str] | frozenset[str],
+) -> LessonCatalog:
+    """Remove exactly one validated lesson while retaining a usable, nonempty catalog."""
+
+    destination = Path(destination_directory).resolve()
+    lock_path = destination / IMPORT_LOCK_NAME
+    lock_acquired = False
+    try:
+        with lock_path.open("x", encoding="utf-8") as lock:
+            lock.write(str(os.getpid()))
+        lock_acquired = True
+        existing = load_lesson_catalog(destination)
+        existing.get(scenario_id)
+        remaining = [lesson for lesson in existing.lessons if lesson.scenario_id != scenario_id]
+        if not remaining:
+            raise ValueError("Create another lesson before deleting the last remaining lesson.")
+        replacement = LessonCatalog(remaining)
+        if any(lesson.scene_template_id not in allowed_scene_templates for lesson in remaining):
+            raise ValueError("The remaining lessons reference an unavailable environment.")
+
+        # File names are local loader data, never derived from a phone-supplied path or ID.
+        for path in destination.glob("*.json"):
+            if not path.is_file():
+                continue
+            definition = lesson_definition_from_mapping(
+                json.loads(path.read_text(encoding="utf-8"))
+            )
+            if definition.scenario_id != scenario_id:
+                continue
+            if path.is_symlink() or path.resolve().parent != destination:
+                raise ValueError("Linked lesson files cannot be deleted through the application.")
+            path.unlink()
+            return replacement
+        raise ValueError("The lesson file is no longer available.")
+    except FileExistsError as error:
+        raise ValueError("Another lesson content change is already in progress.") from error
+    finally:
+        if lock_acquired:
+            lock_path.unlink(missing_ok=True)
 
 
 def _read_candidates(source: Path) -> tuple[_Candidate, ...]:

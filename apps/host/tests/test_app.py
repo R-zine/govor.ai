@@ -24,6 +24,7 @@ from govor_domain import (
     LearnerIntent,
     TeachingEngine,
     import_lesson_bundle,
+    load_lesson_catalog,
 )
 from govor_gateway_security import PairingAuthority
 from govor_host.app import create_app
@@ -564,6 +565,74 @@ def test_external_lesson_is_advertised_and_startable(tmp_path: Path) -> None:
     assert renderer.commands[0].scene.scene_id == "cafe-ordering-v1"
 
 
+def test_active_lesson_deletion_is_owned_live_persistent_and_preserves_history(
+    tmp_path: Path,
+) -> None:
+    directory = tmp_path / "lessons"
+    shutil.copytree(Path("assets/lesson-content"), directory)
+    progress = SQLiteProgressRepository(tmp_path / "progress.sqlite3")
+    state, _ = progress.load_or_start("cafe-ordering", 3)
+    engine = TeachingEngine(load_lesson_catalog(directory).get("cafe-ordering"), state)
+    outcome = engine.evaluate(
+        "I would like coffee, please.", DetectedLanguage.ENGLISH, LearnerIntent.ENGLISH_ANSWER
+    )
+    progress.record_outcome(outcome, engine.state)
+    history = progress.history()
+    renderer = FakeRendererControl()
+    app = create_app(
+        Settings(lesson_directory=str(directory)), renderer=renderer, progress_repository=progress
+    )
+    with TestClient(app) as client, client.websocket_connect("/v1/control") as owner:
+        with client.websocket_connect("/v1/control") as observer:
+            session_id, _ = start_session(owner)
+            observer.send_json(envelope("lesson.delete.request", {"session_id": session_id}))
+            assert observer.receive_json()["payload"]["code"] == "invalid_control_message"
+            assert (directory / "cafe-ordering.json").exists()
+            assert app.state.session_registry.active_count == 1
+
+            owner.send_json(envelope("lesson.delete.request", {"session_id": session_id}))
+            assert owner.receive_json()["payload"]["state"] == "ending"
+            assert owner.receive_json()["message_type"] == "session.ended"
+            catalog = owner.receive_json()
+            other_catalog = observer.receive_json()
+            assert catalog["message_type"] == other_catalog["message_type"] == "lesson.catalog"
+            assert len(catalog["payload"]["lessons"]) == 3
+            assert "cafe-ordering" not in {
+                lesson["scenario_id"] for lesson in catalog["payload"]["lessons"]
+            }
+            owner.send_json(envelope("lesson.catalog.request", {}))
+            assert owner.receive_json()["payload"] == catalog["payload"]
+        assert client.get("/health").json()["lesson_catalog_status"] == "ready"
+        assert app.state.session_registry.active_count == 0
+
+    assert progress.history() == history
+    assert renderer.commands[-1].action == "reset"
+    restarted = create_app(
+        Settings(lesson_directory=str(directory)), renderer=FakeRendererControl()
+    )
+    assert len(restarted.state.lesson_catalog_registry.catalog.lessons) == 3
+
+
+def test_deletion_cannot_target_a_path_and_failure_keeps_catalog_usable(tmp_path: Path) -> None:
+    shutil.copy2(Path("assets/lesson-content/cafe-ordering.json"), tmp_path)
+    app = create_app(Settings(lesson_directory=str(tmp_path)), renderer=FakeRendererControl())
+    with TestClient(app) as client, client.websocket_connect("/v1/control") as socket:
+        session_id, _ = start_session(socket)
+        socket.send_json(
+            envelope("lesson.delete.request", {"session_id": session_id, "path": "../other.json"})
+        )
+        assert socket.receive_json()["payload"]["code"] == "invalid_control_message"
+        assert app.state.session_registry.active_count == 1
+        socket.send_json(envelope("lesson.delete.request", {"session_id": session_id}))
+        assert socket.receive_json()["payload"]["state"] == "ending"
+        assert socket.receive_json()["message_type"] == "session.ended"
+        assert socket.receive_json()["payload"]["code"] == "lesson_delete_failed"
+        socket.send_json(envelope("lesson.catalog.request", {}))
+        assert len(socket.receive_json()["payload"]["lessons"]) == 1
+        assert app.state.session_registry.active_count == 0
+    assert (tmp_path / "cafe-ordering.json").exists()
+
+
 def test_imported_lesson_is_pushed_and_startable_without_reconnect(tmp_path: Path) -> None:
     source_directory = Path(__file__).resolve().parents[3] / "assets" / "lesson-content"
     lesson_directory = tmp_path / "lessons"
@@ -1061,9 +1130,12 @@ def test_no_speech_emits_repeat_turn_without_an_invented_transcript() -> None:
     assert next_message["payload"]["text"] == "Please try again."
 
 
-def test_cancel_interrupts_provider_work_and_cleans_up() -> None:
+@pytest.mark.parametrize("delete", [False, True])
+def test_cancel_interrupts_provider_work_and_cleans_up(tmp_path: Path, delete: bool) -> None:
+    directory = tmp_path / "lessons"
+    shutil.copytree(Path("assets/lesson-content"), directory)
     app = create_app(
-        Settings(provider_timeout_seconds=30),
+        Settings(provider_timeout_seconds=30, lesson_directory=str(directory)),
         renderer=FakeRendererControl(),
         lesson=SlowLessonService(),
     )
@@ -1082,9 +1154,19 @@ def test_cancel_interrupts_provider_work_and_cleans_up() -> None:
             )
         )
         assert socket.receive_json()["payload"]["state"] == "processing"
-        socket.send_json(envelope("session.cancel", {"session_id": session_id, "reason": "user"}))
+        socket.send_json(
+            envelope(
+                "lesson.delete.request" if delete else "session.cancel",
+                {"session_id": session_id}
+                if delete
+                else {"session_id": session_id, "reason": "user"},
+            )
+        )
         assert socket.receive_json()["payload"]["state"] == "ending"
         assert socket.receive_json()["message_type"] == "session.ended"
+        if delete:
+            assert len(socket.receive_json()["payload"]["lessons"]) == 3
+            assert not (directory / "cafe-ordering.json").exists()
 
     assert app.state.session_registry.active_count == 0
 

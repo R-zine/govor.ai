@@ -25,6 +25,7 @@ from govor_contracts import (
     LessonCatalogRequestPayload,
     LessonCreateRequestPayload,
     LessonCreateResultPayload,
+    LessonDeleteRequestPayload,
     LessonEnvironmentItemPayload,
     LessonProgressPayload,
     MessageEnvelope,
@@ -128,6 +129,7 @@ INBOUND_PAYLOADS: dict[str, type[BaseModel]] = {
     "lesson.catalog.request": LessonCatalogRequestPayload,
     "lesson.create.request": LessonCreateRequestPayload,
     "lesson.create.status.request": LessonCatalogRequestPayload,
+    "lesson.delete.request": LessonDeleteRequestPayload,
     "teacher.profile.select": TeacherProfileSelectPayload,
     "session.start": SessionStartPayload,
     "teacher.playback_completed": TeacherPlaybackCompletedPayload,
@@ -155,6 +157,7 @@ class ControlSession:
         teacher_profile_selector: Callable[[str, UUID], Awaitable[None]],
         creation_jobs: LessonCreationJobs,
         creation_owner: str,
+        lesson_deleter: Callable[[str], Awaitable[None]],
         lesson_environment_provider: Callable[[], list[LessonEnvironmentItemPayload]],
         microphone: MicrophoneAudioSource,
         settings: Settings,
@@ -171,6 +174,7 @@ class ControlSession:
         self._teacher_profile_selector = teacher_profile_selector
         self._creation_jobs = creation_jobs
         self._creation_owner = creation_owner
+        self._lesson_deleter = lesson_deleter
         self._lesson_environment_provider = lesson_environment_provider
         self._lesson: LessonService | None = None
         self._lesson_catalog: LessonCatalog | None = None
@@ -294,6 +298,19 @@ class ControlSession:
             )
         elif envelope.message_type == "session.cancel":
             await self._cleanup_active_session(reason="cancelled", notify=True)
+        elif envelope.message_type == "lesson.delete.request":
+            # Session ownership was checked above. No caller-selected lesson or path is accepted.
+            scenario_id = self._scenario_id
+            await self._cleanup_active_session(reason="cancelled", notify=True)
+            try:
+                await self._lesson_deleter(scenario_id)
+            except (OSError, ValueError):
+                await self._send_error(
+                    envelope.correlation_id,
+                    code="lesson_delete_failed",
+                    message="Could not delete the lesson. Refresh the lesson list and try again.",
+                    retryable=False,
+                )
         elif envelope.message_type == "session.retry":
             await self._retry(envelope.correlation_id)
 

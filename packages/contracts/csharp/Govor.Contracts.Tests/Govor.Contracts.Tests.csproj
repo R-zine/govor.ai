@@ -13,6 +13,12 @@
     <ProjectReference Include="..\Govor.Contracts\Govor.Contracts.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\..\..\..\tests\fixtures\contracts\valid\control-lesson-delete-request.json"
+          Link="fixtures\control-lesson-delete-request.json"
+          CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\..\..\tests\fixtures\contracts\invalid\control-lesson-delete-path.json"
+          Link="fixtures\control-lesson-delete-path.json"
+          CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\..\..\tests\fixtures\contracts\valid\control-renderer-command.json"
           Link="fixtures\control-renderer-command.json"
           CopyToOutputDirectory="PreserveNewest" />

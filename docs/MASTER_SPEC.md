@@ -303,6 +303,14 @@ An active lesson must expose **Leave lesson** from the toolbar, overflow menu, a
 Confirm the action, save completed exercise progress, cancel in-flight lesson work/playback, and
 return to lesson selection while keeping the host/media connection available.
 
+The active lesson's overflow menu also exposes **Delete lesson**, with a matching Material icon
+and a separate confirmation naming the lesson and explaining that it is removed from the host
+for all clients. Confirming ends the lesson and removes its validated JSON definition, then
+refreshes connected catalogs without a restart. Learning history is retained. Only the active
+session's own lesson may be deleted; no caller-supplied path or alternate lesson ID is accepted.
+Protect the last remaining lesson and explain that another must be created before deleting it.
+Both the leave menu item and its confirmation use the same native navigation icon.
+
 Teacher and streamed application audio must default to the phone's built-in loudspeaker rather
 than the quiet call earpiece. The Android client must restore the device's prior communication
 audio route when the lesson disconnects or moves to the background.

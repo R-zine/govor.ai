@@ -8,6 +8,7 @@ import ai.govor.core.LessonCatalogRequestPayload
 import ai.govor.core.LessonCreateRequestPayload
 import ai.govor.core.LessonCreateResultPayload
 import ai.govor.core.LessonCreationStatusPayload
+import ai.govor.core.LessonDeleteRequestPayload
 import ai.govor.core.LessonEnvironmentItemPayload
 import ai.govor.core.LessonProgressPayload
 import ai.govor.core.MessageEnvelope
@@ -312,6 +313,15 @@ class LessonSessionClient {
         stopPlayback()
         utteranceId = null
         send("session.cancel", SessionCancelPayload(activeSession))
+    }
+
+    fun deleteLesson() {
+        val activeSession = sessionId ?: return
+        if (mutableState.value == SessionState.ENDING) return
+        mutableState.value = SessionState.ENDING
+        stopPlayback()
+        utteranceId = null
+        send("lesson.delete.request", LessonDeleteRequestPayload(activeSession))
     }
 
     fun release() {

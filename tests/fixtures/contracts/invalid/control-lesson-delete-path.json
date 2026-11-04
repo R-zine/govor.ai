@@ -1,0 +1,9 @@
+{
+  "protocol_version": "1.0",
+  "message_type": "lesson.delete.request",
+  "correlation_id": "9a352221-6fbd-4dd0-9fee-d14a07998d72",
+  "payload": {
+    "session_id": "73137466-ae4e-41ac-93b1-450d23cd334c",
+    "path": "../lessons/cafe-ordering.json"
+  }
+}

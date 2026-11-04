@@ -15,7 +15,7 @@ from .conversation import (
     detect_language,
 )
 from .lesson_catalog import LessonCatalog, lesson_definition_from_mapping, load_lesson_catalog
-from .lesson_import import IMPORT_LOCK_NAME, ImportedLesson, import_lesson_bundle
+from .lesson_import import IMPORT_LOCK_NAME, ImportedLesson, delete_lesson, import_lesson_bundle
 from .session import InvalidTransition, SessionEvent, SessionMachine, SessionState
 from .teaching import (
     CommonMisunderstanding,
@@ -66,6 +66,7 @@ __all__ = [
     "TeachingState",
     "classify_explicit_intent",
     "detect_language",
+    "delete_lesson",
     "lesson_definition_from_mapping",
     "import_lesson_bundle",
     "load_lesson_catalog",

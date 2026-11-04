@@ -1,6 +1,6 @@
 # Current verified status
 
-Last updated: 2026-11-03
+Last updated: 2026-11-04
 
 ## Outcome
 
@@ -1605,6 +1605,33 @@ affected-application tests. Exact commands, artifacts, failures, and limitations
 
 No model/media server or audio player remains running. The installed 0.1.22 host/APK is unchanged;
 the next deployment must rebuild the host to include this correction. No Android code changed.
+
+## Post-milestone confirmed lesson deletion and leave icons
+
+The active Android menu and leave confirmation now share the Material navigation icon.
+**Delete lesson** is a separate red menu action and named confirmation; dismissing it keeps the
+lesson. Confirmation ends only the active session and sends its UUID to the host, which resolves
+and unlinks the validated JSON definition under the existing import lock, replaces the registry,
+and pushes the new catalog immediately. The phone stays connected. History is preserved, linked
+or outside-directory files are refused, and the last remaining lesson is protected with a UI
+explanation. Failures after cleanup return a bounded error on the selector.
+
+Initial verification: 61 domain/schema tests passed; all 36 host tests passed, including deletion
+ownership, live updates to both sockets, restart persistence, retained SQLite history, invalid
+paths, last-lesson rejection, and interrupted-provider cleanup. Ruff and strict mypy passed.
+The full software gate also passed: 354 Python tests at 85.60% branch coverage, Kotlin core/app
+tests and compilation, 12 C# tests, 21 real media tests, Godot import/build/headless self-test, and
+Android debug assembly. The frozen media/speech audit found no known vulnerabilities.
+The muted, isolated API 34 emulator passed menu/dialog icon inspection, both confirmation dismissals,
+confirmed file deletion and live selector refresh without reconnect, last-lesson disabled-button
+and no-op touch checks, and leaving afterward with zero active host sessions. Earlier runs hit a
+System UI ANR, an accessibility timeout, and an assertion against a text child rather than the
+disabled button container; those attempts are not counted as passes. Test services and the owned
+emulator were stopped. Installed release 0.1.22 and the physical phone remain unchanged.
+ADR-0013 and ADR-0017 are amended with architecture, contract, master-spec, and user-guide
+documentation. The focused commit runs the installed quality and affected-application hooks.
+Commands and artifacts are recorded in
+`docs/benchmarks/2026-11-04-lesson-deletion-and-dialog-icons.md`.
 
 ## Future regression commands
 

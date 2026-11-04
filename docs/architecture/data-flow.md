@@ -74,8 +74,9 @@ environment ID, and the next `session_started` command carries its validated pri
 the already-running Godot renderer.
 
 All three Windows entry points are available from the host pre-connect **Content & updates** menu
-as exact package-owned local commands. Only lesson creation is also available from the phone; it
-uses the bounded authenticated control messages above. Import and patch paths remain local-only.
+as exact package-owned local commands. Lesson creation and confirmed deletion of the active
+lesson are also available from the phone through bounded authenticated control messages. Import
+and patch paths remain local-only.
 
 ## Offline application update
 
@@ -190,6 +191,13 @@ are combined into one teacher turn, preserving exact character offsets and expli
 **Leave lesson** sends `session.cancel` over the existing connection. Host cleanup resets Godot;
 the renderer returns to its pre-lesson screen. Android clears the active lesson and reloads the
 catalog while the WebRTC peer remains connected.
+
+**Delete lesson** instead sends `lesson.delete.request` with only the active session UUID after
+a separate named confirmation. The host verifies socket/session ownership, completes the same
+lesson cleanup, then resolves the actual lesson file under its trusted content directory and
+deletes it under the import lock. Remaining content is validated first and the last lesson is
+protected. A replacement catalog is broadcast immediately; a failure is a bounded selector error.
+The learning database and the media/control connection remain available.
 
 Raw microphone audio is held only long enough to process an utterance and is not persisted by
 default. Normal logs contain event names, timing, correlation IDs, and error classes—not audio,

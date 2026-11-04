@@ -435,3 +435,17 @@ TTS, LAN, or subjective listening check was executed. No server/player remained 
 Exact commands, model digest, failed attempts, ignored raw report paths, and limits are in
 `docs/benchmarks/2026-11-03-semantic-answer-assessment.md`. This does not replace any physical
 acceptance row or install the source fix into the currently deployed 0.1.22 host.
+
+## 2026-11-04 confirmed deletion and dialog icons (emulator only)
+
+On the Windows 10.0.26200 x64 development PC, the muted API 34 Android Studio emulator with
+isolated task-owned userdata passed actual native-menu/dialog icon inspection, leave/delete
+confirmation dismissal, confirmed lesson removal/live catalog refresh without reconnect, and
+last-lesson protection, including a disabled-action touch and subsequent leave. The fixture used
+loopback `adb reverse`, explicit fake lessons, diagnostic media, and disposable copied JSON;
+no user lesson file, real phone, model, or learner history was changed. Early System UI ANR,
+accessibility timeout, and incorrect text-child assertion attempts were corrected and not counted
+as passes. The app, test servers, and owned emulator were stopped afterward. Exact commands,
+software gates, screenshots, raw reports, and limitations are in
+`docs/benchmarks/2026-11-04-lesson-deletion-and-dialog-icons.md`. This supplies no new physical,
+acoustic, Wi-Fi, codec, or speech-quality acceptance evidence.

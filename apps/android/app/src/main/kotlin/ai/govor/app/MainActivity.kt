@@ -49,6 +49,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
@@ -64,6 +65,7 @@ import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -369,6 +371,8 @@ private fun GovorApp(model: MediaSessionViewModel = viewModel()) {
                         onPushToTalkChanged = model::setPushToTalk,
                         onRetry = model.lesson::retry,
                         onLeaveLesson = model::leaveLesson,
+                        onDeleteLesson = model::deleteLesson,
+                        canDeleteLesson = lessonCatalog.size > 1,
                         onDisconnect = model::disconnect,
                         errors = listOfNotNull(mediaError, lessonError, pairingError),
                     )
@@ -1130,15 +1134,19 @@ private fun ActiveLessonScreen(
     onPushToTalkChanged: (Boolean) -> Unit,
     onRetry: () -> Unit,
     onLeaveLesson: () -> Unit,
+    onDeleteLesson: () -> Unit,
+    canDeleteLesson: Boolean,
     onDisconnect: () -> Unit,
     errors: List<String>,
 ) {
     var showMore by rememberSaveable { mutableStateOf(false) }
     var confirmLeave by rememberSaveable { mutableStateOf(false) }
+    var confirmDelete by rememberSaveable(lessonProgress?.scenario_id) { mutableStateOf(false) }
     BackHandler { confirmLeave = true }
     if (confirmLeave) {
         AlertDialog(
             onDismissRequest = { confirmLeave = false },
+            icon = { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null) },
             title = { Text("Leave this lesson?") },
             text = { Text("Your completed exercises are saved. Return to the lesson selector?") },
             confirmButton = {
@@ -1147,6 +1155,43 @@ private fun ActiveLessonScreen(
                 }
             },
             dismissButton = { TextButton(onClick = { confirmLeave = false }) { Text("Keep learning") } },
+        )
+    }
+    if (confirmDelete) {
+        AlertDialog(
+            onDismissRequest = { confirmDelete = false },
+            icon = {
+                Icon(
+                    Icons.Filled.DeleteOutline,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error,
+                )
+            },
+            title = { Text("Delete this lesson?") },
+            text = {
+                Text(
+                    if (canDeleteLesson) {
+                        "End and permanently remove “${lessonProgress?.scenario_title.orEmpty()}” " +
+                            "from the host and all connected phones? Your learning history is kept."
+                    } else {
+                        "This is your last lesson. Create another lesson before deleting it."
+                    },
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = canDeleteLesson && lessonState != SessionState.ENDING,
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error,
+                    ),
+                    onClick = { confirmDelete = false; onDeleteLesson() },
+                ) {
+                    Text("Delete lesson")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmDelete = false }) { Text("Keep learning") }
+            },
         )
     }
     var showSpeedMenu by rememberSaveable { mutableStateOf(false) }
@@ -1179,7 +1224,23 @@ private fun ActiveLessonScreen(
                         ) {
                             DropdownMenuItem(
                                 text = { Text("Leave lesson") },
+                                leadingIcon = {
+                                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
+                                },
+                                enabled = lessonState != SessionState.ENDING,
                                 onClick = { showMore = false; confirmLeave = true },
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Delete lesson", color = MaterialTheme.colorScheme.error) },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Filled.DeleteOutline,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.error,
+                                    )
+                                },
+                                enabled = lessonState != SessionState.ENDING && lessonProgress != null,
+                                onClick = { showMore = false; confirmDelete = true },
                             )
                             DropdownMenuItem(
                                 text = { Text("Disconnect") },

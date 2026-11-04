@@ -6,6 +6,20 @@ namespace Govor.Contracts.Tests;
 public sealed class MessageEnvelopeTests
 {
     [Fact]
+    public void LessonDeletionIsBoundToASessionAndRejectsPaths()
+    {
+        string valid = File.ReadAllText(Path.Combine(
+            AppContext.BaseDirectory, "fixtures", "control-lesson-delete-request.json"));
+        LessonDeleteRequestPayload request = ControlContractCodec.DecodePayload<LessonDeleteRequestPayload>(
+            ControlContractCodec.DecodeEnvelope(valid));
+        Assert.Equal(Guid.Parse("73137466-ae4e-41ac-93b1-450d23cd334c"), request.SessionId);
+        string invalid = File.ReadAllText(Path.Combine(
+            AppContext.BaseDirectory, "fixtures", "control-lesson-delete-path.json"));
+        Assert.Throws<JsonException>(() => ControlContractCodec.DecodePayload<LessonDeleteRequestPayload>(
+            ControlContractCodec.DecodeEnvelope(invalid)));
+    }
+
+    [Fact]
     public void HostCreationDisplayHasClosedStateAndBoundedText()
     {
         new LessonCreationDisplayPayload("generating", "Creating a lesson on this PC.").Validate();

@@ -75,6 +75,11 @@ running. A failed or timed-out request shows a result you can dismiss before try
   **Leave lesson** from the three-dot menu. Android Back opens the same confirmation. Choose
   **Leave lesson** to return to selection, or **Keep learning** to continue. Completed exercises
   are saved automatically.
+- To remove the lesson itself, open it, then choose **Delete lesson** from the three-dot menu.
+  Check the lesson name in the confirmation before choosing **Delete lesson** again. This ends
+  the lesson and removes it from the Windows host and connected lesson lists. Your learning
+  history is kept. **Keep learning** or dismissing the dialog leaves the lesson untouched.
+  Create another lesson first if it is the last one remaining.
 
 The app does not save raw microphone recordings. Normal logs omit full learner transcripts.
 

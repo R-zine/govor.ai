@@ -298,6 +298,9 @@ data class LessonCatalogPayload(
 data class SessionScopedPayload(val session_id: String)
 
 @Serializable
+data class LessonDeleteRequestPayload(val session_id: String)
+
+@Serializable
 data class TeacherPlaybackCompletedPayload(val session_id: String, val turn_id: String)
 
 @Serializable

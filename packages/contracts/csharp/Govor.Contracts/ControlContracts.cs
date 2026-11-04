@@ -4,6 +4,9 @@ using System.Text.RegularExpressions;
 
 namespace Govor.Contracts;
 
+public sealed record LessonDeleteRequestPayload(
+    [property: JsonPropertyName("session_id")] Guid SessionId);
+
 public sealed record LessonCreationDisplayPayload(
     [property: JsonPropertyName("state")] string State,
     [property: JsonPropertyName("message")] string Message)

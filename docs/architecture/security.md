@@ -151,6 +151,16 @@ health, and sends no update. The importer and watcher are local filesystem featu
 new LAN endpoint. Lesson data cannot become a path, URL, script, command, or renderer asset ID.
 Catalog messages expose only ID, title, description, and display order.
 
+The phone may request deletion only through `lesson.delete.request` on its authenticated control
+socket and only for that socket's current session UUID. The host derives the scenario ID; extra
+paths/lesson IDs are rejected by the closed payload. After session cleanup, the domain resolves
+the file from a validated local catalog, refuses links/outside-directory targets, shares the
+import lock, validates the remaining catalog, and preserves at least one lesson before unlinking
+exactly one file. No recursive deletion or history deletion is performed. A failed removal sends
+a generic error without filesystem details. The separate Android confirmation prevents an
+ordinary selection/leave action from submitting a delete request; this is a user-interaction
+safeguard, while authentication and session ownership are enforced by the host.
+
 Environment ZIPs are local content and remain untrusted. The importer permits one to 32 JSON
 files, caps source/entry/expanded sizes, rejects encryption, traversal and every non-JSON member,
 and never extracts an archive path. Exact fields, closed primitive/preset values, numeric bounds,

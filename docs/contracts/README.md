@@ -36,6 +36,13 @@ result object or null. The host retains this snapshot across phone socket loss. 
 standalone `lesson.create.result` remains for immediate rejected requests. The loopback-only
 `renderer.lesson_creation` carries only the closed state and bounded display text for host UI.
 
+`lesson.delete.request` is an additive version 1 active-session action with only `session_id`.
+The host requires that session to belong to the receiving control socket and derives its lesson;
+it accepts no scenario ID, filename, or path. Confirmed deletion ends the session using the
+existing `session.ended` event, removes the definition under the import lock, and broadcasts
+`lesson.catalog`. A failed removal uses the existing bounded `error` shape. Both new host and
+client are required to expose this action; an older host rejects the unknown request safely.
+
 `gateway-auth-message.schema.json` is the closed Milestone 8 release-pairing contract. A
 `pairing.request` contains the one-time eight-digit code, UUID device ID, and bounded device name;
 `pairing.ok` returns that device ID plus a random bounded credential. Subsequent control and media

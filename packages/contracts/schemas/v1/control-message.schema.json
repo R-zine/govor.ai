@@ -16,6 +16,7 @@
         "lesson.create.result",
         "lesson.create.status.request",
         "lesson.create.status",
+        "lesson.delete.request",
         "renderer.lesson_creation",
         "teacher.profile.select",
         "session.state",
@@ -83,7 +84,7 @@
     {
       "if": {
         "properties": {
-          "message_type": { "enum": ["session.retry"] }
+          "message_type": { "enum": ["session.retry", "lesson.delete.request"] }
         }
       },
       "then": { "properties": { "payload": { "$ref": "#/$defs/sessionScoped" } } }

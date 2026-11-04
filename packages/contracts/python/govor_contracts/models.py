@@ -244,6 +244,10 @@ class SessionScopedPayload(StrictModel):
     session_id: UUID
 
 
+class LessonDeleteRequestPayload(SessionScopedPayload):
+    """Delete only the lesson owned by the referenced active session."""
+
+
 class TeacherPlaybackCompletedPayload(SessionScopedPayload):
     turn_id: UUID
 

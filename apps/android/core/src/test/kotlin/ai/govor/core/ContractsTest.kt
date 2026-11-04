@@ -10,6 +10,24 @@ import java.util.UUID
 
 class ContractsTest {
     @Test
+    fun `lesson deletion carries only an active session identity`() {
+        val fixture = requireNotNull(javaClass.classLoader.getResource(
+            "valid/control-lesson-delete-request.json",
+        )).readText()
+        val message = ControlContractCodec.decodeEnvelope(fixture)
+        val request = ControlContractCodec.decodePayload<LessonDeleteRequestPayload>(message)
+        assertEquals("73137466-ae4e-41ac-93b1-450d23cd334c", request.session_id)
+        val invalid = requireNotNull(javaClass.classLoader.getResource(
+            "invalid/control-lesson-delete-path.json",
+        )).readText()
+        assertThrows(SerializationException::class.java) {
+            ControlContractCodec.decodePayload<LessonDeleteRequestPayload>(
+                ControlContractCodec.decodeEnvelope(invalid),
+            )
+        }
+    }
+
+    @Test
     fun `creation status survives reconnect and rejects terminal state without result`() {
         val message = ControlContractCodec.decodeEnvelope(requireNotNull(
             javaClass.classLoader.getResource("valid/control-lesson-create-status.json"),
