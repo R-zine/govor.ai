@@ -13,11 +13,28 @@ from govor_contracts import (
     SceneObjectPayload,
     SceneSpecificationPayload,
     SpeechEnergySamplePayload,
+    TeacherTurnPayload,
     Vector3Payload,
 )
 from pydantic import ValidationError
 
 ROOT = Path(__file__).resolve().parents[2]
+
+
+def test_shared_bilingual_turn_preserves_word_locales() -> None:
+    fixture = json.loads(
+        (ROOT / "tests/fixtures/contracts/valid/control-teacher-turn-bilingual.json").read_text(
+            encoding="utf-8"
+        )
+    )
+
+    turn = TeacherTurnPayload.model_validate(fixture["payload"])
+
+    assert turn.locale == "bg-BG"
+    assert [(word.word, word.locale) for word in turn.pronunciations] == [
+        ("Кажете", "bg-BG"),
+        ("tea", "en-GB"),
+    ]
 
 
 def test_shared_renderer_fixture_validates_scene_animation_model() -> None:

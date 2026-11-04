@@ -59,6 +59,10 @@ and expired bootstraps are rejected. It grants no authority beyond the existing 
 Milestone 4 extends the same version with understood additive fields and closed message variants.
 `teacher.turn` contains bounded PCM16 WAV, an explicit sample rate, exact pronunciation ranges,
 accent-specific IPA, nullable provider-derived word/phoneme spans, and `fallback_used`.
+The turn locale describes the reply overall; each pronunciation retains its own supported
+`en-GB`, `en-US`, or `bg-BG` locale. A Bulgarian explanation containing an English example is
+valid. Clients must validate each word's locale without requiring it to equal the turn locale;
+word replay uses that word's locale. The shared bilingual fixture covers this distinction.
 `teacher.word_replay_requested` identifies an active turn/word plus bounded rate;
 `teacher.word_audio` returns one bounded isolated-word WAV. Android and Python validate references,
 duration, locale, and audio metadata before use.

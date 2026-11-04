@@ -460,3 +460,20 @@ byte-identical. No new physical lesson, microphone, voice, media, or deletion in
 tested. No host listener or audio remains active. See
 `docs/benchmarks/2026-11-04-release-0.1.23-deployment.md` for exact artifacts, commands, hashes,
 failed harness attempts, and evidence limits.
+
+## 2026-11-04 bilingual reply and portrait scanner regression (development only)
+
+On the same Windows development PC, an isolated muted API 34 emulator passed real bilingual
+speech playback, exercise retention after scripted Bulgarian help, English return/advancement,
+and leave cleanup through loopback `adb reverse`. Recognition/dialogue were explicit fixtures in
+this UI run. Separately, two synthetic Bulgarian inputs passed the actual local Whisper/Qwen/
+Kokoro/Piper pipeline and Python wire/avatar validation within 30 seconds. These are distinct
+checks; neither proves a physical microphone or a fully real-provider native-phone interaction.
+
+The test-signed release client also opened its actual camera QR scanner twice and cancelled back
+to pairing while retaining the 1080x2220 portrait display. Screenshots show the preview and
+instructions. The emulator does not prove physical-camera decoding, speech intelligibility,
+acoustics, Wi-Fi, hardware codecs, or new release acceptance. No physical phone installation or
+private content/progress was changed; test services, audio, and the task emulator were stopped.
+See `docs/benchmarks/2026-11-04-bilingual-replies-and-portrait-scanner.md` for exact commands,
+timestamps, artifacts, failed attempts, and software gates.

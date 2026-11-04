@@ -27,6 +27,13 @@ physical target-hardware bundle.
 
 ## Post-milestone maintenance
 
+The 2026-11-04 bilingual/scanner correction removes an Android-only restriction that rejected
+English pronunciation metadata inside Bulgarian help, adds shared cross-language regression
+coverage, and overrides ZXing's inherited landscape scanner activity to portrait. Actual muted
+emulator playback/English continuation and release camera open/cancel checks passed. ADR-0007 and
+ADR-0018 define the corrections. This does not change version 1 message shapes, speech models,
+the installed 0.1.23 release, or historical physical acceptance; a new client build is required.
+
 The 2026-11-04 Android follow-up makes leave icons consistent and adds separately confirmed
 active-lesson deletion. The host enforces socket/session ownership and locked, validated,
 single-file removal with last-lesson protection, retains learning history, and immediately pushes

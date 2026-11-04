@@ -92,6 +92,21 @@ public sealed class MessageEnvelopeTests
     }
 
     [Fact]
+    public void BilingualTeacherTurnPreservesWordLocales()
+    {
+        string json = File.ReadAllText(Path.Combine(
+            AppContext.BaseDirectory, "fixtures", "control-teacher-turn-bilingual.json"));
+        TeacherTurnPayload payload = ControlContractCodec.DecodePayload<TeacherTurnPayload>(
+            ControlContractCodec.DecodeEnvelope(json));
+
+        Assert.Equal("bg-BG", payload.Locale);
+        Assert.Equal("Кажете", payload.Pronunciations[0].Word);
+        Assert.Equal("bg-BG", payload.Pronunciations[0].Locale);
+        Assert.Equal("tea", payload.Pronunciations[1].Word);
+        Assert.Equal("en-GB", payload.Pronunciations[1].Locale);
+    }
+
+    [Fact]
     public void WordReplayRequestAndAudioFixturesDeserialize()
     {
         string requestJson = File.ReadAllText(

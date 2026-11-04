@@ -60,6 +60,14 @@ Version 1 `teacher.turn` now contains sample rate, pronunciations, nullable word
 and a fallback flag. `teacher.word_replay_requested` and `teacher.word_audio` are closed bounded
 messages. WAV payloads are limited to 1,500,044 decoded bytes and 30 seconds.
 
+The 2026-11-04 Android validation correction accepts each pronunciation's supported locale
+independently of the overall teacher-turn locale. Mixed Bulgarian/English replies intentionally
+contain both; requiring equality rejected otherwise valid synthesized help before playback.
+Exact text ranges, nonblank IPA, supported locales, timing references, and audio bounds remain
+validated. The shared bilingual fixture exercises JSON Schema, Python, Kotlin, and C# decoding;
+Kotlin also rejects unsupported word locales, blank IPA, and mismatched ranges. This corrects a
+client restriction; the existing version 1 wire shape and speech routing are unchanged.
+
 ## Rejected
 
 - Estimating word or phoneme spans from text length: this would fabricate timing and drift visibly.

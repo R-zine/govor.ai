@@ -104,6 +104,36 @@ class ContractsTest {
     }
 
     @Test
+    fun `bilingual teacher reply preserves each words speech locale`() {
+        val fixture = requireNotNull(
+            javaClass.classLoader.getResource("valid/control-teacher-turn-bilingual.json"),
+        ).readText()
+        val turn = ControlContractCodec.decodePayload<TeacherTurnPayload>(
+            ControlContractCodec.decodeEnvelope(fixture),
+        ).validate()
+
+        assertEquals("bg-BG", turn.locale)
+        assertEquals(listOf("bg-BG", "en-GB"), turn.pronunciations.map { it.locale })
+        // An English-led correction may also contain Bulgarian support, with either accent.
+        turn.copy(locale = "en-GB").validate()
+        turn.copy(
+            locale = "en-US",
+            pronunciations = turn.pronunciations.map {
+                if (it.locale == "en-GB") it.copy(locale = "en-US") else it
+            },
+        ).validate()
+        assertThrows(IllegalArgumentException::class.java) {
+            turn.copy(pronunciations = listOf(turn.pronunciations[0].copy(locale = "fr-FR"))).validate()
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            turn.copy(pronunciations = listOf(turn.pronunciations[0].copy(ipa = " "))).validate()
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            turn.copy(pronunciations = listOf(turn.pronunciations[1].copy(start_char = 0))).validate()
+        }
+    }
+
+    @Test
     fun `lesson catalog payload deserializes strictly`() {
         val fixture = requireNotNull(
             javaClass.classLoader.getResource("valid/control-lesson-catalog.json"),

@@ -41,6 +41,7 @@ def test_default_lesson_files_match_the_versioned_schema() -> None:
         ("gateway-auth-message.schema.json", "gateway-auth-request.json"),
         ("pairing-bootstrap.schema.json", "pairing-bootstrap.json"),
         ("control-message.schema.json", "control-teacher-turn.json"),
+        ("control-message.schema.json", "control-teacher-turn-bilingual.json"),
         ("control-message.schema.json", "control-word-replay-request.json"),
         ("control-message.schema.json", "control-word-audio.json"),
         ("control-message.schema.json", "control-lesson-catalog.json"),

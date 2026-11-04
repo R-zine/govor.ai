@@ -419,7 +419,9 @@ data class TeacherTurnPayload(
             require(pronunciation.start_char >= 0 && pronunciation.end_char <= text.length)
             require(pronunciation.end_char > pronunciation.start_char)
             require(text.substring(pronunciation.start_char, pronunciation.end_char) == pronunciation.word)
-            require(pronunciation.ipa.isNotBlank() && pronunciation.locale == locale)
+            // Mixed-language explanations retain the synthesizer's locale for each word.
+            require(pronunciation.ipa.isNotBlank())
+            require(pronunciation.locale in setOf("en-GB", "en-US", "bg-BG"))
         }
         word_alignment.orEmpty().forEach { alignment ->
             require(alignment.word_index in pronunciations.indices)

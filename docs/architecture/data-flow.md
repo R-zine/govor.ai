@@ -187,6 +187,8 @@ cancel generation; host shutdown cancels it and clears in-memory status.
 Mixed teacher replies are segmented by Latin/Cyrillic script before local synthesis. Each span
 uses its language voice, selected teacher, and English accent. Resampled PCM and actual timing
 are combined into one teacher turn, preserving exact character offsets and explicit null timing.
+Android accepts the retained language on each pronunciation independently of the overall reply
+locale, so an English example inside Bulgarian help remains playable and keeps its English IPA.
 
 **Leave lesson** sends `session.cancel` over the existing connection. Host cleanup resets Godot;
 the renderer returns to its pre-lesson screen. Android clears the active lesson and reloads the

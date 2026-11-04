@@ -40,6 +40,12 @@ exchange. Existing encrypted credentials expose **Reconnect to saved host**; a n
 available for a changed host. Release manual fields sit behind **Pair manually**, while debug
 builds retain the expanded form.
 
+The 2026-11-04 scanner correction overrides ZXing's inherited `sensorLandscape` activity setting
+with portrait in the application manifest. Disabling ZXing's runtime orientation lock alone does
+not override that manifest setting. The scanner remains internal (`exported=false`) and retains
+the library's camera behavior and theme; opening/cancelling scanning keeps the pairing screen's
+portrait orientation.
+
 ## Consequences
 
 - First pairing requires pointing the phone at one QR instead of transcribing 80-plus characters.

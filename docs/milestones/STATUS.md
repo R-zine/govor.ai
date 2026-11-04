@@ -1652,6 +1652,42 @@ New physical lesson/voice/deletion behavior is not inferred from package/startup
 suite and emulator evidence remain in their feature reports. Exact commands, artifacts, failed
 harness attempts, and limits are in `docs/benchmarks/2026-11-04-release-0.1.23-deployment.md`.
 
+## Bilingual reply validation and portrait QR scanner correction
+
+The 2026-11-04 learner report was an open lesson with an error, followed by an invalid-event
+error. Android incorrectly required all pronunciation locales to equal the overall reply locale;
+real Bulgarian help intentionally includes English examples with English pronunciation metadata.
+The validator now accepts supported word locales independently while retaining exact text/IPA,
+audio, and timing checks. A shared mixed reply is covered through JSON Schema and Python/Kotlin/C#;
+the new Kotlin regression failed before the correction and passed afterward, including negative
+checks for unsupported locales, empty IPA, and mismatched ranges.
+
+ZXing also inherited `sensorLandscape` from its activity manifest despite the portrait app and
+disabled runtime orientation lock. The application overrides the internal scanner to portrait.
+Both build variants' merged manifests passed inspection. The test-signed release UI opened the
+actual camera scanner and cancelled back to pairing twice in the muted isolated API 34 emulator,
+retaining its 1080x2220 portrait display and rendering the camera preview/instructions.
+
+Four bundled help replies passed real Kokoro/Piper synthesis without fallback. Two synthetic
+Bulgarian requests also passed real Whisper/Qwen/teaching/speech processing, Python teacher-turn
+validation, and avatar construction in 22.357 and 20.031 seconds under the unchanged 30-second
+bound. Separately, the native emulator played real mixed Bulgarian help, retained the exercise,
+played the subsequent accepted English answer, advanced, and left with zero active sessions.
+That UI fixture used explicit scripted recognition/dialogue; it is not physical microphone or
+end-to-end real-provider recognition evidence. The owned emulator and test/model/media services
+were stopped, with no audio left active.
+
+Focused checks passed: 55 Python schema/model tests, Kotlin core/app tests, release assembly/vital
+lint, 13 C# tests, and the frozen media/speech dependency audit (exit 0, no known vulnerabilities).
+The full software gate passed: 356 Python tests at 85.63% branch coverage, Kotlin core/app tests,
+13 C# tests, 21 real media tests, Godot import/build/headless self-test, and Android debug assembly.
+The focused commit runs the installed quality and affected-application hooks. No physical phone,
+Wi-Fi, or subjective listening check was executed; the installed 0.1.23 release is unchanged and
+needs a client update
+to receive these fixes. ADR-0007, ADR-0018, architecture/contracts, and
+`docs/benchmarks/2026-11-04-bilingual-replies-and-portrait-scanner.md` record the causes, commands,
+artifacts, unsuccessful harness attempts, and limits.
+
 ## Future regression commands
 
 ```powershell
