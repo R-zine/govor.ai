@@ -33,6 +33,12 @@ single-file removal with last-lesson protection, retains learning history, and i
 the replacement catalog. ADR-0013 and ADR-0017 record the content and UI behavior. Source and
 emulator checks do not update the installed release or change historical physical acceptance.
 
+Matching host/Android 0.1.23/code 24 was subsequently built and installed on the authorized USB
+realme on 2026-11-04. Signature/update/startup, package doctors/imports, six-model readiness, and
+preservation of all five lessons plus byte-identical progress passed. The new host folder is
+`.cache/dist/govor.ai-0.1.23-windows-x64`. This is deployment evidence; interactive physical
+semantic-answer, deletion, and speech checks remain for the user's next test.
+
 The 2026-11-03 usability corrections route bilingual replies through separate local language
 voices, recover host-owned lesson-creation status after phone lock/reconnect, show creation
 activity on the host, and expose confirmed **Leave lesson** navigation while staying connected.

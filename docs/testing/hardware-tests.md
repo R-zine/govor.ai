@@ -449,3 +449,14 @@ as passes. The app, test servers, and owned emulator were stopped afterward. Exa
 software gates, screenshots, raw reports, and limitations are in
 `docs/benchmarks/2026-11-04-lesson-deletion-and-dialog-icons.md`. This supplies no new physical,
 acoustic, Wi-Fi, codec, or speech-quality acceptance evidence.
+
+## 2026-11-04 physical USB update to 0.1.23
+
+The authorized realme RMX3939 (Android 16/API 36) received the stable-signer 0.1.23/code-24 APK
+through `adb install -r --no-streaming`, preserving app data. The post-update package query and
+cold Activity start (`Status: ok`, 652 ms) passed. The matching host was packaged, all five lesson
+definitions were preserved, all six models reported ready, and Windows progress stayed
+byte-identical. No new physical lesson, microphone, voice, media, or deletion interaction was
+tested. No host listener or audio remains active. See
+`docs/benchmarks/2026-11-04-release-0.1.23-deployment.md` for exact artifacts, commands, hashes,
+failed harness attempts, and evidence limits.

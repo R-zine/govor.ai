@@ -1627,11 +1627,30 @@ confirmed file deletion and live selector refresh without reconnect, last-lesson
 and no-op touch checks, and leaving afterward with zero active host sessions. Earlier runs hit a
 System UI ANR, an accessibility timeout, and an assertion against a text child rather than the
 disabled button container; those attempts are not counted as passes. Test services and the owned
-emulator were stopped. Installed release 0.1.22 and the physical phone remain unchanged.
+emulator were stopped. During that source/emulator run the installed 0.1.22 release was unchanged;
+the subsequent 0.1.23 deployment is recorded below.
 ADR-0013 and ADR-0017 are amended with architecture, contract, master-spec, and user-guide
 documentation. The focused commit runs the installed quality and affected-application hooks.
 Commands and artifacts are recorded in
 `docs/benchmarks/2026-11-04-lesson-deletion-and-dialog-icons.md`.
+
+## Release 0.1.23 rebuild and phone update
+
+Source `d4d9eec` was packaged on 2026-11-04 as portable Windows 0.1.23 and signed Android code 24.
+The realme RMX3939 received the signature-compatible in-place USB update from 0.1.22/code 23 and
+cold-launched with `Status: ok` in 652 ms. The signed APK is 59,941,049 bytes with SHA-256
+`d6ab8d1987ec77ae5693c5f305be04088307011ac74a0c32c757cbf80e58fc3f`.
+
+The new host is `.cache/dist/govor.ai-0.1.23-windows-x64`. All five previous lesson JSONs were
+migrated with matching hashes, including the generated lesson; older host directories remain.
+Embedded-Python catalog/scene/control validation, all packaged wrapper doctors, source-hash
+comparisons, stable APK signer verification, and six-model readiness passed. The Windows progress
+database remained byte-identical. No host listener/player or audio was left active.
+
+This deploys semantic assessment, leave icons, and lesson deletion for the user's next test.
+New physical lesson/voice/deletion behavior is not inferred from package/startup checks. The source
+suite and emulator evidence remain in their feature reports. Exact commands, artifacts, failed
+harness attempts, and limits are in `docs/benchmarks/2026-11-04-release-0.1.23-deployment.md`.
 
 ## Future regression commands
 
