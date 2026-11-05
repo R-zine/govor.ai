@@ -1688,6 +1688,30 @@ to receive these fixes. ADR-0007, ADR-0018, architecture/contracts, and
 `docs/benchmarks/2026-11-04-bilingual-replies-and-portrait-scanner.md` record the causes, commands,
 artifacts, unsuccessful harness attempts, and limits.
 
+## Release 0.1.24 rebuild and phone update
+
+Source `d346223` was packaged on 2026-11-05 as matching Windows 0.1.24 and signed Android code 25.
+The authorized realme RMX3939 updated in place from 0.1.23/code 24 through USB. The installed base
+APK digest matches the final signed artifact, and the first installation time/app identity are
+preserved. The Activity cold-start returned `Status: ok` in 675 ms; its process remained present.
+Normal ADB installation succeeded while the phone was locked, without changing the lock policy.
+No new interactive lesson/QR/voice acceptance is claimed from startup behind the lock screen.
+
+The new host is `.cache/dist/govor.ai-0.1.24-windows-x64`; launch its `Start-Govor.cmd` for the next
+test. All four current lesson JSONs were migrated with matching hashes. Catalog comparison also
+confirmed no extra lesson was restored; the previously generated lesson remains absent.
+The previous host remains intact; current progress stayed byte-identical. Embedded Python
+catalog/scene/bilingual-contract/source checks, package wrapper doctors, actual APK portrait
+manifest/signature verification, and six-model readiness all passed. No host/media/model process,
+listener, or player was left running.
+
+APK: `.cache/dist/govor.ai-0.1.24-android-release.apk`, 59,924,649 bytes, SHA-256
+`f9a743859be148d4ddbb53aa560e958c3b99f89fb04eec09bf2f65788d806ff5`. The established signer is
+unchanged. This deploys both bilingual reply validation and portrait scanning. No application
+source/dependency change was made during packaging; prior exact-source full-suite and emulator
+evidence remain applicable software evidence. Commands, UTC timestamps, preservation hashes,
+artifacts, and limits are in `docs/benchmarks/2026-11-05-release-0.1.24-deployment.md`.
+
 ## Future regression commands
 
 ```powershell

@@ -27,6 +27,14 @@ physical target-hardware bundle.
 
 ## Post-milestone maintenance
 
+Matching host/Android 0.1.24/code 25 was built on 2026-11-05 from `d346223`, and the authorized
+USB realme received the signed in-place APK update. Package doctors/imports, source/catalog/scene
+checks, actual APK portrait manifest/signature/hash, preserved installation identity/startup,
+and six-model readiness passed. All four current lesson files were preserved with no extra lesson
+restored; progress remained byte-identical. The new host entry point is
+`.cache/dist/govor.ai-0.1.24-windows-x64/Start-Govor.cmd`. No new physical lesson/voice/QR
+acceptance is inferred from build or startup; see the dated release-deployment report.
+
 The 2026-11-04 bilingual/scanner correction removes an Android-only restriction that rejected
 English pronunciation metadata inside Bulgarian help, adds shared cross-language regression
 coverage, and overrides ZXing's inherited landscape scanner activity to portrait. Actual muted

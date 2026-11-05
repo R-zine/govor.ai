@@ -477,3 +477,20 @@ acoustics, Wi-Fi, hardware codecs, or new release acceptance. No physical phone 
 private content/progress was changed; test services, audio, and the task emulator were stopped.
 See `docs/benchmarks/2026-11-04-bilingual-replies-and-portrait-scanner.md` for exact commands,
 timestamps, artifacts, failed attempts, and software gates.
+
+## 2026-11-05 physical USB update to 0.1.24
+
+On the Windows 10.0.26200 x64 development PC, the authorized realme RMX3939 (Android 16/API 36)
+received the stable-signer 0.1.24/code-25 APK through `adb install -r --no-streaming` without
+uninstalling or clearing app data. Its installed APK digest matches the distribution file; the
+original installation time and app identity remain. Cold Activity startup reported `Status: ok`
+in 675 ms, with the process present and no fatal AndroidRuntime exception. The phone remained
+locked; this is installation/process evidence, not a visually confirmed lesson or camera check.
+
+The matching new host's wrapper doctors, embedded-runtime catalog/scene/source verification,
+six-model readiness, exact preservation of the four-lesson current catalog, and unchanged
+progress digest passed. No host player/model process or application listener remained active.
+Build completed at 18:15:13 UTC, package verification at 18:15:45 UTC, and phone verification at
+18:16:41 UTC on 2026-11-05. See `docs/benchmarks/2026-11-05-release-0.1.24-deployment.md` for exact
+commands, artifacts, hashes, and limits. No new physical bilingual/QR/Wi-Fi/acoustic acceptance was
+executed, and the historical Milestone 9 record is unchanged.
