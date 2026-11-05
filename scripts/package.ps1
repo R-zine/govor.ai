@@ -150,6 +150,9 @@ Copy-Item -LiteralPath (Join-Path $script:RepositoryRoot 'distribution\windows\I
 Copy-Item -LiteralPath (Join-Path $script:RepositoryRoot 'distribution\windows\Apply-Govor-Patch.cmd') -Destination $stage
 Copy-Item -LiteralPath (Join-Path $script:RepositoryRoot 'distribution\windows\Apply-Govor-Patch.ps1') -Destination $stage
 Copy-Item -LiteralPath (Join-Path $script:RepositoryRoot 'distribution\windows\Install-Prerequisites.ps1') -Destination $stage
+Copy-Item -LiteralPath (Join-Path $script:RepositoryRoot 'LICENSE') -Destination $stage
+Copy-Item -LiteralPath (Join-Path $script:RepositoryRoot 'COPYRIGHT') -Destination $stage
+Copy-Item -LiteralPath (Join-Path $script:RepositoryRoot 'licenses') -Destination $stage -Recurse
 
 $documentation = Join-Path $stage 'documentation'
 New-Item -ItemType Directory -Force -Path $documentation | Out-Null
@@ -158,6 +161,7 @@ Copy-Item -LiteralPath (Join-Path $script:RepositoryRoot 'docs\user-guide\androi
 Copy-Item -LiteralPath (Join-Path $script:RepositoryRoot 'docs\troubleshooting\README.md') -Destination (Join-Path $documentation 'troubleshooting.md')
 Copy-Item -LiteralPath (Join-Path $script:RepositoryRoot 'THIRD_PARTY_LICENSES.md') -Destination $documentation
 Copy-Item -LiteralPath (Join-Path $script:RepositoryRoot 'distribution\GPL-COMPLIANCE.md') -Destination $documentation
+Copy-Item -LiteralPath (Join-Path $script:RepositoryRoot 'distribution\OPEN_SOURCE_RELEASE.md') -Destination $documentation
 Copy-Item -LiteralPath (Join-Path $runtimeRoot 'python\LICENSE.txt') -Destination (Join-Path $documentation 'PYTHON-LICENSE.txt')
 Copy-Item -LiteralPath (Join-Path $script:ToolsRoot 'dotnet\LICENSE.txt') -Destination (Join-Path $documentation 'DOTNET-LICENSE.txt')
 Copy-Item -LiteralPath (Join-Path $script:ToolsRoot 'dotnet\ThirdPartyNotices.txt') -Destination (Join-Path $documentation 'DOTNET-THIRD-PARTY-NOTICES.txt')

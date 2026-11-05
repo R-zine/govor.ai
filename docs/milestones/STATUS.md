@@ -1712,6 +1712,34 @@ source/dependency change was made during packaging; prior exact-source full-suit
 evidence remain applicable software evidence. Commands, UTC timestamps, preservation hashes,
 artifacts, and limits are in `docs/benchmarks/2026-11-05-release-0.1.24-deployment.md`.
 
+## Open-source preparation and licensing review
+
+On 2026-11-05 the owner requested source publication preparation and a human-readable README.
+Original project material now has a complete GPLv3 `LICENSE`, an explicit GPL-3.0-or-later grant
+and exceptions in `COPYRIGHT`, contribution terms, security-reporting guidance, and additional
+private-key/model/SQLite ignore rules. The README covers features, user installation/pairing,
+local mock/real-model development, tests, builds/signing, updates/data, and current MVP limits.
+The Windows packager copies the original license grant/text and third-party notice directory.
+
+The pinned eSpeak loader source has an MIT license despite omitted wheel metadata; its full
+notice is copied and the register/source-manifest description corrected. The actual PyAV 14.2
+wheel's FFmpeg 7.1 reports GPL version 3 or later with x264/x265 enabled. Exact native corresponding
+source/build inputs/notices and standalone Android notice delivery remain **open public-binary
+release requirements**, explicitly recorded in `distribution/OPEN_SOURCE_RELEASE.md` and
+ADR-0023. The previous source archive list does not establish a complete native inventory.
+No dependency was replaced, no existing binary/phone installation was changed, and no repository
+visibility, remote, history, or public release was modified.
+
+Gitleaks 8.30.1 scanned all 40 available commits locally with redacted output: exit 0, no candidate
+secrets. Historical private-runtime paths were absent. Seven README PowerShell blocks, 25 local
+Markdown links, JSON/PowerShell syntax, and actual license-copy commands in disposable staging
+passed verification. The full software gate passed: 356 Python tests at 85.63% branch coverage,
+Kotlin core/app tests, 13 C# tests, 21 real media tests, Godot import/build/headless self-test,
+Android debug assembly, Ruff/format, and strict mypy. The focused commit runs the required
+hygiene/contract/affected-application hooks. No app/model listener remained. Details, findings, exact commands,
+artifacts, and limits are in `docs/benchmarks/2026-11-05-open-source-readiness.md`. Binary release
+compliance and a fresh full setup on another machine are not inferred from these checks.
+
 ## Future regression commands
 
 ```powershell

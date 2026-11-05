@@ -27,7 +27,7 @@
       "uri": "https://codeload.github.com/thewh1teagle/espeakng-loader/tar.gz/0ddc87adf77e5850d7eeb542ac8a87d421b64daa",
       "sha256": "c52fde6a08f790dc9f150b68205a35d3ce0aa95dbd5fa8be7b22989b26d1ba09",
       "size": 4595,
-      "license": "wrapper metadata undeclared; bundled eSpeak NG is GPL-3.0-or-later"
+      "license": "MIT wrapper; bundled eSpeak NG is GPL-3.0-or-later"
     }
   ]
 }

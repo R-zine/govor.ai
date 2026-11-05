@@ -27,6 +27,14 @@ physical target-hardware bundle.
 
 ## Post-milestone maintenance
 
+The 2026-11-05 open-source preparation adds an explicit GPL-3.0-or-later grant for original project
+material, a learner/contributor-oriented README, contribution/security guidance, corrected loader
+MIT attribution, and package license collation. ADR-0023 and `distribution/OPEN_SOURCE_RELEASE.md`
+record the distinction between source publication and public binary redistribution. Exact native
+FFmpeg/codec source/notices and standalone APK notice delivery remain open for public binaries;
+neither historical milestone acceptance nor a successful build clears those items. A bounded
+all-history secret scan found no candidate secrets; no repository or release was published.
+
 Matching host/Android 0.1.24/code 25 was built on 2026-11-05 from `d346223`, and the authorized
 USB realme received the signed in-place APK update. Package doctors/imports, source/catalog/scene
 checks, actual APK portrait manifest/signature/hash, preserved installation identity/startup,

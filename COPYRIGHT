@@ -1,0 +1,23 @@
+govor.ai
+Copyright (C) 2026 the govor.ai contributors
+
+SPDX-License-Identifier: GPL-3.0-or-later
+
+Except for third-party material identified below or by its own notices, the original
+source code, build scripts, documentation, tests, and lesson definitions in this
+repository are licensed under the GNU General Public License as published by the
+Free Software Foundation, either version 3 of the License, or (at your option) any
+later version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE. See the GNU General Public License in LICENSE for details.
+
+Third-party software retains its original copyright and license terms. This grant
+does not relicense dependencies, model weights, voice data, the Gradle wrapper, or
+other upstream material. See THIRD_PARTY_LICENSES.md and licenses/third-party.
+The MakeHuman-derived teacher GLBs and reviewed photographic backdrops retain
+their CC0-1.0 dedication and recorded provenance under apps/renderer/Assets.
+
+Contributors retain copyright in their contributions. No ownership transfer to
+the Free Software Foundation or a newly created legal entity is implied.

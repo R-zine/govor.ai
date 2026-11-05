@@ -217,6 +217,13 @@ configuration, guides, notices, and corresponding source; model weights are inst
 from an exact size/SHA-256 manifest. Mutable models, progress, logs, TLS identity, and hashed device
 credentials live below `%LOCALAPPDATA%\govor.ai` so application updates do not replace them.
 
+The source-publication policy is GPL-3.0-or-later for original project material, with separate
+upstream/model/CC0 terms preserved. The 2026-11-05 review found the current media wheel also
+bundles GPL FFmpeg/codecs whose complete native source/notices are not yet in the release
+inventory. Standalone APK notices also need verification. This limits public binary publication,
+not local development or the recorded private deployments; see ADR-0023 and
+`distribution/OPEN_SOURCE_RELEASE.md`.
+
 The launcher is the only release process owner. It forces local/offline providers, starts
 loopback inference plus authenticated HTTPS/WSS LAN gateways, creates protected short-lived
 pairing artifacts, and places all children in a kill-on-close Windows Job Object. The Godot window

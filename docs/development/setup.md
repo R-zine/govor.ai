@@ -19,6 +19,10 @@ Run:
 uv run --frozen pre-commit install
 ```
 
+For a first deterministic development run without model weights, omit `-IncludeLocalAi`.
+The [README](../../README.md#develop-locally) walks through both modes. Ensure SDK Platform Tools'
+`adb` is on PATH, or invoke it by its full path.
+
 `bootstrap.ps1` keeps downloaded Python/.NET/Gradle state in ignored `.tools` and `.cache`
 directories and writes ignored `apps/android/local.properties`. Use `-IncludeMedia` to install the
 Milestone 1 Python WebRTC dependencies and `-IncludeRenderer` for the Godot editor/export
@@ -55,10 +59,21 @@ Build the renderer and start the combined fake control/renderer stack:
 ./scripts/dev.ps1 -Mode mock
 ```
 
-Start the media server separately with `scripts/media-dev.ps1` and a fresh development token. Use
+Start the media server separately with a fresh development token:
+
+```powershell
+$devToken = [Guid]::NewGuid().ToString('N')
+$devToken
+./scripts/media-dev.ps1 -PairingToken $devToken -BindHost 127.0.0.1 -Source Renderer -AllowInsecureDevLan
+```
+
+The script requires the explicit cleartext opt-in even with a loopback bind. Use
 `127.0.0.1:8765` for control and `127.0.0.1:8766` for media in the debug app. The release manifest
 still rejects cleartext; this is the supported emulator development path only. It does not satisfy
 the physical-device/Wi-Fi release acceptance bundle that later passed separately in Milestone 9.
+
+The debug APK must first be built with `./scripts/build.ps1 -Target android`; building the renderer
+alone does not create it. Use `adb -e` when only the emulator should be targeted.
 
 For the full Milestone 3 loopback stack, build the renderer and run:
 

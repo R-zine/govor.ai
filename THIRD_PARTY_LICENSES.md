@@ -1,6 +1,8 @@
 # Third-party dependency register
 
-This file is a dependency review register, not a replacement for bundled license texts. Exact
+Original project material is GPL-3.0-or-later; see `LICENSE` and `COPYRIGHT`. Third-party software
+and assets retain the distinct licenses below. This file is a dependency review register, not a
+replacement for bundled license texts. Exact
 resolved Python versions are in `uv.lock`; Gradle and NuGet versions are pinned in their project
 files.
 
@@ -15,13 +17,15 @@ files.
 | Uvicorn | 0.37.0 | github.com/encode/uvicorn | BSD-3-Clause | Retain notice |
 | jsonschema | 4.25.1 | github.com/python-jsonschema/jsonschema | MIT | Source notice required |
 | aiortc media gateway | 1.15.0 | github.com/aiortc/aiortc | BSD-3-Clause | Installed-package license is bundled with the release runtime |
-| PyAV media dependency | 14.2.0 | github.com/PyAV-Org/PyAV | BSD-3-Clause | Chosen because it publishes a Windows CPython 3.12 wheel; installed metadata/licenses are bundled |
+| PyAV Python wrapper | 14.2.0 | github.com/PyAV-Org/PyAV | BSD-3-Clause | Wrapper license only; its Windows wheel also bundles the native libraries in the next row |
+| FFmpeg and codec/runtime DLLs in the PyAV Windows wheel | FFmpeg 7.1; libavcodec 61.19.100 | github.com/PyAV-Org/PyAV; ffmpeg.org | Actual installed FFmpeg reports GPL-3.0-or-later; bundled libraries have additional individual terms | Measured `avcodec_license()` returns GPL version 3 or later; configuration enables GPL/version3/x264/x265. Exact native source/build and notice inventory is an open public-binary-release requirement; the wrapper's BSD license is insufficient. See `distribution/OPEN_SOURCE_RELEASE.md` |
 | libwebrtc Android AAR | 150.7871.01 | github.com/webrtc-sdk/android | BSD-3-Clause plus bundled notices | Exact wrapper license and WebRTC third-party notice set are bundled from commit `7b6390fb` |
 | OkHttp | 4.12.0 | github.com/square/okhttp | Apache-2.0 | Retain notice |
 | AndroidX / Jetpack Compose | pinned by Gradle catalog | developer.android.com | Apache-2.0 | Retain notices |
 | ZXing Android Embedded | 4.3.0 | github.com/journeyapps/zxing-android-embedded | Apache-2.0 | Offline QR camera/scanner activity; retain notice |
 | ZXing Core | 3.4.1 (transitive) | github.com/zxing/zxing | Apache-2.0 | QR decoding used only on-device; retain notice |
 | xUnit.net | pinned by project | xunit.net | Apache-2.0 | Retain notice |
+| Gradle wrapper | 8.11.1 | github.com/gradle/gradle | Apache-2.0 | Build tooling; retain upstream wrapper notices; not original GPL project material |
 | Godot Engine .NET editor/export templates | 4.7.2 | github.com/godotengine/godot | MIT | Release ships only the exported player; exact Godot license/copyright notices are hash-pinned and bundled |
 | Ara 3D Gen build tooling | commit `0c3473d` | github.com/olatunde85/3d-gen | MIT | Build-time only; generator source and optional animation library are not bundled |
 | Ara/MakeHuman teacher character data | September 2020 CC0 release | github.com/olatunde85/3d-gen; makehumancommunity.org | CC0-1.0 | Three generated GLBs are bundled; inputs, hashes, attribution, and animation-stripping step are recorded beside the assets |
@@ -40,7 +44,7 @@ files.
 | Piper `bg_BG-dimitar-medium` voice | revision `7c89b592` | huggingface.co/rhasspy/piper-voices | CC0-1.0 dataset/model card; engine GPL applies separately | Model/config are installed separately with exact size/SHA-256 verification |
 | phonemizer | 3.4.0 | github.com/bootphon/phonemizer | GPL-3.0-or-later | Distributed with installed license, shipped govor.ai source, and pinned upstream source archive |
 | Segno | 1.6.6 | github.com/heuer/segno | BSD-3-Clause | Pure-Python release pairing QR encoder; installed-package license is bundled |
-| espeakng-loader / bundled eSpeak NG | 0.2.4 / 1.52.0 library | pypi.org/project/espeakng-loader, github.com/espeak-ng/espeak-ng | Loader wheel metadata does not declare a wrapper license; bundled eSpeak NG is GPL-3.0-or-later | Conservatively distributed with installed notices and pinned source archives for loader and eSpeak NG |
+| espeakng-loader / bundled eSpeak NG | 0.2.4 / 1.52.0 library | github.com/thewh1teagle/espeakng-loader at `0ddc87ad`; github.com/espeak-ng/espeak-ng | Wrapper MIT; bundled eSpeak NG GPL-3.0-or-later | The wheel omits a license declaration but the pinned upstream source includes MIT `LICENSE`; copied under `licenses/third-party`. Retain both the wrapper notice and the engine's GPL/source materials |
 
 Model weights and voices are not embedded in the portable archive; the guided setup downloads the
 exact artifacts listed in `config/release-models.json`. The current teacher GLBs and photographic
@@ -51,4 +55,7 @@ remain application-authored data-only primitive recipes.
 The release archive includes installed Python package licenses, exact hash-pinned runtime notices,
 the complete govor.ai source shipped for that version, and the upstream source snapshots listed in
 `config/release-sources.json`. `distribution/GPL-COMPLIANCE.md` explains the layout. This register
-and those materials document the current packaging decision; they are not legal advice.
+and those materials document the current packaging decision. They do not yet cover the complete
+native FFmpeg/codec dependency source and notice inventory. Standalone APK notice delivery also
+needs review; Windows-side notices are not automatically embedded in the APK. Public binary
+publication remains pending the specific items in `distribution/OPEN_SOURCE_RELEASE.md`.

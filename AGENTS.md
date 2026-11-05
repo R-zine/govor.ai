@@ -52,6 +52,9 @@ wait for a separate commit request.
 - Do not log secrets, raw microphone audio, or full learner transcripts by default.
 - Do not add cloud calls, telemetry, accounts, or paid services by default.
 - Pin dependencies and update `THIRD_PARTY_LICENSES.md` when adding one.
+- Original project material is GPL-3.0-or-later; retain separate upstream/model/asset licenses.
+  Before public binary publication, close the native-source and standalone-APK notice items in
+  `distribution/OPEN_SOURCE_RELEASE.md`. A passing build does not establish license completeness.
 
 ## Commands
 

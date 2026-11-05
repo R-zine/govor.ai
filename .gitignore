@@ -5,6 +5,8 @@
 *.keystore
 *.jks
 *.p12
+*.pfx
+*.key
 local.properties
 .secrets/
 
@@ -41,6 +43,12 @@ apps/renderer/Builds/
 data/
 recordings/
 benchmarks/results/
+*.sqlite
+*.sqlite3
+*.sqlite3-*
+*.gguf
+*.onnx
+*.safetensors
 
 # Editors / OS
 .idea/
