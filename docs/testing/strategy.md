@@ -24,6 +24,12 @@ Validate CI changes in isolated environments rather than relying on a populated 
 or incremental type-check cache. Keep `apps/android/gradlew` executable in Git and LF-terminated
 for the Ubuntu Android job.
 
+Updater integration tests also run with a test-owned Utility module manifest that hides Windows
+PowerShell's Get-FileHash function, reproducing the PowerShell 7-to-Python-to-Windows-PowerShell
+module-path failure. A probe verifies that the function is unavailable before running real signed
+patch installation, tamper rejection, and rollback. This is a controlled module-compatibility
+fixture, not a claim that PowerShell 7 was installed or that a packaged release was deployed.
+
 The deterministic fake lesson proves orchestration without models or credentials. Its generated
 tone and Android playback-completion event prove the bounded fake playback code path on the
 emulator; they do not prove speech quality, physical acoustics, production speech routing,

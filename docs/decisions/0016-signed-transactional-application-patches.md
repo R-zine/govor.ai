@@ -59,6 +59,16 @@ unknown-source policy, or add a LAN update endpoint.
 - Android updates still require visible platform confirmation. A staged APK is not evidence that a
   phone was updated.
 
+## 2026-11-06 PowerShell module compatibility amendment
+
+The installed verifier streams file bytes through .NET SHA-256 and disposes both the stream and
+algorithm. It does not depend on the Get-FileHash function, which can disappear when a Windows
+PowerShell subprocess inherits a PowerShell 7 Utility module path. Signature, old/new digest,
+staging, and rollback requirements remain the same. Regression tests exercise successful updates,
+late rollback, and tamper rejection with the native and shadowed Utility module layouts.
+As with any verifier change, existing installations receive this bootstrap through a full release;
+format version 1 patches cannot replace it.
+
 ## Rejected
 
 - Unsigned ZIP overlays or unauthenticated checksum files.

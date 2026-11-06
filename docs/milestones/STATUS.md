@@ -1795,9 +1795,33 @@ no known vulnerabilities. The final focused commit invokes the full software gat
 shared CI workflow changed. No GPU/phone/model inference or physical acceptance was performed.
 See `docs/benchmarks/2026-11-06-ci-workflow-repair.md` for commands, observed failures, and limits.
 
-Hosted rerun remains **not executed**: the local commits need to be pushed by an authenticated
-repository owner. Do not report GitHub CI as green from local verification. Existing action
-deprecation warnings are nonfatal and were not the cause of the three failing jobs.
+The owner subsequently pushed the repair. Run `42230794616` passed hosted Android, media,
+renderer, C#, and hygiene jobs. Its remaining Python failure is detailed below. Do not report
+complete GitHub CI as green from local verification. Existing action deprecation warnings were
+nonfatal and were not the cause of these failures.
+
+## Updater hashing under inherited PowerShell module paths
+
+On 2026-11-06 the owner supplied the remaining job's traceback: 395 tests passed, but three
+Windows updater cases failed because Get-FileHash was unavailable in the Windows PowerShell
+child process. Coverage still met 85.60%. A test-owned Utility module manifest reproduced the
+same three failures before the fix, with a probe proving the hash function unavailable. This
+models the module-export collision from an inherited PowerShell 7 PSModulePath without requiring
+a second shell installation.
+
+The verifier now streams bytes through .NET SHA-256 with deterministic disposal and lowercase
+hex output. Existing signature, base/payload hash, staging, and rollback checks remain enforced.
+The three updater scenarios run under both normal and shadowed Utility modules; successful
+updates additionally verify empty and 4 MiB binary payloads. All 16 patch tests, Ruff/format, and
+PowerShell syntax passed. The complete Python CI command passed in the isolated environment:
+401 tests, 85.60% branch coverage, XML coverage, and strict mypy. The focused commit runs the
+affected launcher suite and hygiene checks. See
+`docs/benchmarks/2026-11-06-powershell-updater-compatibility.md`.
+
+No application/model/phone deployment or hardware acceptance occurred. The protected installed
+bootstrap requires a future full release to receive this source change; existing packages remain
+unchanged. ADR-0016 records the compatibility amendment. A hosted rerun of this new fix remains
+**not executed** until the owner pushes the focused commit.
 
 ## Future regression commands
 

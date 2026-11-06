@@ -27,12 +27,20 @@ physical target-hardware bundle.
 
 ## Post-milestone maintenance
 
+The follow-up run `42230794616` confirmed hosted Android, media, renderer, C#, and hygiene jobs
+passing. Python reached its tests and exposed a separate Windows PowerShell module-discovery
+failure in three updater cases. The verifier now uses streaming .NET SHA-256, with real signed
+patch regressions covering native and shadowed Utility modules. The dated updater-compatibility
+report records the exact reproduction and verification; the next hosted Python result remains
+pending a push.
+
 The 2026-11-06 CI repair addresses the failed initial public-repository run: Ubuntu could not
 execute the Gradle wrapper, the Python job omitted speech dependencies, and the media type check
 omitted the gateway-security source root. CI now reuses the checked-in Python/media test scopes,
 keeps speech dependencies in the audit, and preserves XML coverage. Wrapper execute mode and LF
-attributes are explicit. Isolated-environment reproductions and repaired checks passed; hosted
-rerun acceptance remains pending a push and is not inferred from local checks.
+attributes are explicit. Isolated-environment reproductions and repaired checks passed. The
+follow-up hosted run passed five jobs and exposed the updater test issue described above;
+complete hosted acceptance is not inferred from local checks.
 
 The 2026-11-06 commit-gate update selects staged component and transitive consumer suites, includes
 deletions/renames, and avoids whole-application tests for documentation and isolated test changes.

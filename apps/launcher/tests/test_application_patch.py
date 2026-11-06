@@ -101,6 +101,49 @@ def patch_fixture(tmp_path: Path) -> tuple[Path, Path, Path, Path, Path]:
     return base, target, private, public, apk
 
 
+@pytest.fixture(params=["native", "shadowed-utility"])
+def updater_environment(tmp_path: Path, request: pytest.FixtureRequest) -> dict[str, str]:
+    if os.name != "nt":
+        pytest.skip("the packaged updater is Windows-only")
+    environment = os.environ.copy()
+    environment["GOVOR_DATA_ROOT"] = str(tmp_path / "data")
+    if request.param == "shadowed-utility":
+        # A PowerShell 7 parent can put its Utility manifest ahead of Windows PowerShell's.
+        # Its cmdlet-only exports hide the 5.1 Get-FileHash script function. Reproduce that
+        # module shape using the actual 5.1 cmdlet assembly, without downloading another shell.
+        modules = tmp_path / "pwsh-modules"
+        utility = modules / "Microsoft.PowerShell.Utility"
+        utility.mkdir(parents=True)
+        assembly = str(Path(_powershell()).parent / "Microsoft.PowerShell.Commands.Utility.dll")
+        escaped_assembly = assembly.replace("'", "''")
+        (utility / "Microsoft.PowerShell.Utility.psd1").write_text(
+            "@{\nModuleVersion = '7.0.0.0'\n"
+            "GUID = '1DA87E53-152B-403E-98DC-74D7B4D63D59'\n"
+            f"NestedModules = @('{escaped_assembly}')\n"
+            "CmdletsToExport = @('Add-Type', 'ConvertFrom-Json', 'ConvertTo-Json', "
+            "'Sort-Object', 'Write-Output', 'Get-FileHash')\nFunctionsToExport = @()\n}\n",
+            encoding="utf-8",
+        )
+        environment["PSMODULEPATH"] = (
+            str(modules) + os.pathsep + environment.get("PSMODULEPATH", "")
+        )
+        probe = subprocess.run(  # noqa: S603 - fixed OS executable and test-owned module setup
+            [
+                _powershell(),
+                "-NoProfile",
+                "-Command",
+                "$ErrorActionPreference = 'Stop'; Add-Type -AssemblyName System.IO.Compression; "
+                "if (Get-Command Get-FileHash -ErrorAction SilentlyContinue) { exit 1 }; exit 0",
+            ],
+            env=environment,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        assert probe.returncode == 0, "fixture must make Get-FileHash unavailable: " + probe.stderr
+    return environment
+
+
 def test_create_and_verify_patch_covers_host_operations_and_android(
     patch_fixture: tuple[Path, Path, Path, Path, Path], tmp_path: Path
 ) -> None:
@@ -240,7 +283,9 @@ def test_release_script_creates_a_verifiable_patch(
 
 @pytest.mark.skipif(os.name != "nt", reason="the packaged updater is Windows-only")
 def test_windows_updater_applies_a_signed_patch_and_preserves_untracked_content(
-    patch_fixture: tuple[Path, Path, Path, Path, Path], tmp_path: Path
+    patch_fixture: tuple[Path, Path, Path, Path, Path],
+    tmp_path: Path,
+    updater_environment: dict[str, str],
 ) -> None:
     base, target, private, _, apk = patch_fixture
     runtime_library = target / "runtime" / "python" / "Lib" / "site-packages" / "av.libs"
@@ -249,14 +294,15 @@ def test_windows_updater_applies_a_signed_patch_and_preserves_untracked_content(
     voice = target / "runtime" / "voices" / "!v"
     voice.mkdir(parents=True)
     (voice / "Mr serious").write_text("voice fixture\n", encoding="utf-8")
+    (target / "app" / "empty.bin").write_bytes(b"")
+    binary_payload = bytes(range(256)) * 16384
+    (target / "app" / "binary.bin").write_bytes(binary_payload)
     output = tmp_path / "update.govorpatch"
     create_patch(base, target, output, private, android_apk=apk)
     custom = base / "content" / "lessons" / "my-local-lesson.json"
     custom.parent.mkdir(parents=True)
     custom.write_text("{}\n", encoding="utf-8")
     data_root = tmp_path / "data"
-    environment = os.environ.copy()
-    environment["GOVOR_DATA_ROOT"] = str(data_root)
     result = subprocess.run(  # noqa: S603 - fixed OS executable and repository-owned script
         [
             _powershell(),
@@ -274,12 +320,14 @@ def test_windows_updater_applies_a_signed_patch_and_preserves_untracked_content(
         check=False,
         capture_output=True,
         text=True,
-        env=environment,
+        env=updater_environment,
     )
 
     assert result.returncode == 0, result.stdout + result.stderr
     assert (base / "app" / "replace.txt").read_text(encoding="utf-8") == "new\n"
     assert (base / "app" / "add.txt").read_text(encoding="utf-8") == "added\n"
+    assert (base / "app" / "empty.bin").read_bytes() == b""
+    assert (base / "app" / "binary.bin").read_bytes() == binary_payload
     assert (base / runtime_library.relative_to(target) / "libstdc++-fixture.dll").read_bytes() == (
         b"runtime library"
     )
@@ -296,7 +344,9 @@ def test_windows_updater_applies_a_signed_patch_and_preserves_untracked_content(
 
 @pytest.mark.skipif(os.name != "nt", reason="the packaged updater is Windows-only")
 def test_windows_updater_rolls_back_when_a_late_operation_cannot_commit(
-    patch_fixture: tuple[Path, Path, Path, Path, Path], tmp_path: Path
+    patch_fixture: tuple[Path, Path, Path, Path, Path],
+    tmp_path: Path,
+    updater_environment: dict[str, str],
 ) -> None:
     base, target, private, _, _ = patch_fixture
     late_target = target / "zzz" / "late.txt"
@@ -307,8 +357,6 @@ def test_windows_updater_rolls_back_when_a_late_operation_cannot_commit(
     # This untracked parent-file collision passes the complete-file preflight but prevents the
     # alphabetically late add from creating its parent directory after earlier operations commit.
     (base / "zzz").write_text("local parent collision\n", encoding="utf-8")
-    environment = os.environ.copy()
-    environment["GOVOR_DATA_ROOT"] = str(tmp_path / "data")
 
     result = subprocess.run(  # noqa: S603 - fixed OS executable and repository-owned script
         [
@@ -327,7 +375,7 @@ def test_windows_updater_rolls_back_when_a_late_operation_cannot_commit(
         check=False,
         capture_output=True,
         text=True,
-        env=environment,
+        env=updater_environment,
     )
 
     assert result.returncode != 0
@@ -341,7 +389,9 @@ def test_windows_updater_rolls_back_when_a_late_operation_cannot_commit(
 
 @pytest.mark.skipif(os.name != "nt", reason="the packaged updater is Windows-only")
 def test_windows_updater_rejects_tampered_payload_before_mutation(
-    patch_fixture: tuple[Path, Path, Path, Path, Path], tmp_path: Path
+    patch_fixture: tuple[Path, Path, Path, Path, Path],
+    tmp_path: Path,
+    updater_environment: dict[str, str],
 ) -> None:
     base, target, private, _, _ = patch_fixture
     original = tmp_path / "original.govorpatch"
@@ -353,8 +403,6 @@ def test_windows_updater_rejects_tampered_payload_before_mutation(
             if entry.filename.endswith("app/add.txt"):
                 payload = b"evil!\r\n"
             destination.writestr(entry.filename, payload)
-    environment = os.environ.copy()
-    environment["GOVOR_DATA_ROOT"] = str(tmp_path / "data")
 
     result = subprocess.run(  # noqa: S603 - fixed OS executable and repository-owned script
         [
@@ -373,7 +421,7 @@ def test_windows_updater_rejects_tampered_payload_before_mutation(
         check=False,
         capture_output=True,
         text=True,
-        env=environment,
+        env=updater_environment,
     )
 
     assert result.returncode != 0
