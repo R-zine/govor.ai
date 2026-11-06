@@ -16,7 +16,7 @@ Run:
 ```powershell
 ./scripts/bootstrap.ps1 -IncludeMedia -IncludeRenderer -IncludeLocalAi
 ./scripts/test.ps1 -Scope fast
-uv run --frozen pre-commit install
+uv run --frozen pre-commit install --install-hooks
 ```
 
 For a first deterministic development run without model weights, omit `-IncludeLocalAi`.
@@ -35,9 +35,12 @@ ignored and are not part of this repository.
 If Git reports dubious ownership in a managed checkout, use the command-scoped `safe.directory`
 example in `AGENTS.md`; do not modify global configuration automatically.
 
-The installed pre-commit hook runs repository hygiene checks and selects software tests from the
-staged paths. It requires the same Windows toolchains as the affected application. Documentation-
-only commits skip software suites; hardware and benchmark commands are never selected implicitly.
+The installed pre-commit hook runs repository hygiene checks and selects component/consumer tests
+from staged paths, including deletions and renames. It requires only the toolchains for those
+applications: Python-only changes do not require Java or Godot. Documentation-only commits skip
+software suites; hardware and benchmark commands are never selected implicitly. Preview a commit
+with `./scripts/pre-commit-tests.ps1 -Staged -ListOnly`. The complete
+[selection rules](commands.md) explain shared-boundary checks and dependency audits.
 CI runs the same suites in dedicated platform jobs and skips the Windows-local dispatcher and
 PowerShell parser hooks in its separate Linux pre-commit hygiene job.
 

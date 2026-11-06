@@ -1,18 +1,28 @@
 [CmdletBinding()]
 param(
     [ValidateSet('fast', 'python', 'contracts', 'kotlin', 'csharp', 'media', 'speech', 'godot', 'all', 'hardware')]
-    [string]$Scope = 'fast'
+    [string]$Scope = 'fast',
+    [string[]]$PythonTestPaths = @()
 )
 
 . (Join-Path $PSScriptRoot 'common.ps1')
 Initialize-GovorEnvironment
-$env:JAVA_HOME = Get-GovorJavaHome
+if ($Scope -in @('fast', 'kotlin', 'all')) { $env:JAVA_HOME = Get-GovorJavaHome }
 
 function Test-Python {
     Invoke-Checked -FilePath 'uv' -ArgumentList @('run', '--frozen', '--extra', 'speech', 'ruff', 'check', '.')
     Invoke-Checked -FilePath 'uv' -ArgumentList @('run', '--frozen', '--extra', 'speech', 'ruff', 'format', '--check', '.')
     Invoke-Checked -FilePath 'uv' -ArgumentList @('run', '--frozen', '--extra', 'speech', 'mypy')
-    Invoke-Checked -FilePath 'uv' -ArgumentList @('run', '--frozen', '--extra', 'speech', 'pytest', '-q', '--cov', '--cov-report=term-missing', '--cov-fail-under=85')
+    if ($PythonTestPaths.Count -gt 0) {
+        # Partial suites cannot establish the whole-tree coverage threshold. The complete gate
+        # below retains it; affected checks run real unit/integration tests without a false claim.
+        Invoke-Checked -FilePath 'uv' -ArgumentList (@(
+            'run', '--frozen', '--extra', 'speech', 'pytest', '-q'
+        ) + $PythonTestPaths)
+    }
+    else {
+        Invoke-Checked -FilePath 'uv' -ArgumentList @('run', '--frozen', '--extra', 'speech', 'pytest', '-q', '--cov', '--cov-report=term-missing', '--cov-fail-under=85')
+    }
 }
 
 function Test-Speech {
@@ -38,8 +48,10 @@ function Test-Kotlin {
     # Keep the combined JVM/Android unit-test gate deterministic on Windows: parallel persistent
     # daemons can hold generated Kotlin-DSL/version-catalog workspaces while the other project is
     # configured.
+    Initialize-GovorAndroidDebugKeystore
     Invoke-Checked -FilePath $gradle -ArgumentList @(
-        ':core:test', ':app:testDebugUnitTest', '--no-configuration-cache', '--no-daemon',
+        ':core:test', ':app:testDebugUnitTest', ':app:lintDebug', ':app:assembleDebug',
+        '--no-configuration-cache', '--no-daemon',
         '--no-parallel'
     ) -WorkingDirectory (Join-Path $script:RepositoryRoot 'apps\android')
 }
@@ -104,11 +116,5 @@ if ($Scope -in @('fast', 'csharp', 'all')) { Test-CSharp }
 if ($Scope -in @('media', 'all')) { Test-Media }
 if ($Scope -eq 'speech') { Test-Speech }
 if ($Scope -in @('godot', 'all')) { Test-Godot }
-
-if ($Scope -eq 'all') {
-    Initialize-GovorAndroidDebugKeystore
-    $gradle = Join-Path $script:RepositoryRoot 'apps\android\gradlew.bat'
-    Invoke-Checked -FilePath $gradle -ArgumentList @(':app:assembleDebug') -WorkingDirectory (Join-Path $script:RepositoryRoot 'apps\android')
-}
 
 Write-Output "Test scope '$Scope' passed."

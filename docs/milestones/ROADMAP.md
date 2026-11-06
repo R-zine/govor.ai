@@ -27,6 +27,14 @@ physical target-hardware bundle.
 
 ## Post-milestone maintenance
 
+The 2026-11-06 commit-gate update selects staged component and transitive consumer suites, includes
+deletions/renames, and avoids whole-application tests for documentation and isolated test changes.
+Android JVM/lint/debug-build checks share one Gradle invocation and match CI. Shared contracts,
+dependencies, workflows, test infrastructure, and unclassified runtime paths retain the full gate;
+Python dependency changes also select the vulnerability audit. The hook is installed locally,
+with selection/failure/import regression tests and maintained developer instructions. No physical
+acceptance or release deployment changes; see the dated commit-check report.
+
 The 2026-11-05 open-source preparation adds an explicit GPL-3.0-or-later grant for original project
 material, a learner/contributor-oriented README, contribution/security guidance, corrected loader
 MIT attribution, and package license collation. ADR-0023 and `distribution/OPEN_SOURCE_RELEASE.md`

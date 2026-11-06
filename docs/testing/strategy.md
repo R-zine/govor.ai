@@ -8,6 +8,15 @@ Milestone 0 quality gates are Ruff, Ruff format, strict mypy, pytest with 85% br
 the initial pure Python surface, Kotlin/JUnit tests, C#/xUnit tests, schema fixtures, an Android
 debug build, pre-commit, and CI configuration review.
 
+Commit checks select component suites and their consumers from the staged snapshot, including
+deletions and renames. Regression tests exercise selection, transitive imports, deduplication,
+Git index failures, and propagation of a failing suite. Android commits also run lint and debug
+compilation in the JVM-test Gradle invocation. Shared contracts/dependencies/test infrastructure
+retain the complete software gate; Python dependency changes include a vulnerability audit.
+Partial Python test selections do not establish whole-tree coverage. See the maintained
+[selection table](../development/commands.md). None of these hooks invokes hardware, a VM,
+interactive emulator checks, real-model inference, or acoustic benchmarks.
+
 The deterministic fake lesson proves orchestration without models or credentials. Its generated
 tone and Android playback-completion event prove the bounded fake playback code path on the
 emulator; they do not prove speech quality, physical acoustics, production speech routing,

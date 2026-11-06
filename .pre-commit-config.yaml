@@ -4,6 +4,10 @@ repos:
     hooks:
       - id: check-json
       - id: check-yaml
+      - id: check-toml
+      - id: check-xml
+      - id: check-merge-conflict
+      - id: check-case-conflict
       - id: end-of-file-fixer
       - id: mixed-line-ending
       - id: trailing-whitespace
@@ -12,19 +16,13 @@ repos:
         args: ["--maxkb=1024"]
         exclude: ^apps/renderer/Assets/Teacher/Ara/(elena|amira|daniel)\.glb$
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.12.12
+    rev: v0.13.3
     hooks:
       - id: ruff-check
         args: ["--fix"]
       - id: ruff-format
   - repo: local
     hooks:
-      - id: contract-tests
-        name: JSON contract tests
-        entry: uv run pytest tests/contracts -q
-        language: system
-        pass_filenames: false
-        files: ^(packages/contracts/schemas/|tests/contracts/|tests/fixtures/contracts/)
       - id: powershell-syntax
         name: PowerShell syntax
         entry: powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/check-powershell-syntax.ps1
@@ -34,7 +32,8 @@ repos:
         require_serial: true
       - id: affected-tests
         name: Tests for affected applications
-        entry: powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/pre-commit-tests.ps1
+        entry: powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/pre-commit-tests.ps1 -Staged
         language: system
         pass_filenames: true
         require_serial: true
+        always_run: true

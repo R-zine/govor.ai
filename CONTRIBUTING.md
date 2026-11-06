@@ -11,12 +11,20 @@ under **GPL-3.0-or-later**, the license in [COPYRIGHT](COPYRIGHT) and [LICENSE](
 Contributors retain their copyright. Do not submit third-party code or assets without their
 license, provenance, and redistribution terms. Existing CC0/upstream exceptions remain separate.
 
-Use focused changes and run:
+Install the commit checks once per clone, then use focused changes:
 
 ```powershell
-./scripts/test.ps1 -Scope fast
-uv run --frozen pre-commit run --all-files
+uv run --frozen pre-commit install --install-hooks
+git add <changed-files>
+./scripts/pre-commit-tests.ps1 -Staged -ListOnly
+git commit
 ```
+
+The hook selects staged component tests and their consumers, plus formatting, linting, static
+types, syntax, and repository hygiene. Review and stage any automatic formatting corrections
+before retrying. Deleted/renamed files are included; documentation-only changes skip application
+tests. See [the selection rules](docs/development/commands.md). Run
+`uv run --frozen pre-commit run --all-files` for an explicit complete repository check.
 
 Run `./scripts/test.ps1 -Scope all` before marking a milestone acceptance criterion verified.
 Hardware tests require their named hardware; do not replace them with mocks or emulators.

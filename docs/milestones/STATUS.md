@@ -1,6 +1,6 @@
 # Current verified status
 
-Last updated: 2026-11-04
+Last updated: 2026-11-06
 
 ## Outcome
 
@@ -1739,6 +1739,40 @@ Android debug assembly, Ruff/format, and strict mypy. The focused commit runs th
 hygiene/contract/affected-application hooks. No app/model listener remained. Details, findings, exact commands,
 artifacts, and limits are in `docs/benchmarks/2026-11-05-open-source-readiness.md`. Binary release
 compliance and a fresh full setup on another machine are not inferred from these checks.
+
+## Staged commit checks and affected test selection
+
+On 2026-11-06 the existing pre-commit hook was refined rather than duplicated. It now includes
+staged deletions and both sides of renames, prints its selection, tests changed Python components
+and their transitive consumers, deduplicates suites, and rejects nonzero child-script exits.
+Test-only edits keep their owning component suite; Markdown/notices skip application tests.
+Shared schemas/fixtures, Python dependencies, workflow/test infrastructure, and unknown runtime
+paths keep the full software gate. Python dependency changes also run the frozen media/speech
+vulnerability audit. Actual-import regression tests detect missing dependency-table consumers.
+
+Android now runs core/app JVM tests, lintDebug, and debug compilation in one invocation, also used
+by CI. Python-only checks no longer look up Java. Partial Python test runs retain Ruff/format and
+strict whole-host mypy without applying the whole-tree coverage threshold to a partial suite;
+the complete gate still requires 85%. The duplicate standalone schema hook was removed because
+the shared-contract selection already includes it. TOML/XML, merge-marker, and case-conflict
+checks were added, and the Ruff hook pin now matches the existing Python tool pin.
+
+Verified: 51 dispatcher/syntax/import/failure regressions, including deleted integration tests
+and isolation from a caller's Git environment; a real selected speech-test run (19
+tests, no unrelated suites); parser and Ruff checks; hook configuration validation/installation;
+and a real documentation-only hook run that skipped application tests. The complete
+software checks passed inside the all-files hook before the final deletion case: 397 Python tests at 85.60% branch coverage,
+Kotlin core/app tests, Android lint/debug build, 13 C# tests, 21 media tests, Godot import/build/
+self-test, and the dependency audit (no known vulnerabilities). That manual invocation returned
+exit 1 because an agent edited AGENTS.md while the hook was running; its individual tests/audit
+passed. The focused commit runs the final staged checks again with the tree held stationary.
+
+Android lint has 28 existing warnings and no errors; the existing Starlette/pytest-cache and
+NuGet advisory-index warnings remain visible. No lint baseline, disabled test, lowered full-suite
+coverage threshold, device/emulator interaction, real-model inference, package deployment, or
+hardware acceptance was added. Commands, results, and limitations are recorded in
+`docs/benchmarks/2026-11-06-staged-commit-checks.md`; the selection table and preview/install
+commands are in `docs/development/commands.md`. Keep the component/resource mapping current.
 
 ## Future regression commands
 

@@ -106,7 +106,7 @@ Clone this repository, open PowerShell in its root, then run:
 ```powershell
 # Toolchains and media dependencies, without downloading AI model weights.
 ./scripts/bootstrap.ps1 -IncludeMedia -IncludeRenderer
-uv run --frozen pre-commit install
+uv run --frozen pre-commit install --install-hooks
 
 # Check the code, then build the debug Android app and exported renderer.
 ./scripts/test.ps1 -Scope fast
@@ -174,7 +174,10 @@ uv run --frozen pre-commit run --all-files
 ```
 
 For a focused change, scopes include `python`, `contracts`, `kotlin`, `csharp`, `speech`, `media`,
-and `godot`. Installed commit hooks choose tests from the changed paths. Physical-device tests
+and `godot`. Installed commit hooks choose component tests and their consumers from staged paths,
+including deletions/renames, and run linting/static checks. Preview the selection with
+`./scripts/pre-commit-tests.ps1 -Staged -ListOnly`; see [the rules](docs/development/commands.md).
+Documentation-only commits skip application tests. Physical-device tests
 and performance benchmarks are separate, explicit commands; ordinary unit tests need no model
 weights or physical phone. See [testing strategy](docs/testing/strategy.md).
 

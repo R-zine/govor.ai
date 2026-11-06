@@ -52,6 +52,10 @@ wait for a separate commit request.
 - Do not log secrets, raw microphone audio, or full learner transcripts by default.
 - Do not add cloud calls, telemetry, accounts, or paid services by default.
 - Pin dependencies and update `THIRD_PARTY_LICENSES.md` when adding one.
+- Keep `scripts/pre-commit-tests.ps1` current when adding component dependencies or runtime
+  resources. Commit hooks select staged component/consumer suites, including deletions/renames;
+  shared test/contract infrastructure retains the full software gate. Never add implicit device,
+  real-model, acoustic, VM, or benchmark runs to commit hooks.
 - Original project material is GPL-3.0-or-later; retain separate upstream/model/asset licenses.
   Before public binary publication, close the native-source and standalone-APK notice items in
   `distribution/OPEN_SOURCE_RELEASE.md`. A passing build does not establish license completeness.
