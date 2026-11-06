@@ -17,12 +17,12 @@ jobs:
           version: "0.9.30"
           enable-cache: true
       - run: uv python install 3.12
-      - run: uv sync --dev --frozen
-      - run: uv run --frozen ruff check .
-      - run: uv run --frozen ruff format --check .
-      - run: uv run --frozen mypy
-      - run: uv run --frozen pytest -q --cov --cov-report=xml --cov-fail-under=85
-      - run: uv run --frozen pip-audit --cache-dir .cache/pip-audit
+      - run: uv sync --dev --extra speech --frozen
+      - name: Python lint, types, tests, and coverage
+        run: ./scripts/test.ps1 -Scope python
+        env:
+          PYTEST_ADDOPTS: --cov-report=xml
+      - run: uv run --frozen --extra speech pip-audit --cache-dir .cache/pip-audit
 
   android:
     runs-on: ubuntu-latest
@@ -60,8 +60,8 @@ jobs:
           enable-cache: true
       - run: uv python install 3.12
       - run: uv sync --dev --extra media --frozen
-      - run: uv run --frozen --extra media mypy services/media/src packages/contracts/python
-      - run: uv run --frozen --extra media pytest services/media/tests -q
+      - name: Media types and real loopback tests
+        run: ./scripts/test.ps1 -Scope media
 
   renderer:
     runs-on: windows-latest

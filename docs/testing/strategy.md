@@ -17,6 +17,13 @@ Partial Python test selections do not establish whole-tree coverage. See the mai
 [selection table](../development/commands.md). None of these hooks invokes hardware, a VM,
 interactive emulator checks, real-model inference, or acoustic benchmarks.
 
+The hosted Python and media jobs invoke the same `scripts/test.ps1` scopes as local checks. The
+Python job explicitly syncs the speech extra before checking the complete host, and retains that
+extra for its dependency audit; the media scope includes the gateway-security source root.
+Validate CI changes in isolated environments rather than relying on a populated developer venv
+or incremental type-check cache. Keep `apps/android/gradlew` executable in Git and LF-terminated
+for the Ubuntu Android job.
+
 The deterministic fake lesson proves orchestration without models or credentials. Its generated
 tone and Android playback-completion event prove the bounded fake playback code path on the
 emulator; they do not prove speech quality, physical acoustics, production speech routing,

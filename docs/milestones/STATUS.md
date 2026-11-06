@@ -1774,6 +1774,31 @@ hardware acceptance was added. Commands, results, and limitations are recorded i
 `docs/benchmarks/2026-11-06-staged-commit-checks.md`; the selection table and preview/install
 commands are in `docs/development/commands.md`. Keep the component/resource mapping current.
 
+## Hosted CI dependency and Gradle execution repair
+
+The owner reported failed GitHub run `42224355712` on 2026-11-06, for public source `76dd3e9`.
+The public Actions API identifies Android exit 126, Python failure at mypy, and media failure at
+mypy; C#, renderer, and hygiene jobs passed. Full hosted logs require authentication unavailable
+in this session. Fresh isolated Python environments reproduced missing speech dependencies (16
+type errors) and the media command's missing gateway-security source root (one import error).
+Git recorded the Unix Gradle wrapper as non-executable, explaining Ubuntu's execution failure.
+
+The workflow now invokes the existing Python/media test scopes, explicitly syncs/retains the
+speech extra for Python and its audit, and keeps the XML coverage artifact. No type ignores or
+test/coverage reductions were added. The wrapper's Git mode is 100755 with explicit LF attributes;
+its contents are unchanged. Bash syntax and workflow parsing passed.
+
+In isolated environments with cold type-check caches, the repaired Python sequence passed
+Ruff/format, 57-source strict mypy, 398 tests, and 85.60% branch coverage with coverage.xml. The
+media sequence passed 13-source mypy and 21 real aiortc tests. The speech-inclusive audit reported
+no known vulnerabilities. The final focused commit invokes the full software gate because a
+shared CI workflow changed. No GPU/phone/model inference or physical acceptance was performed.
+See `docs/benchmarks/2026-11-06-ci-workflow-repair.md` for commands, observed failures, and limits.
+
+Hosted rerun remains **not executed**: the local commits need to be pushed by an authenticated
+repository owner. Do not report GitHub CI as green from local verification. Existing action
+deprecation warnings are nonfatal and were not the cause of the three failing jobs.
+
 ## Future regression commands
 
 ```powershell

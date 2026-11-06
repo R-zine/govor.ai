@@ -27,6 +27,13 @@ physical target-hardware bundle.
 
 ## Post-milestone maintenance
 
+The 2026-11-06 CI repair addresses the failed initial public-repository run: Ubuntu could not
+execute the Gradle wrapper, the Python job omitted speech dependencies, and the media type check
+omitted the gateway-security source root. CI now reuses the checked-in Python/media test scopes,
+keeps speech dependencies in the audit, and preserves XML coverage. Wrapper execute mode and LF
+attributes are explicit. Isolated-environment reproductions and repaired checks passed; hosted
+rerun acceptance remains pending a push and is not inferred from local checks.
+
 The 2026-11-06 commit-gate update selects staged component and transitive consumer suites, includes
 deletions/renames, and avoids whole-application tests for documentation and isolated test changes.
 Android JVM/lint/debug-build checks share one Gradle invocation and match CI. Shared contracts,
